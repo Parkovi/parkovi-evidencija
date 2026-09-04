@@ -1248,7 +1248,7 @@ function sP(n){
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije})[n]?.();
 }
 
 function vJ(){
@@ -3349,12 +3349,23 @@ const NEOPOR_MAX = 1200;    // max neoporezivo godišnje
 
 // ── Setup ──────────────────────────────────────────────────────
 async function setupStimulacije(){
+  // Učitaj djelatnike iz SB ako ih nema
+  if(!DB.djelatnici || DB.djelatnici.length === 0){
+    const {data} = await SB.from('djelatnici').select('*');
+    if(data) DB.djelatnici = data.map(d=>({
+      id:d.id, sifra:d.sifra||'', prez:d.prezime||'', ime:d.ime||'',
+      oib:d.oib||'', dat:d.datum_zap||'', jid:d.jedinica_id||1,
+      rm:d.radno_mjesto||'', poc:d.poc_rada||'07:00', kraj:d.kraj_rada||'15:00'
+    }));
+  }
   // Popuni filtere
   const vj = vJ();
   const jeds = DB.jedinice.filter(j=>vj.includes(j.id));
   const jOpts = '<option value="0">Sve jedinice</option>' + jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
   document.getElementById('stim-fj').innerHTML = jOpts;
   stimFilterDjel();
+  // Prikaži filtre i gumbe
+  document.getElementById('stim-results').innerHTML = '<div class="empty"><i class="ti ti-coin-euro"></i><p>Odaberi filtre i klikni Pretraži, ili klikni Novi unos</p></div>';
 }
 
 function stimFilterDjel(){
