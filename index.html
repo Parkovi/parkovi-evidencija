@@ -550,7 +550,204 @@ select{cursor:pointer}
   </div>
 </div>
 
+      <div class="page" id="page-stimulacije">
+        <div class="ph">
+          <div>
+            <div class="pt">Stimulacije</div>
+            <div class="ps">Obračun stimulacija i dodataka za bolovanje</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn bp" onclick="openStimUnos()"><i class="ti ti-plus"></i> Novi unos</button>
+          </div>
+        </div>
+
+        <!-- Filteri -->
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="min-width:180px;margin:0">
+              <label class="fl">Jedinica</label>
+              <select id="stim-fj" onchange="stimFilterDjel()">
+                <option value="0">Sve jedinice</option>
+              </select>
+            </div>
+            <div class="fg" style="min-width:180px;margin:0">
+              <label class="fl">Djelatnik</label>
+              <select id="stim-fd"><option value="0">Svi djelatnici</option></select>
+            </div>
+            <div class="fg" style="min-width:100px;margin:0">
+              <label class="fl">Godina</label>
+              <select id="stim-fg">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+              </select>
+            </div>
+            <div class="fg" style="min-width:130px;margin:0">
+              <label class="fl">Mjesec</label>
+              <select id="stim-fm">
+                <option value="0">Svi mjeseci</option>
+                <option value="1">Siječanj</option><option value="2">Veljača</option>
+                <option value="3">Ožujak</option><option value="4">Travanj</option>
+                <option value="5">Svibanj</option><option value="6">Lipanj</option>
+                <option value="7">Srpanj</option><option value="8">Kolovoz</option>
+                <option value="9">Rujan</option><option value="10">Listopad</option>
+                <option value="11">Studeni</option><option value="12">Prosinac</option>
+              </select>
+            </div>
+            <button class="btn bp" onclick="loadStimulacije()" style="margin-bottom:1px"><i class="ti ti-search"></i> Pretraži</button>
+            <button class="btn bs" onclick="openBodovi()" style="margin-bottom:1px"><i class="ti ti-chart-dots"></i> Bodovi djelatnika</button>
+            <button class="btn bs" onclick="openVrijednostBoda()" style="margin-bottom:1px"><i class="ti ti-settings"></i> Vrijednost boda</button>
+          </div>
+        </div>
+
+        <!-- Rezultati -->
+        <div class="card">
+          <div id="stim-results"><div class="empty"><i class="ti ti-coin-euro"></i><p>Odaberi filtre i klikni Pretraži</p></div></div>
+        </div>
+      </div>
+
+
 <!-- MODALI -->
+
+
+<!-- MODAL: Novi unos stimulacije -->
+<div class="mo" id="mo-stim-unos">
+  <div class="md mdlg">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-coin-euro"></i> <span id="stim-unos-title">Unos stimulacije</span></div>
+      <button class="mcl" onclick="closeM('mo-stim-unos')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="fl">Jedinica</label>
+          <select id="stim-jed" onchange="stimModalFilterDjel()">
+            <option value="0">Odaberi jedinicu</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Djelatnik <span class="req">*</span></label>
+          <select id="stim-djel"><option value="0">Odaberi djelatnika</option></select>
+        </div>
+        <div class="fg">
+          <label class="fl">Godina <span class="req">*</span></label>
+          <select id="stim-god">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Mjesec <span class="req">*</span></label>
+          <select id="stim-mj">
+            <option value="1">Siječanj</option><option value="2">Veljača</option>
+            <option value="3">Ožujak</option><option value="4">Travanj</option>
+            <option value="5">Svibanj</option><option value="6">Lipanj</option>
+            <option value="7">Srpanj</option><option value="8">Kolovoz</option>
+            <option value="9">Rujan</option><option value="10">Listopad</option>
+            <option value="11">Studeni</option><option value="12">Prosinac</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Stimulacija %</label>
+          <input type="number" id="stim-posto" min="0" max="100" step="5" value="0" placeholder="0">
+        </div>
+        <div class="fg">
+          <label class="fl">Bodovi (automatski)</label>
+          <input type="number" id="stim-bodovi" readonly style="background:var(--bg3)">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
+        <div class="fg">
+          <label class="fl">Dodatak bolovanje (€)</label>
+          <input type="number" id="stim-bol" value="0" min="0" step="0.01" placeholder="0 ili 233">
+        </div>
+        <div class="fg">
+          <label class="fl">Dod. bolovanje mj. (€)</label>
+          <input type="number" id="stim-bol-mj" value="0" min="0" step="1" placeholder="0, 100 ili 200">
+        </div>
+        <div class="fg">
+          <label class="fl">Napomena</label>
+          <input type="text" id="stim-nap" placeholder="Opcionalno">
+        </div>
+      </div>
+      <!-- Pregled obračuna -->
+      <div id="stim-preview" style="margin-top:1rem;padding:1rem;background:var(--bg3);border-radius:8px;display:none">
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px"><i class="ti ti-calculator"></i> Pregled obračuna</div>
+        <div id="stim-preview-content"></div>
+      </div>
+      <div id="stim-al" style="margin-top:8px"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-stim-unos')">Odustani</button>
+      <button class="btn bs" onclick="calcStimPreview()"><i class="ti ti-calculator"></i> Izračunaj</button>
+      <button class="btn bp" onclick="saveStim()"><i class="ti ti-check"></i> Spremi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bodovi djelatnika -->
+<div class="mo" id="mo-bodovi">
+  <div class="md mdlg">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-chart-dots"></i> Bodovi djelatnika</div>
+      <button class="mcl" onclick="closeM('mo-bodovi')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <select id="bod-fj" onchange="filterBodovi()" style="flex:1;min-width:150px">
+          <option value="0">Sve jedinice</option>
+        </select>
+        <input type="text" id="bod-search" placeholder="Pretraži ime..." oninput="filterBodovi()" style="flex:1;min-width:150px;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
+      </div>
+      <div id="bodovi-list" style="max-height:60vh;overflow-y:auto"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-bodovi')">Zatvori</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Vrijednost boda -->
+<div class="mo" id="mo-vb">
+  <div class="md" style="max-width:420px">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-settings"></i> Vrijednost boda</div>
+      <button class="mcl" onclick="closeM('mo-vb')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:1rem">Promjena vrijednosti boda vrijedi za odabrani period i sve buduće unose.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="fl">Godina</label>
+          <select id="vb-god"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="fg">
+          <label class="fl">Mjesec (ili svi)</label>
+          <select id="vb-mj">
+            <option value="0">Svi mjeseci</option>
+            <option value="1">Siječanj</option><option value="2">Veljača</option>
+            <option value="3">Ožujak</option><option value="4">Travanj</option>
+            <option value="5">Svibanj</option><option value="6">Lipanj</option>
+            <option value="7">Srpanj</option><option value="8">Kolovoz</option>
+            <option value="9">Rujan</option><option value="10">Listopad</option>
+            <option value="11">Studeni</option><option value="12">Prosinac</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Nova vrijednost boda (€) <span class="req">*</span></label>
+        <input type="number" id="vb-val" step="0.0001" placeholder="npr. 0.3520">
+      </div>
+      <div style="padding:.75rem;background:var(--bg3);border-radius:6px;font-size:12px;color:var(--text2)">
+        Trenutna vrijednost: <strong id="vb-current">0.352 €</strong>
+      </div>
+      <div id="vb-al" style="margin-top:8px"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-vb')">Odustani</button>
+      <button class="btn bp" onclick="saveVrijednostBoda()"><i class="ti ti-check"></i> Spremi</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Promjena lozinke -->
 <div class="mo" id="mo-pwd">
@@ -3139,6 +3336,454 @@ async function savePwd(){
     showToast('✅ Lozinka uspješno promijenjena!', 'success');
   } catch(e){
     al.innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Greška: ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODUL STIMULACIJE
+// ══════════════════════════════════════════════════════════════
+
+const BRUTO2_STOPA = 0.165; // 16.5%
+const NEOPOR_MAX = 1200;    // max neoporezivo godišnje
+
+// ── Setup ──────────────────────────────────────────────────────
+async function setupStimulacije(){
+  // Popuni filtere
+  const vj = vJ();
+  const jeds = DB.jedinice.filter(j=>vj.includes(j.id));
+  const jOpts = '<option value="0">Sve jedinice</option>' + jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
+  document.getElementById('stim-fj').innerHTML = jOpts;
+  stimFilterDjel();
+}
+
+function stimFilterDjel(){
+  const jid = parseInt(document.getElementById('stim-fj')?.value)||0;
+  const djels = jid===0
+    ? DB.djelatnici.filter(d=>vJ().includes(d.jid))
+    : DB.djelatnici.filter(d=>d.jid===jid);
+  const opts = '<option value="0">Svi djelatnici</option>' + 
+    djels.sort((a,b)=>a.prez.localeCompare(b.prez)).map(d=>`<option value="${d.id}">${dF(d)}</option>`).join('');
+  document.getElementById('stim-fd').innerHTML = opts;
+}
+
+// ── Učitaj stimulacije ─────────────────────────────────────────
+async function loadStimulacije(){
+  const jid = parseInt(document.getElementById('stim-fj').value)||0;
+  const did = parseInt(document.getElementById('stim-fd').value)||0;
+  const god = parseInt(document.getElementById('stim-fg').value)||2026;
+  const mj  = parseInt(document.getElementById('stim-fm').value)||0;
+
+  document.getElementById('stim-results').innerHTML = '<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+
+  try{
+    let q = SB.from('stimulacije_obracun').select('*').eq('godina', god);
+    if(mj>0) q = q.eq('mjesec', mj);
+    if(did>0) q = q.eq('djelatnik_id', did);
+    else if(jid>0){
+      const djIds = DB.djelatnici.filter(d=>d.jid===jid).map(d=>d.id);
+      q = q.in('djelatnik_id', djIds);
+    } else {
+      const djIds = DB.djelatnici.filter(d=>vJ().includes(d.jid)).map(d=>d.id);
+      if(djIds.length) q = q.in('djelatnik_id', djIds);
+    }
+    q = q.order('mjesec').order('djelatnik_id');
+
+    const {data, error} = await q;
+    if(error) throw error;
+
+    if(!data||!data.length){
+      document.getElementById('stim-results').innerHTML = '<div class="empty"><i class="ti ti-coin-euro"></i><p>Nema unesenih stimulacija za odabrani period</p></div>';
+      return;
+    }
+
+    renderStimResults(data, god);
+  } catch(e){
+    document.getElementById('stim-results').innerHTML = `<div class="al ald"><i class="ti ti-alert-circle"></i> Greška: ${e.message}</div>`;
+  }
+}
+
+function renderStimResults(data, god){
+  // Group by djelatnik
+  const byDjel = {};
+  data.forEach(r=>{
+    if(!byDjel[r.djelatnik_id]) byDjel[r.djelatnik_id] = [];
+    byDjel[r.djelatnik_id].push(r);
+  });
+
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--bg3);text-align:left">
+      <th style="padding:8px 10px">Djelatnik</th>
+      <th style="padding:8px 10px">Mj.</th>
+      <th style="padding:8px 10px;text-align:right">Bodovi</th>
+      <th style="padding:8px 10px;text-align:right">Stim.%</th>
+      <th style="padding:8px 10px;text-align:right">Iznos stim.</th>
+      <th style="padding:8px 10px;text-align:right">Neopor.</th>
+      <th style="padding:8px 10px;text-align:right">Opor.</th>
+      <th style="padding:8px 10px;text-align:right">Dod.bol.</th>
+      <th style="padding:8px 10px;text-align:right">Bol.neopor.</th>
+      <th style="padding:8px 10px;text-align:right">Bol.opor.</th>
+      <th style="padding:8px 10px;text-align:right">Bruto2</th>
+      <th style="padding:8px 10px;text-align:right">Dod.mj.</th>
+      <th style="padding:8px 10px;text-align:right">Kumul.</th>
+      <th style="padding:8px 10px"></th>
+    </tr></thead><tbody>`;
+
+  let totStim=0, totNeopor=0, totOpor=0, totBruto2=0, totMj=0;
+
+  Object.entries(byDjel).forEach(([djId, rows])=>{
+    const d = DB.djelatnici.find(x=>x.id===parseInt(djId));
+    const name = d ? dF(d) : '–';
+    rows.forEach(r=>{
+      const stim = parseFloat(r.iznos_stimulacije)||0;
+      const neopor = parseFloat(r.iznos_neoporezivo)||0;
+      const opor = parseFloat(r.iznos_oporezivo)||0;
+      const bolDod = parseFloat(r.dodatak_bolovanje)||0;
+      const bolNeopor = parseFloat(r.dodatak_bol_neoporezivo)||0;
+      const bolOpor = parseFloat(r.dodatak_bol_oporezivo)||0;
+      const bruto2 = parseFloat(r.dodatak_bol_bruto2)||0;
+      const mjDod = parseFloat(r.dodatak_mjesecni)||0;
+      const kumul = parseFloat(r.kumulativ_neoporezivo)||0;
+      totStim+=stim; totNeopor+=neopor+bolNeopor; totOpor+=opor+bolOpor; totBruto2+=bruto2; totMj+=mjDod;
+      html += `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:7px 10px;font-weight:500">${name}</td>
+        <td style="padding:7px 10px">${MN[r.mjesec-1]}</td>
+        <td style="padding:7px 10px;text-align:right">${r.bodovi}</td>
+        <td style="padding:7px 10px;text-align:right">${r.stimulacija_posto}%</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:500">${stim.toFixed(2)} €</td>
+        <td style="padding:7px 10px;text-align:right;color:#22863a">${neopor.toFixed(2)} €</td>
+        <td style="padding:7px 10px;text-align:right;color:#c0392b">${opor>0?opor.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right">${bolDod>0?bolDod.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#22863a">${bolNeopor>0?bolNeopor.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#c0392b">${bolOpor>0?bolOpor.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#e67e22;font-weight:600">${bruto2>0?bruto2.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right">${mjDod>0?mjDod.toFixed(2)+' €':'–'}</td>
+        <td style="padding:7px 10px;text-align:right;font-size:11px;color:var(--text2)">${kumul.toFixed(2)} €</td>
+        <td style="padding:7px 10px">
+          <button class="btn bsm bs" onclick="editStim(${r.id})"><i class="ti ti-edit"></i></button>
+          <button class="btn bsm bd" onclick="delStim(${r.id})"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`;
+    });
+  });
+
+  html += `</tbody><tfoot><tr style="background:var(--bg3);font-weight:700">
+    <td colspan="4" style="padding:8px 10px">UKUPNO</td>
+    <td style="padding:8px 10px;text-align:right">${totStim.toFixed(2)} €</td>
+    <td style="padding:8px 10px;text-align:right;color:#22863a">${totNeopor.toFixed(2)} €</td>
+    <td style="padding:8px 10px;text-align:right;color:#c0392b">${totOpor.toFixed(2)} €</td>
+    <td colspan="2" style="padding:8px 10px"></td>
+    <td style="padding:8px 10px"></td>
+    <td style="padding:8px 10px;text-align:right;color:#e67e22">${totBruto2.toFixed(2)} €</td>
+    <td style="padding:8px 10px;text-align:right">${totMj.toFixed(2)} €</td>
+    <td colspan="2" style="padding:8px 10px"></td>
+  </tr></tfoot></table></div>`;
+
+  document.getElementById('stim-results').innerHTML = html;
+}
+
+// ── Obračun ────────────────────────────────────────────────────
+function calcStim(bodovi, posto, vrijBoda, kumPrije, dodatakBol, dodatakMj){
+  // 1. Izračunaj stimulaciju
+  const iznos = Math.round(bodovi * (posto/100) * vrijBoda * 100) / 100;
+
+  // 2. Koliko prostora ima u 1200 €
+  const prostor = Math.max(0, NEOPOR_MAX - kumPrije);
+
+  // 3. Stimulacija → neoporezivo/oporezivo
+  let stimNeopor = Math.min(iznos, prostor);
+  let stimOpor   = Math.max(0, iznos - stimNeopor);
+  let kumNakon   = kumPrije + stimNeopor;
+
+  // 4. Dodatak bolovanje (233 €) → neoporezivo/oporezivo + bruto2
+  let bolNeopor = 0, bolOpor = 0, bolBruto2 = 0;
+  if(dodatakBol > 0){
+    const prostor2 = Math.max(0, NEOPOR_MAX - kumNakon);
+    bolNeopor = Math.min(dodatakBol, prostor2);
+    bolOpor   = Math.max(0, dodatakBol - bolNeopor);
+    kumNakon  += bolNeopor;
+    // Na oporezivi dio ide bruto2 (16.5%)
+    if(bolOpor > 0){
+      bolBruto2 = Math.round(bolOpor * BRUTO2_STOPA * 100) / 100;
+    }
+  }
+
+  return {
+    iznos, stimNeopor, stimOpor,
+    bolNeopor, bolOpor, bolBruto2,
+    dodatakMj,  // 200€/100€ - uvijek oporezivo, bez bruto2
+    kumNakon
+  };
+}
+
+// ── Modal unos ─────────────────────────────────────────────────
+async function openStimUnos(){
+  const vj = vJ();
+  const jeds = DB.jedinice.filter(j=>vj.includes(j.id));
+  document.getElementById('stim-jed').innerHTML = '<option value="0">Sve jedinice</option>' +
+    jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
+  document.getElementById('stim-djel').innerHTML = '<option value="0">Odaberi djelatnika</option>' +
+    DB.djelatnici.filter(d=>vj.includes(d.jid)).sort((a,b)=>a.prez.localeCompare(b.prez))
+      .map(d=>`<option value="${d.id}">${dF(d)}</option>`).join('');
+  document.getElementById('stim-posto').value = 0;
+  document.getElementById('stim-bol').value = 0;
+  document.getElementById('stim-bol-mj').value = 0;
+  document.getElementById('stim-nap').value = '';
+  document.getElementById('stim-preview').style.display = 'none';
+  document.getElementById('stim-al').innerHTML = '';
+  // Set current month
+  const now = new Date();
+  document.getElementById('stim-god').value = now.getFullYear();
+  document.getElementById('stim-mj').value = now.getMonth()+1;
+  window._stimEditId = null;
+  document.getElementById('stim-unos-title').textContent = 'Unos stimulacije';
+  openM('mo-stim-unos');
+}
+
+async function stimModalFilterDjel(){
+  const jid = parseInt(document.getElementById('stim-jed').value)||0;
+  const djels = jid===0
+    ? DB.djelatnici.filter(d=>vJ().includes(d.jid))
+    : DB.djelatnici.filter(d=>d.jid===jid);
+  document.getElementById('stim-djel').innerHTML = '<option value="0">Odaberi djelatnika</option>' +
+    djels.sort((a,b)=>a.prez.localeCompare(b.prez)).map(d=>`<option value="${d.id}">${dF(d)}</option>`).join('');
+  document.getElementById('stim-bodovi').value = '';
+}
+
+// Kad se odabere djelatnik - učitaj mu bodove
+document.addEventListener('change', async function(e){
+  if(e.target.id === 'stim-djel'){
+    const did = parseInt(e.target.value);
+    if(!did) return;
+    const {data} = await SB.from('stimulacije_bodovi').select('bodovi').eq('djelatnik_id', did).single();
+    document.getElementById('stim-bodovi').value = data ? data.bodovi : 0;
+  }
+});
+
+async function calcStimPreview(){
+  const did   = parseInt(document.getElementById('stim-djel').value)||0;
+  const god   = parseInt(document.getElementById('stim-god').value)||2026;
+  const mj    = parseInt(document.getElementById('stim-mj').value)||1;
+  const posto = parseFloat(document.getElementById('stim-posto').value)||0;
+  const bod   = parseInt(document.getElementById('stim-bodovi').value)||0;
+  const bolDod= parseFloat(document.getElementById('stim-bol').value)||0;
+  const bolMj = parseFloat(document.getElementById('stim-bol-mj').value)||0;
+
+  if(!did){document.getElementById('stim-al').innerHTML='<div class="al ald">Odaberi djelatnika!</div>';return;}
+
+  // Get vrijednost boda for this period
+  const {data:vbData} = await SB.from('stimulacije_parametri')
+    .select('vrijednost_boda').eq('godina', god).eq('mjesec', mj).single();
+  const vrijBoda = vbData ? parseFloat(vbData.vrijednost_boda) : 0.352;
+
+  // Get kumulativ neoporezivo do ovog mjeseca
+  const {data:kumData} = await SB.from('stimulacije_obracun')
+    .select('kumulativ_neoporezivo, mjesec')
+    .eq('djelatnik_id', did).eq('godina', god)
+    .lt('mjesec', mj).order('mjesec', {ascending:false}).limit(1);
+  const kumPrije = kumData && kumData.length ? parseFloat(kumData[0].kumulativ_neoporezivo)||0 : 0;
+
+  const r = calcStim(bod, posto, vrijBoda, kumPrije, bolDod, bolMj);
+
+  const prev = document.getElementById('stim-preview');
+  const cont = document.getElementById('stim-preview-content');
+  prev.style.display = 'block';
+
+  cont.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12.5px">
+      <div>Bodovi × ${posto}% × ${vrijBoda} €</div>
+      <div style="font-weight:600">${r.iznos.toFixed(2)} €</div>
+      <div style="color:var(--text2)">Kumulativ prije</div>
+      <div>${kumPrije.toFixed(2)} € / ${NEOPOR_MAX} €</div>
+      <div style="color:#22863a">Stimulacija neoporezivo</div>
+      <div style="color:#22863a;font-weight:600">${r.stimNeopor.toFixed(2)} €</div>
+      ${r.stimOpor>0?`<div style="color:#c0392b">Stimulacija oporezivo</div><div style="color:#c0392b;font-weight:600">${r.stimOpor.toFixed(2)} €</div>`:''}
+      ${bolDod>0?`
+        <div style="border-top:1px solid var(--border);padding-top:4px;margin-top:2px">Dodatak bolovanje</div>
+        <div style="border-top:1px solid var(--border);padding-top:4px;font-weight:600">${bolDod.toFixed(2)} €</div>
+        <div style="color:#22863a">Bol. neoporezivo</div><div style="color:#22863a;font-weight:600">${r.bolNeopor.toFixed(2)} €</div>
+        ${r.bolOpor>0?`<div style="color:#c0392b">Bol. oporezivo</div><div style="color:#c0392b;font-weight:600">${r.bolOpor.toFixed(2)} €</div>
+        <div style="color:#e67e22;font-weight:700">Bruto 2 (16.5%)</div><div style="color:#e67e22;font-weight:700">${r.bolBruto2.toFixed(2)} €</div>`:''}
+      `:''}
+      ${bolMj>0?`<div>Dod. bolovanje mj. (opor.)</div><div style="font-weight:600">${bolMj.toFixed(2)} €</div>`:''}
+      <div style="border-top:1px solid var(--border);padding-top:6px;font-weight:700">Kumulativ nakon</div>
+      <div style="border-top:1px solid var(--border);padding-top:6px;font-weight:700">${r.kumNakon.toFixed(2)} € / ${NEOPOR_MAX} €</div>
+    </div>`;
+
+  // Store for save
+  window._stimCalc = {r, vrijBoda, kumPrije};
+  document.getElementById('stim-al').innerHTML = '';
+}
+
+async function saveStim(){
+  const did   = parseInt(document.getElementById('stim-djel').value)||0;
+  const god   = parseInt(document.getElementById('stim-god').value)||2026;
+  const mj    = parseInt(document.getElementById('stim-mj').value)||1;
+  const posto = parseFloat(document.getElementById('stim-posto').value)||0;
+  const bod   = parseInt(document.getElementById('stim-bodovi').value)||0;
+  const bolDod= parseFloat(document.getElementById('stim-bol').value)||0;
+  const bolMj = parseFloat(document.getElementById('stim-bol-mj').value)||0;
+  const nap   = document.getElementById('stim-nap').value.trim();
+
+  if(!did){document.getElementById('stim-al').innerHTML='<div class="al ald">Odaberi djelatnika!</div>';return;}
+
+  // Recalculate if not previewed
+  if(!window._stimCalc) await calcStimPreview();
+  if(!window._stimCalc) return;
+
+  const {r, vrijBoda, kumPrije} = window._stimCalc;
+
+  const payload = {
+    djelatnik_id: did, godina: god, mjesec: mj,
+    bodovi: bod, stimulacija_posto: posto,
+    vrijednost_boda: vrijBoda,
+    iznos_stimulacije: r.iznos,
+    iznos_neoporezivo: r.stimNeopor,
+    iznos_oporezivo: r.stimOpor,
+    dodatak_bolovanje: bolDod,
+    dodatak_bol_neoporezivo: r.bolNeopor,
+    dodatak_bol_oporezivo: r.bolOpor,
+    dodatak_bol_bruto2: r.bolBruto2,
+    dodatak_mjesecni: bolMj,
+    kumulativ_neoporezivo: r.kumNakon,
+    napomena: nap
+  };
+
+  document.getElementById('stim-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
+  try{
+    let error;
+    if(window._stimEditId){
+      ({error} = await SB.from('stimulacije_obracun').update(payload).eq('id', window._stimEditId));
+    } else {
+      ({error} = await SB.from('stimulacije_obracun').upsert(payload, {onConflict:'djelatnik_id,godina,mjesec'}));
+    }
+    if(error) throw error;
+    closeM('mo-stim-unos');
+    showToast('✅ Stimulacija uspješno unesena!', 'success');
+    loadStimulacije();
+  } catch(e){
+    document.getElementById('stim-al').innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Greška: ${e.message}</div>`;
+  }
+}
+
+async function editStim(id){
+  const {data,error} = await SB.from('stimulacije_obracun').select('*').eq('id',id).single();
+  if(error||!data){showToast('Greška učitavanja','error');return;}
+  await openStimUnos();
+  window._stimEditId = id;
+  document.getElementById('stim-unos-title').textContent = 'Uredi stimulaciju';
+  document.getElementById('stim-djel').value = data.djelatnik_id;
+  document.getElementById('stim-god').value = data.godina;
+  document.getElementById('stim-mj').value = data.mjesec;
+  document.getElementById('stim-posto').value = data.stimulacija_posto;
+  document.getElementById('stim-bodovi').value = data.bodovi;
+  document.getElementById('stim-bol').value = data.dodatak_bolovanje||0;
+  document.getElementById('stim-bol-mj').value = data.dodatak_mjesecni||0;
+  document.getElementById('stim-nap').value = data.napomena||'';
+}
+
+async function delStim(id){
+  if(!confirm('Obrisati ovaj zapis stimulacije?')) return;
+  const {error} = await SB.from('stimulacije_obracun').delete().eq('id',id);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  showToast('✅ Zapis obrisan','success');
+  loadStimulacije();
+}
+
+// ── Bodovi modal ───────────────────────────────────────────────
+async function openBodovi(){
+  const {data,error} = await SB.from('stimulacije_bodovi')
+    .select('*, djelatnici(prezime,ime,jedinica_id)').order('djelatnici(prezime)');
+  if(error){showToast('Greška: '+error.message,'error');return;}
+
+  const vj = vJ();
+  const jeds = DB.jedinice.filter(j=>vj.includes(j.id));
+  document.getElementById('bod-fj').innerHTML = '<option value="0">Sve jedinice</option>' +
+    jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
+
+  window._bodovi_data = data;
+  filterBodovi();
+  openM('mo-bodovi');
+}
+
+function filterBodovi(){
+  const jid = parseInt(document.getElementById('bod-fj')?.value)||0;
+  const srch = (document.getElementById('bod-search')?.value||'').toLowerCase();
+  const data = (window._bodovi_data||[]).filter(r=>{
+    const d = r.djelatnici;
+    if(!d) return false;
+    if(jid && d.jedinica_id !== jid) return false;
+    if(srch && !`${d.prezime} ${d.ime}`.toLowerCase().includes(srch)) return false;
+    return true;
+  });
+
+  const html = data.map(r=>{
+    const d = r.djelatnici;
+    const jName = DB.jedinice.find(j=>j.id===d.jedinica_id)?.name||'–';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:13px">${d.prezime} ${d.ime}</div>
+        <div style="font-size:11px;color:var(--text2)">${jName}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" value="${r.bodovi}" min="0" step="100"
+          style="width:80px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;text-align:right"
+          onchange="saveBodovi(${r.id}, this.value)">
+        <span style="font-size:11px;color:var(--text2)">bod.</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bodovi-list').innerHTML = html || '<div class="empty"><p>Nema rezultata</p></div>';
+}
+
+async function saveBodovi(id, val){
+  const bodovi = parseInt(val)||0;
+  const {error} = await SB.from('stimulacije_bodovi').update({bodovi, updated_at: new Date().toISOString()}).eq('id', id);
+  if(error) showToast('Greška: '+error.message,'error');
+  else showToast('✅ Bodovi ažurirani','success');
+}
+
+// ── Vrijednost boda ────────────────────────────────────────────
+async function openVrijednostBoda(){
+  const now = new Date();
+  document.getElementById('vb-god').value = now.getFullYear();
+  document.getElementById('vb-mj').value = now.getMonth()+1;
+  document.getElementById('vb-val').value = '';
+  document.getElementById('vb-al').innerHTML = '';
+
+  // Get current value
+  const {data} = await SB.from('stimulacije_parametri')
+    .select('vrijednost_boda').eq('godina', now.getFullYear()).eq('mjesec', now.getMonth()+1).single();
+  document.getElementById('vb-current').textContent = (data ? parseFloat(data.vrijednost_boda).toFixed(4) : '0.3520') + ' €';
+
+  openM('mo-vb');
+}
+
+async function saveVrijednostBoda(){
+  const god = parseInt(document.getElementById('vb-god').value)||2026;
+  const mj  = parseInt(document.getElementById('vb-mj').value)||0;
+  const val = parseFloat(document.getElementById('vb-val').value);
+
+  if(isNaN(val)||val<=0){
+    document.getElementById('vb-al').innerHTML='<div class="al ald">Unesite ispravnu vrijednost!</div>';return;
+  }
+
+  document.getElementById('vb-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
+  try{
+    if(mj===0){
+      // Update all months in year
+      const {error} = await SB.from('stimulacije_parametri')
+        .update({vrijednost_boda: val}).eq('godina', god);
+      if(error) throw error;
+    } else {
+      const {error} = await SB.from('stimulacije_parametri')
+        .upsert({godina:god, mjesec:mj, vrijednost_boda:val}, {onConflict:'godina,mjesec'});
+      if(error) throw error;
+    }
+    closeM('mo-vb');
+    showToast('✅ Vrijednost boda ažurirana!','success');
+  } catch(e){
+    document.getElementById('vb-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;
   }
 }
 
