@@ -648,6 +648,89 @@ select{cursor:pointer}
         </div>
       </div>
 
+      <!-- NABAVA PAGES -->
+
+      <!-- ZAHTJEVNICE -->
+      <div class="page" id="page-zahtjevnice">
+        <div class="ph">
+          <div><div class="pt">Zahtjevnice</div><div class="ps">Evidencija zahtjevnica za nabavu materijala, usluga i radova</div></div>
+          <button class="btn bp" onclick="openNovaZahtjevnica()"><i class="ti ti-plus"></i> Nova zahtjevnica</button>
+        </div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="min-width:150px;margin:0"><label class="fl">Status</label>
+              <select id="zah-fst">
+                <option value="">Svi</option>
+                <option value="nova">Nova</option>
+                <option value="kod_nabave">Kod nabave</option>
+                <option value="ponuda_trazena">Ponuda tražena</option>
+                <option value="kod_direktora">Kod direktora</option>
+                <option value="odobrena">Odobrena</option>
+                <option value="odbijena">Odbijena</option>
+                <option value="realizirana">Realizirana</option>
+              </select>
+            </div>
+            <div class="fg" style="min-width:150px;margin:0"><label class="fl">Vrsta</label>
+              <select id="zah-fvr">
+                <option value="">Sve vrste</option>
+                <option value="roba">Roba</option>
+                <option value="usluga">Usluga</option>
+                <option value="radovi">Radovi</option>
+              </select>
+            </div>
+            <div class="fg" style="min-width:200px;margin:0"><label class="fl">Jedinica</label>
+              <select id="zah-fj"><option value="">Sve jedinice</option></select>
+            </div>
+            <div class="fg" style="min-width:90px;margin:0"><label class="fl">Godina</label>
+              <select id="zah-fg"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <button class="btn bp" onclick="loadZahtjevnice()" style="margin-bottom:1px"><i class="ti ti-search"></i> Pretraži</button>
+          </div>
+        </div>
+        <div class="card"><div id="zah-list"><div class="empty"><i class="ti ti-file-description"></i><p>Klikni Pretraži</p></div></div></div>
+      </div>
+
+      <!-- NARUDŽBENICE -->
+      <div class="page" id="page-narudzbenice">
+        <div class="ph">
+          <div><div class="pt">Narudžbenice</div><div class="ps">Evidencija narudžbenica</div></div>
+          <button class="btn bp" onclick="openNovaNarudzbenica()"><i class="ti ti-plus"></i> Nova narudžbenica</button>
+        </div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="min-width:150px;margin:0"><label class="fl">Status</label>
+              <select id="nar-fst">
+                <option value="">Svi</option>
+                <option value="nacrt">Nacrt</option>
+                <option value="kod_direktora">Kod direktora</option>
+                <option value="odobrena">Odobrena</option>
+                <option value="odbijena">Odbijena</option>
+                <option value="poslana">Poslana dobavljaču</option>
+                <option value="realizirana">Realizirana</option>
+              </select>
+            </div>
+            <div class="fg" style="min-width:90px;margin:0"><label class="fl">Godina</label>
+              <select id="nar-fg"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <button class="btn bp" onclick="loadNarudzbenice()" style="margin-bottom:1px"><i class="ti ti-search"></i> Pretraži</button>
+          </div>
+        </div>
+        <div class="card"><div id="nar-list"><div class="empty"><i class="ti ti-shopping-cart"></i><p>Klikni Pretraži</p></div></div></div>
+      </div>
+
+      <!-- DOBAVLJAČI -->
+      <div class="page" id="page-dobavljaci">
+        <div class="ph">
+          <div><div class="pt">Dobavljači</div><div class="ps">Šifarnik dobavljača</div></div>
+          <button class="btn bp" onclick="openNovDobavljac()"><i class="ti ti-plus"></i> Novi dobavljač</button>
+        </div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <input type="text" id="dob-search" placeholder="Pretraži naziv, OIB..." oninput="filterDobavljaci()" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 12px">
+        </div>
+        <div class="card"><div id="dob-list"><div class="empty"><i class="ti ti-building-store"></i><p>Učitavam...</p></div></div></div>
+      </div>
+
+
 <!-- MODALI -->
 
 
@@ -790,6 +873,388 @@ select{cursor:pointer}
     </div>
   </div>
 </div>
+
+
+<!-- ═══════════════════════════ MODALI NABAVE ══════════════════════════ -->
+
+<!-- MODAL: Nova/Uredi Zahtjevnica -->
+<div class="mo" id="mo-zahtjevnica">
+  <div class="md" style="max-width:800px;width:95%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-file-description"></i> <span id="zah-modal-title">Nova zahtjevnica</span></div>
+      <button class="mcl" onclick="closeM('mo-zahtjevnica')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <!-- Header info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem">
+        <div class="fg">
+          <label class="fl">Broj zahtjevnice</label>
+          <input type="text" id="zah-broj" readonly style="background:var(--bg3);font-weight:600">
+        </div>
+        <div class="fg">
+          <label class="fl">Datum <span class="req">*</span></label>
+          <input type="date" id="zah-datum">
+        </div>
+        <div class="fg">
+          <label class="fl">Jedinica <span class="req">*</span></label>
+          <select id="zah-jed"></select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Mjesto troška / Namjena <span class="req">*</span></label>
+        <input type="text" id="zah-mjesto" placeholder="npr. Duška Janbay i Meri Mardešić (stavka 4.)">
+      </div>
+      <div class="fg">
+        <label class="fl">Zatražio</label>
+        <input type="text" id="zah-zatrazio" placeholder="Ime i prezime osobe koja traži">
+      </div>
+
+      <!-- Stavke -->
+      <div style="font-weight:600;font-size:13px;margin:1rem 0 8px"><i class="ti ti-list"></i> Stavke</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="zah-stavke-tbl">
+          <thead>
+            <tr style="background:var(--bg3)">
+              <th style="padding:7px 8px;text-align:left;width:40px">Rb.</th>
+              <th style="padding:7px 8px;text-align:left;width:120px">Svrha utroška</th>
+              <th style="padding:7px 8px;text-align:left">Naziv materijala/robe/usluge</th>
+              <th style="padding:7px 8px;width:80px">Jed.mj.</th>
+              <th style="padding:7px 8px;width:80px;text-align:right">Količina</th>
+              <th style="padding:7px 8px;width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="zah-stavke-body"></tbody>
+        </table>
+      </div>
+      <button class="btn bs" onclick="dodajZahStavku()" style="margin-top:8px"><i class="ti ti-plus"></i> Dodaj stavku</button>
+
+      <div class="fg" style="margin-top:1rem">
+        <label class="fl">Napomena</label>
+        <textarea id="zah-nap" rows="2" placeholder="Opcionalno..."></textarea>
+      </div>
+      <div id="zah-al"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-zahtjevnica')">Odustani</button>
+      <button class="btn bs" onclick="saveZahtjevnica('nova')"><i class="ti ti-device-floppy"></i> Spremi</button>
+      <button class="btn bp" onclick="saveZahtjevnica('u_obradi')"><i class="ti ti-send"></i> Pošalji na obradu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Pregled Zahtjevnice (za odobravanje) -->
+<div class="mo" id="mo-zah-pregled">
+  <div class="md" style="max-width:800px;width:95%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-file-description"></i> Zahtjevnica <span id="zah-pregled-broj"></span></div>
+      <button class="mcl" onclick="closeM('mo-zah-pregled')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb" id="zah-pregled-content"></div>
+    <div class="mft" id="zah-pregled-actions"></div>
+  </div>
+</div>
+
+<!-- MODAL: Nova/Uredi Narudžbenica -->
+<div class="mo" id="mo-narudzbenica">
+  <div class="md" style="max-width:900px;width:95%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-shopping-cart"></i> <span id="nar-modal-title">Nova narudžbenica</span></div>
+      <button class="mcl" onclick="closeM('mo-narudzbenica')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem">
+        <div class="fg">
+          <label class="fl">Broj narudžbenice</label>
+          <input type="text" id="nar-broj" readonly style="background:var(--bg3);font-weight:600">
+        </div>
+        <div class="fg">
+          <label class="fl">Datum <span class="req">*</span></label>
+          <input type="date" id="nar-datum">
+        </div>
+        <div class="fg">
+          <label class="fl">Veza sa zahtjevnicom</label>
+          <select id="nar-zah"><option value="">– bez veze –</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="fl">Dobavljač <span class="req">*</span></label>
+          <select id="nar-dob"><option value="">– odaberi –</option></select>
+        </div>
+        <div class="fg">
+          <label class="fl">Ili upiši naziv dobavljača</label>
+          <input type="text" id="nar-dob-naziv" placeholder="Ako nije u šifarniku">
+        </div>
+        <div class="fg">
+          <label class="fl">Rok isporuke</label>
+          <input type="date" id="nar-rok">
+        </div>
+        <div class="fg">
+          <label class="fl">Mjesto isporuke</label>
+          <input type="text" id="nar-mjesto" placeholder="npr. Skladište, ul. ...">
+        </div>
+      </div>
+
+      <!-- Stavke -->
+      <div style="font-weight:600;font-size:13px;margin:1rem 0 8px"><i class="ti ti-list"></i> Stavke</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="nar-stavke-tbl">
+          <thead>
+            <tr style="background:var(--bg3)">
+              <th style="padding:7px 8px;width:40px">Rb.</th>
+              <th style="padding:7px 8px;text-align:left">Naziv robe/usluge</th>
+              <th style="padding:7px 8px;width:70px">Jed.mj.</th>
+              <th style="padding:7px 8px;width:80px;text-align:right">Kol.</th>
+              <th style="padding:7px 8px;width:100px;text-align:right">Cijena (bez PDV)</th>
+              <th style="padding:7px 8px;width:70px;text-align:right">PDV %</th>
+              <th style="padding:7px 8px;width:100px;text-align:right">Ukupno s PDV</th>
+              <th style="padding:7px 8px;width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="nar-stavke-body"></tbody>
+          <tfoot>
+            <tr style="background:var(--bg3);font-weight:700">
+              <td colspan="4" style="padding:7px 8px">UKUPNO</td>
+              <td style="padding:7px 8px;text-align:right" id="nar-tot-bez">0.00 €</td>
+              <td style="padding:7px 8px"></td>
+              <td style="padding:7px 8px;text-align:right" id="nar-tot-pdv">0.00 €</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <button class="btn bs" onclick="dodajNarStavku()" style="margin-top:8px"><i class="ti ti-plus"></i> Dodaj stavku</button>
+
+      <div class="fg" style="margin-top:1rem">
+        <label class="fl">Napomena</label>
+        <textarea id="nar-nap" rows="2"></textarea>
+      </div>
+      <div id="nar-al"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-narudzbenica')">Odustani</button>
+      <button class="btn bs" onclick="saveNarudzbenica('nacrt')"><i class="ti ti-device-floppy"></i> Spremi nacrt</button>
+      <button class="btn bp" onclick="saveNarudzbenica('poslano_direktoru')"><i class="ti ti-send"></i> Pošalji direktoru</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Dobavljač -->
+<div class="mo" id="mo-dobavljac">
+  <div class="md" style="max-width:500px">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-building-store"></i> <span id="dob-modal-title">Novi dobavljač</span></div>
+      <button class="mcl" onclick="closeM('mo-dobavljac')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Naziv <span class="req">*</span></label><input type="text" id="dob-naziv"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg"><label class="fl">OIB</label><input type="text" id="dob-oib" maxlength="11"></div>
+        <div class="fg"><label class="fl">Kontakt (tel.)</label><input type="text" id="dob-kontakt"></div>
+      </div>
+      <div class="fg"><label class="fl">Adresa</label><input type="text" id="dob-adresa"></div>
+      <div class="fg"><label class="fl">Email</label><input type="email" id="dob-email"></div>
+      <div class="fg"><label class="fl">Napomena</label><textarea id="dob-nap" rows="2"></textarea></div>
+      <div id="dob-al"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-dobavljac')">Odustani</button>
+      <button class="btn bp" onclick="saveDobavljac()"><i class="ti ti-check"></i> Spremi</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════ MODALI NABAVE ══════════════════════ -->
+
+<!-- MODAL: Nova/Uredi Zahtjevnica -->
+<div class="mo" id="mo-zahtjevnica">
+  <div class="md" style="max-width:820px;width:96%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-file-description"></i> <span id="zah-modal-title">Nova zahtjevnica</span></div>
+      <button class="mcl" onclick="closeM('mo-zahtjevnica')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb" style="max-height:80vh;overflow-y:auto">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="fg" style="margin:0"><label class="fl">Broj</label><input type="text" id="zah-broj" style="font-weight:700"></div>
+        <div class="fg" style="margin:0"><label class="fl">Datum <span class="req">*</span></label><input type="date" id="zah-datum"></div>
+        <div class="fg" style="margin:0"><label class="fl">Vrsta <span class="req">*</span></label>
+          <select id="zah-vrsta">
+            <option value="roba">Roba</option>
+            <option value="usluga">Usluga</option>
+            <option value="radovi">Radovi</option>
+          </select>
+        </div>
+        <div class="fg" style="margin:0"><label class="fl">Jedinica <span class="req">*</span></label>
+          <select id="zah-jed"></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="fg" style="margin:0"><label class="fl">Mjesto troška <span class="req">*</span></label>
+          <input type="text" id="zah-mjesto" placeholder="npr. Duška Janbay (stavka 4.)"></div>
+        <div class="fg" style="margin:0"><label class="fl">Zatražio/la</label>
+          <input type="text" id="zah-zatrazio" placeholder="Ime i prezime"></div>
+      </div>
+
+      <!-- Stavke -->
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-list"></i> Stavke zahtjevnice</div>
+      <div style="overflow-x:auto;margin-bottom:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--bg3)">
+            <th style="padding:6px 8px;width:35px">Rb.</th>
+            <th style="padding:6px 8px;text-align:left;width:110px">Svrha utroška</th>
+            <th style="padding:6px 8px;text-align:left">Naziv materijala / robe / usluge</th>
+            <th style="padding:6px 8px;width:70px">Jed.mj.</th>
+            <th style="padding:6px 8px;width:75px;text-align:right">Količina</th>
+            <th style="padding:6px 8px;width:30px"></th>
+          </tr></thead>
+          <tbody id="zah-stavke-body"></tbody>
+        </table>
+      </div>
+      <button class="btn bs" onclick="dodajZahStavku()" style="font-size:12px;padding:4px 10px"><i class="ti ti-plus"></i> Dodaj stavku</button>
+
+      <div class="fg" style="margin-top:12px"><label class="fl">Napomena</label>
+        <textarea id="zah-nap" rows="2" placeholder="Opcionalno..."></textarea>
+      </div>
+      <div id="zah-al"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-zahtjevnica')">Odustani</button>
+      <button class="btn bs" onclick="saveZahtjevnica('nova')"><i class="ti ti-device-floppy"></i> Spremi</button>
+      <button class="btn bp" onclick="saveZahtjevnica('kod_nabave')"><i class="ti ti-send"></i> Pošalji nabavi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Pregled zahtjevnice / narudžbenice -->
+<div class="mo" id="mo-pregled-nab">
+  <div class="md" style="max-width:860px;width:96%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-eye"></i> <span id="pregled-nab-title">Pregled</span></div>
+      <button class="mcl" onclick="closeM('mo-pregled-nab')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb" id="pregled-nab-content" style="max-height:80vh;overflow-y:auto"></div>
+    <div class="mft" id="pregled-nab-actions"></div>
+  </div>
+</div>
+
+<!-- MODAL: Nova/Uredi Narudžbenica -->
+<div class="mo" id="mo-narudzbenica">
+  <div class="md" style="max-width:900px;width:96%">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-shopping-cart"></i> <span id="nar-modal-title">Nova narudžbenica</span></div>
+      <button class="mcl" onclick="closeM('mo-narudzbenica')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb" style="max-height:80vh;overflow-y:auto">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="fg" style="margin:0"><label class="fl">Broj narudžbenice</label>
+          <input type="text" id="nar-broj" placeholder="0001-2026" style="font-weight:700"></div>
+        <div class="fg" style="margin:0"><label class="fl">Datum <span class="req">*</span></label>
+          <input type="date" id="nar-datum"></div>
+        <div class="fg" style="margin:0"><label class="fl">Zahtjevnica</label>
+          <select id="nar-zah"><option value="">– bez veze –</option></select>
+        </div>
+      </div>
+
+      <!-- Dobavljač -->
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-building-store"></i> Dobavljač (isporučitelj)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="fg" style="margin:0"><label class="fl">Odaberi iz liste</label>
+          <select id="nar-dob-select" onchange="popuniDobavljaca()">
+            <option value="">– ili upiši ručno –</option>
+          </select>
+        </div>
+        <div class="fg" style="margin:0"><label class="fl">Naziv <span class="req">*</span></label>
+          <input type="text" id="nar-dob-naziv" placeholder="Naziv dobavljača" oninput="spremiNovogDobavljaca()"></div>
+        <div class="fg" style="margin:0"><label class="fl">OIB</label>
+          <input type="text" id="nar-dob-oib" maxlength="11"></div>
+        <div class="fg" style="margin:0"><label class="fl">Adresa</label>
+          <input type="text" id="nar-dob-adresa"></div>
+      </div>
+
+      <!-- Stavke -->
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-list"></i> Stavke narudžbenice</div>
+      <div style="overflow-x:auto;margin-bottom:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--bg3)">
+            <th style="padding:6px;width:35px">Rb.</th>
+            <th style="padding:6px;text-align:left">Opis proizvoda/usluge</th>
+            <th style="padding:6px;width:65px">Jed.</th>
+            <th style="padding:6px;width:70px;text-align:right">Kol.</th>
+            <th style="padding:6px;width:95px;text-align:right">Cijena</th>
+            <th style="padding:6px;width:60px;text-align:right">PDV%</th>
+            <th style="padding:6px;width:95px;text-align:right">Iznos stavke</th>
+            <th style="padding:6px;width:30px"></th>
+          </tr></thead>
+          <tbody id="nar-stavke-body"></tbody>
+          <tfoot><tr style="background:var(--bg3);font-weight:700">
+            <td colspan="4" style="padding:7px 8px">UKUPNO</td>
+            <td style="padding:7px 8px;text-align:right" id="nar-tot-bez">0,00 €</td>
+            <td style="padding:7px 8px;text-align:right" id="nar-tot-pdv-iznos">PDV: 0,00 €</td>
+            <td style="padding:7px 8px;text-align:right" id="nar-tot-spdv">0,00 €</td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <button class="btn bs" onclick="dodajNarStavku()" style="font-size:12px;padding:4px 10px"><i class="ti ti-plus"></i> Dodaj stavku</button>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div class="fg" style="margin:0"><label class="fl">Rok isporuke</label><input type="date" id="nar-rok"></div>
+        <div class="fg" style="margin:0"><label class="fl">Mjesto isporuke</label><input type="text" id="nar-mjesto" placeholder="npr. Skladište, ul. ..."></div>
+        <div class="fg" style="margin:0"><label class="fl">Način otpreme</label><input type="text" id="nar-otprema" value="Po dogovoru"></div>
+        <div class="fg" style="margin:0"><label class="fl">Napomene</label><input type="text" id="nar-nap" placeholder="npr. Klasa/Urbroj, sekcija..."></div>
+      </div>
+
+      <!-- Upload ponude -->
+      <div style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-file-upload"></i> Priloži ponudu</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="nar-ponuda-broj" placeholder="Broj ponude (npr. 638-26)" style="border:1px solid var(--border);border-radius:6px;padding:6px 10px;flex:1;min-width:150px">
+          <label style="cursor:pointer;display:flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px">
+            <i class="ti ti-upload"></i> Upload PDF/JPG
+            <input type="file" id="nar-ponuda-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="previewPonuda(this)">
+          </label>
+          <span id="nar-ponuda-preview" style="font-size:12px;color:var(--text2)"></span>
+        </div>
+      </div>
+
+      <div id="nar-al" style="margin-top:8px"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-narudzbenica')">Odustani</button>
+      <button class="btn bs" onclick="saveNarudzbenica('nacrt')"><i class="ti ti-device-floppy"></i> Spremi nacrt</button>
+      <button class="btn bp" onclick="saveNarudzbenica('kod_direktora')"><i class="ti ti-send"></i> Pošalji direktoru</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Dobavljač -->
+<div class="mo" id="mo-dobavljac">
+  <div class="md" style="max-width:500px">
+    <div class="mhd">
+      <div class="mtt"><i class="ti ti-building-store"></i> <span id="dob-modal-title">Novi dobavljač</span></div>
+      <button class="mcl" onclick="closeM('mo-dobavljac')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Naziv <span class="req">*</span></label><input type="text" id="dob-naziv"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label class="fl">OIB</label><input type="text" id="dob-oib" maxlength="11"></div>
+        <div class="fg"><label class="fl">Kontakt (tel.)</label><input type="text" id="dob-kontakt"></div>
+        <div class="fg"><label class="fl">Adresa</label><input type="text" id="dob-adresa"></div>
+        <div class="fg"><label class="fl">Grad</label><input type="text" id="dob-grad"></div>
+        <div class="fg"><label class="fl">Email</label><input type="email" id="dob-email"></div>
+        <div class="fg"><label class="fl">IBAN</label><input type="text" id="dob-iban"></div>
+      </div>
+      <div class="fg"><label class="fl">Napomena</label><textarea id="dob-nap" rows="2"></textarea></div>
+      <div id="dob-al"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bs" onclick="closeM('mo-dobavljac')">Odustani</button>
+      <button class="btn bp" onclick="saveDobavljac()"><i class="ti ti-check"></i> Spremi</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- MODAL: Promjena lozinke -->
 <div class="mo" id="mo-pwd">
@@ -1289,7 +1754,7 @@ function sP(n){
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,zahtjevnice:setupZahtjevnice,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci,zahtjevnice:setupZahtjevnice,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci})[n]?.();
 }
 
 function vJ(){
@@ -3914,6 +4379,765 @@ async function saveVrijednostBoda(){
   }
 }
 
+
+
+// ══════════════════════════════════════════════════════════════
+// MODUL NABAVE - ZAHTJEVNICE I NARUDŽBENICE
+// ══════════════════════════════════════════════════════════════
+
+const ZAH_STATUS = {
+  nova: {lbl:'Nova', cls:'bdg bgy', color:'#888'},
+  kod_nabave: {lbl:'Kod nabave', cls:'bdg bbl', color:'#1a5fa8'},
+  ponuda_trazena: {lbl:'Ponuda tražena', cls:'bdg bbl', color:'#1a5fa8'},
+  kod_direktora: {lbl:'Kod direktora', cls:'bdg' ,color:'#e6a817'},
+  odobrena: {lbl:'Odobrena', cls:'bdg bgr', color:'#22863a'},
+  odbijena: {lbl:'Odbijena', cls:'bdg bad', color:'#c0392b'},
+  realizirana: {lbl:'Realizirana', cls:'bdg bgd', color:'#555'}
+};
+const NAR_STATUS = {
+  nacrt: {lbl:'Nacrt', cls:'bdg bgy'},
+  kod_direktora: {lbl:'Kod direktora', cls:'bdg', color:'#e6a817'},
+  odobrena: {lbl:'Odobrena', cls:'bdg bgr'},
+  odbijena: {lbl:'Odbijena', cls:'bdg bad'},
+  poslana: {lbl:'Poslana dobavljaču', cls:'bdg bbl'},
+  realizirana: {lbl:'Realizirana', cls:'bdg bgd'}
+};
+const VRSTA_LBL = {roba:'Roba',usluga:'Usluga',radovi:'Radovi'};
+
+// ── Generiranje broja ──────────────────────────────────────────
+async function nextZahBroj(god){
+  const god2=String(god).slice(-2);
+  const {data}=await SB.from('zahtjevnice').select('broj').eq('godina',god).order('id',{ascending:false}).limit(1);
+  if(data&&data.length){
+    const last=parseInt(data[0].broj.split('/')[0])||0;
+    return String(last+1).padStart(3,'0')+'/'+god2;
+  }
+  return '001/'+god2;
+}
+
+async function nextNarBroj(god){
+  const {data}=await SB.from('narudzbenice').select('broj').eq('godina',god).order('id',{ascending:false}).limit(1);
+  if(data&&data.length){
+    const last=parseInt(data[0].broj.split('-')[0])||0;
+    return String(last+1).padStart(4,'0')+'-'+god;
+  }
+  return '0001-'+god;
+}
+
+// ══ ZAHTJEVNICE ════════════════════════════════════════════════
+
+async function setupZahtjevnice(){
+  const vj=vJ(), jeds=DB.jedinice.filter(j=>vj.includes(j.id));
+  const el=document.getElementById('zah-fj');
+  if(el) el.innerHTML='<option value="">Sve jedinice</option>'+jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
+  await loadZahtjevnice();
+}
+
+async function loadZahtjevnice(){
+  const st=document.getElementById('zah-fst')?.value||'';
+  const vr=document.getElementById('zah-fvr')?.value||'';
+  const jid=document.getElementById('zah-fj')?.value||'';
+  const god=parseInt(document.getElementById('zah-fg')?.value)||2026;
+  const el=document.getElementById('zah-list');
+  if(!el) return;
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+
+  try{
+    let q=SB.from('zahtjevnice').select('*').eq('godina',god).order('id',{ascending:false});
+    if(st) q=q.eq('status',st);
+    if(vr) q=q.eq('vrsta',vr);
+    if(jid) q=q.eq('jedinica_id',parseInt(jid));
+    const {data,error}=await q;
+    if(error) throw error;
+    if(!data||!data.length){el.innerHTML='<div class="empty"><i class="ti ti-file-description"></i><p>Nema zahtjevnica za odabrane filtere</p></div>';return;}
+
+    let html=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:8px 10px;text-align:left">Broj</th>
+        <th style="padding:8px 10px">Datum</th>
+        <th style="padding:8px 10px">Vrsta</th>
+        <th style="padding:8px 10px;text-align:left">Mjesto troška</th>
+        <th style="padding:8px 10px;text-align:left">Zatražio</th>
+        <th style="padding:8px 10px">Status</th>
+        <th style="padding:8px 10px">Akcije</th>
+      </tr></thead><tbody>`;
+
+    data.forEach(z=>{
+      const st=ZAH_STATUS[z.status]||{lbl:z.status,cls:'bdg bgy'};
+      const jName=DB.jedinice.find(j=>j.id===z.jedinica_id)?.name||'–';
+      html+=`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;font-weight:700">${z.broj}</td>
+        <td style="padding:8px 10px;text-align:center">${z.datum}</td>
+        <td style="padding:8px 10px;text-align:center"><span class="bdg bgy">${VRSTA_LBL[z.vrsta]||z.vrsta}</span></td>
+        <td style="padding:8px 10px">${z.mjesto_troska||'–'}</td>
+        <td style="padding:8px 10px">${z.zatrazio_ime||'–'}</td>
+        <td style="padding:8px 10px;text-align:center"><span class="${st.cls}">${st.lbl}</span></td>
+        <td style="padding:8px 10px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn bsm bs" onclick="pregledZahtjevnica(${z.id})"><i class="ti ti-eye"></i> Pregled</button>
+            ${z.status==='nova'?`<button class="btn bsm bs" onclick="editZahtjevnica(${z.id})"><i class="ti ti-edit"></i></button>`:''}
+            ${(z.status==='kod_direktora'&&CU?.role==='admin')?`<button class="btn bsm bp" onclick="odobriZahtjevnicu(${z.id},true)"><i class="ti ti-check"></i> Odobri</button><button class="btn bsm bd" onclick="odobriZahtjevnicu(${z.id},false)"><i class="ti ti-x"></i></button>`:''}
+            ${z.status==='odobrena'?`<button class="btn bsm bp" onclick="napraviNarudzbenicu(${z.id})"><i class="ti ti-shopping-cart"></i> Narudžb.</button>`:''}
+          </div>
+        </td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+    el.innerHTML=html;
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+async function openNovaZahtjevnica(){
+  window._zahEdit=null;
+  const god=new Date().getFullYear();
+  const broj=await nextZahBroj(god);
+  document.getElementById('zah-modal-title').textContent='Nova zahtjevnica';
+  document.getElementById('zah-broj').value=broj;
+  document.getElementById('zah-datum').value=new Date().toISOString().split('T')[0];
+  document.getElementById('zah-vrsta').value='roba';
+  document.getElementById('zah-mjesto').value='';
+  document.getElementById('zah-zatrazio').value='';
+  document.getElementById('zah-nap').value='';
+  document.getElementById('zah-al').innerHTML='';
+  const vj=vJ(), jeds=DB.jedinice.filter(j=>vj.includes(j.id));
+  document.getElementById('zah-jed').innerHTML=jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
+  window._zahStavke=[{svrha:'',naziv:'',jed_mjere:'kom',kolicina:1}];
+  renderZahStavke();
+  openM('mo-zahtjevnica');
+}
+
+async function editZahtjevnica(id){
+  const {data:z}=await SB.from('zahtjevnice').select('*').eq('id',id).single();
+  const {data:stavke}=await SB.from('zahtjevnice_stavke').select('*').eq('zahtjevnica_id',id).order('rbr');
+  if(!z) return;
+  window._zahEdit=id;
+  document.getElementById('zah-modal-title').textContent='Uredi zahtjevnicu';
+  document.getElementById('zah-broj').value=z.broj;
+  document.getElementById('zah-datum').value=z.datum;
+  document.getElementById('zah-vrsta').value=z.vrsta||'roba';
+  document.getElementById('zah-mjesto').value=z.mjesto_troska||'';
+  document.getElementById('zah-zatrazio').value=z.zatrazio_ime||'';
+  document.getElementById('zah-nap').value=z.napomena||'';
+  document.getElementById('zah-al').innerHTML='';
+  const vj=vJ(), jeds=DB.jedinice.filter(j=>vj.includes(j.id));
+  document.getElementById('zah-jed').innerHTML=jeds.map(j=>`<option value="${j.id}" ${j.id===z.jedinica_id?'selected':''}>${j.name}</option>`).join('');
+  window._zahStavke=(stavke||[]).map(s=>({svrha:s.svrha_utroska||'',naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina_trazena||1}));
+  if(!window._zahStavke.length) window._zahStavke=[{svrha:'',naziv:'',jed_mjere:'kom',kolicina:1}];
+  renderZahStavke();
+  openM('mo-zahtjevnica');
+}
+
+function renderZahStavke(){
+  const stavke=window._zahStavke||[];
+  const tbody=document.getElementById('zah-stavke-body');
+  if(!tbody) return;
+  tbody.innerHTML=stavke.map((s,i)=>`<tr>
+    <td style="padding:4px 6px;text-align:center;color:var(--text2)">${i+1}.</td>
+    <td style="padding:4px 6px"><input type="text" value="${s.svrha||''}" placeholder="Svrha" oninput="zahSC(${i},'svrha',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px"></td>
+    <td style="padding:4px 6px"><input type="text" value="${s.naziv||''}" placeholder="Naziv materijala/robe/usluge" oninput="zahSC(${i},'naziv',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px"></td>
+    <td style="padding:4px 6px"><input type="text" value="${s.jed_mjere||'kom'}" oninput="zahSC(${i},'jed_mjere',this.value)" style="width:60px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center;font-size:12px"></td>
+    <td style="padding:4px 6px"><input type="number" value="${s.kolicina||1}" min="0.001" step="1" oninput="zahSC(${i},'kolicina',parseFloat(this.value)||1)" style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:right;font-size:12px"></td>
+    <td style="padding:4px 6px"><button onclick="zahUkloni(${i})" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:18px;line-height:1">×</button></td>
+  </tr>`).join('');
+}
+function zahSC(i,f,v){if(window._zahStavke)window._zahStavke[i][f]=v;}
+function dodajZahStavku(){window._zahStavke=window._zahStavke||[];window._zahStavke.push({svrha:'',naziv:'',jed_mjere:'kom',kolicina:1});renderZahStavke();}
+function zahUkloni(i){if(window._zahStavke&&window._zahStavke.length>1){window._zahStavke.splice(i,1);renderZahStavke();}}
+
+async function saveZahtjevnica(status){
+  const broj=document.getElementById('zah-broj').value.trim();
+  const datum=document.getElementById('zah-datum').value;
+  const vrsta=document.getElementById('zah-vrsta').value;
+  const jid=parseInt(document.getElementById('zah-jed').value)||null;
+  const mjesto=document.getElementById('zah-mjesto').value.trim();
+  const zatrazio=document.getElementById('zah-zatrazio').value.trim();
+  const nap=document.getElementById('zah-nap').value.trim();
+  const stavke=(window._zahStavke||[]).filter(s=>s.naziv.trim());
+  const god=new Date().getFullYear();
+
+  if(!datum||!mjesto){document.getElementById('zah-al').innerHTML='<div class="al ald">Datum i mjesto troška su obavezni!</div>';return;}
+  if(!stavke.length){document.getElementById('zah-al').innerHTML='<div class="al ald">Unesite barem jednu stavku!</div>';return;}
+
+  document.getElementById('zah-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
+  try{
+    const payload={broj,godina:god,datum,vrsta,jedinica_id:jid,mjesto_troska:mjesto,
+      zatrazio_ime:zatrazio,napomena:nap,status,created_by:SB_USER?.id,updated_at:new Date().toISOString()};
+    let zahId=window._zahEdit;
+    if(zahId){
+      await SB.from('zahtjevnice').update(payload).eq('id',zahId);
+    } else {
+      const {data,error}=await SB.from('zahtjevnice').insert(payload).select().single();
+      if(error) throw error;
+      zahId=data.id;
+    }
+    await SB.from('zahtjevnice_stavke').delete().eq('zahtjevnica_id',zahId);
+    await SB.from('zahtjevnice_stavke').insert(stavke.map((s,i)=>({
+      zahtjevnica_id:zahId,rbr:i+1,svrha_utroska:s.svrha,naziv:s.naziv,
+      jed_mjere:s.jed_mjere||'kom',kolicina_trazena:parseFloat(s.kolicina)||1
+    })));
+    closeM('mo-zahtjevnica');
+    showToast(status==='kod_nabave'?'✅ Zahtjevnica poslana nabavi!':'✅ Zahtjevnica snimljena!','success');
+    loadZahtjevnice();
+  }catch(e){document.getElementById('zah-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+async function pregledZahtjevnica(id){
+  const {data:z}=await SB.from('zahtjevnice').select('*').eq('id',id).single();
+  const {data:stavke}=await SB.from('zahtjevnice_stavke').select('*').eq('zahtjevnica_id',id).order('rbr');
+  if(!z) return;
+  document.getElementById('pregled-nab-title').textContent=`Zahtjevnica ${z.broj}`;
+  const st=ZAH_STATUS[z.status]||{lbl:z.status,cls:'bdg bgy'};
+  const jName=DB.jedinice.find(j=>j.id===z.jedinica_id)?.name||'–';
+  document.getElementById('pregled-nab-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:1rem;padding:12px;background:var(--bg3);border-radius:8px">
+      <div><div style="font-size:11px;color:var(--text2)">Broj</div><div style="font-weight:700;font-size:16px">${z.broj}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Datum</div><div style="font-weight:600">${z.datum}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Vrsta</div><div><span class="bdg bgy">${VRSTA_LBL[z.vrsta]||z.vrsta}</span></div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Jedinica</div><div style="font-weight:600">${jName}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Status</div><span class="${st.cls}">${st.lbl}</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+      <div><strong>Mjesto troška:</strong><br>${z.mjesto_troska||'–'}</div>
+      <div><strong>Zatražio/la:</strong><br>${z.zatrazio_ime||'–'}</div>
+      ${z.napomena?`<div><strong>Napomena:</strong><br>${z.napomena}</div>`:''}
+      ${z.broj_ponude?`<div><strong>Broj ponude:</strong><br>${z.broj_ponude}</div>`:''}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:1rem">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:7px 8px;width:35px">Rb.</th>
+        <th style="padding:7px 8px;text-align:left;width:110px">Svrha utroška</th>
+        <th style="padding:7px 8px;text-align:left">Naziv materijala / robe / usluge</th>
+        <th style="padding:7px 8px;width:70px">Jed.mj.</th>
+        <th style="padding:7px 8px;text-align:right;width:70px">Tražena</th>
+        <th style="padding:7px 8px;text-align:right;width:70px">Odobrena</th>
+        <th style="padding:7px 8px;text-align:right;width:70px">Izdana</th>
+        <th style="padding:7px 8px;width:80px">Br.izdatnice</th>
+      </tr></thead>
+      <tbody>${(stavke||[]).map(s=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;text-align:center">${s.rbr}.</td>
+        <td style="padding:6px 8px">${s.svrha_utroska||''}</td>
+        <td style="padding:6px 8px">${s.naziv}</td>
+        <td style="padding:6px 8px;text-align:center">${s.jed_mjere}</td>
+        <td style="padding:6px 8px;text-align:right">${s.kolicina_trazena}</td>
+        <td style="padding:6px 8px;text-align:right">${s.kolicina_odobrena||'–'}</td>
+        <td style="padding:6px 8px;text-align:right">${s.kolicina_izdana||'–'}</td>
+        <td style="padding:6px 8px">${s.broj_izdatnice||'–'}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    ${z.odobrio_ime?`<div style="padding:8px;background:rgba(34,134,58,.08);border-radius:6px"><strong>Odobrio:</strong> ${z.odobrio_ime} &nbsp;|&nbsp; ${z.datum_odobrenja?.split('T')[0]||''}</div>`:''}
+    ${z.ponuda_url?`<div style="margin-top:8px"><a href="${z.ponuda_url}" target="_blank" class="btn bs" style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-file-download"></i> Priložena ponuda</a></div>`:''}
+  `;
+
+  let actions=`<button class="btn bs" onclick="closeM('mo-pregled-nab')">Zatvori</button>`;
+  if(z.status==='kod_direktora'&&CU?.role==='admin'){
+    actions+=`<button class="btn bp" onclick="odobriZahtjevnicu(${id},true)"><i class="ti ti-check"></i> Odobri</button>
+    <button class="btn bd" onclick="odobriZahtjevnicu(${id},false)"><i class="ti ti-x"></i> Odbij</button>`;
+  }
+  if(z.status==='nova'||z.status==='kod_nabave'){
+    actions+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');editZahtjevnica(${id})"><i class="ti ti-edit"></i> Uredi</button>`;
+  }
+  if(z.status==='odobrena'){
+    actions+=`<button class="btn bp" onclick="closeM('mo-pregled-nab');napraviNarudzbenicu(${id})"><i class="ti ti-shopping-cart"></i> Napravi narudžbenicu</button>`;
+  }
+  document.getElementById('pregled-nab-actions').innerHTML=actions;
+  openM('mo-pregled-nab');
+}
+
+async function odobriZahtjevnicu(id,odobri){
+  if(!odobri){
+    const razlog=prompt('Razlog odbijanja:');
+    if(razlog===null) return;
+    await SB.from('zahtjevnice').update({status:'odbijena',napomena:razlog,updated_at:new Date().toISOString()}).eq('id',id);
+    showToast('Zahtjevnica odbijena','info');
+  } else {
+    const ime=CU?.name||'Administrator';
+    await SB.from('zahtjevnice').update({status:'odobrena',odobrio_ime:ime,datum_odobrenja:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
+    showToast('✅ Zahtjevnica odobrena!','success');
+  }
+  closeM('mo-pregled-nab');
+  loadZahtjevnice();
+}
+
+async function napraviNarudzbenicu(zahId){
+  closeM('mo-pregled-nab');
+  await openNovaNarudzbenica(zahId);
+}
+
+// ══ NARUDŽBENICE ════════════════════════════════════════════════
+
+async function setupNarudzbenice(){
+  await loadNarudzbenice();
+}
+
+async function loadNarudzbenice(){
+  const st=document.getElementById('nar-fst')?.value||'';
+  const god=parseInt(document.getElementById('nar-fg')?.value)||2026;
+  const el=document.getElementById('nar-list');
+  if(!el) return;
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  try{
+    let q=SB.from('narudzbenice').select('*').eq('godina',god).order('id',{ascending:false});
+    if(st) q=q.eq('status',st);
+    const {data,error}=await q;
+    if(error) throw error;
+    if(!data||!data.length){el.innerHTML='<div class="empty"><i class="ti ti-shopping-cart"></i><p>Nema narudžbenica</p></div>';return;}
+    let html=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:8px 10px;text-align:left">Broj</th>
+        <th style="padding:8px 10px">Datum</th>
+        <th style="padding:8px 10px;text-align:left">Dobavljač</th>
+        <th style="padding:8px 10px;text-align:right">Bez PDV</th>
+        <th style="padding:8px 10px;text-align:right">S PDV</th>
+        <th style="padding:8px 10px">Status</th>
+        <th style="padding:8px 10px">Akcije</th>
+      </tr></thead><tbody>`;
+    data.forEach(n=>{
+      const st=NAR_STATUS[n.status]||{lbl:n.status,cls:'bdg bgy'};
+      html+=`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;font-weight:700">${n.broj}</td>
+        <td style="padding:8px 10px;text-align:center">${n.datum}</td>
+        <td style="padding:8px 10px">${n.dobavljac_naziv||'–'}</td>
+        <td style="padding:8px 10px;text-align:right">${parseFloat(n.ukupno_bez_pdv||0).toFixed(2)} €</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:600">${parseFloat(n.ukupno_s_pdv||0).toFixed(2)} €</td>
+        <td style="padding:8px 10px;text-align:center"><span class="${st.cls}">${st.lbl}</span></td>
+        <td style="padding:8px 10px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn bsm bs" onclick="pregledNarudzbenica(${n.id})"><i class="ti ti-eye"></i> Pregled</button>
+            ${n.status==='nacrt'?`<button class="btn bsm bs" onclick="editNarudzbenica(${n.id})"><i class="ti ti-edit"></i></button>`:''}
+            ${(n.status==='kod_direktora'&&CU?.role==='admin')?`<button class="btn bsm bp" onclick="odobriNarudzbenicu(${n.id},true)"><i class="ti ti-check"></i> Odobri</button><button class="btn bsm bd" onclick="odobriNarudzbenicu(${n.id},false)"><i class="ti ti-x"></i></button>`:''}
+            ${n.status==='odobrena'?`<button class="btn bsm bp" onclick="posaljiNarudzbenicu(${n.id})"><i class="ti ti-send"></i> Pošalji</button>`:''}
+          </div>
+        </td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+    el.innerHTML=html;
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+async function openNovaNarudzbenica(zahId){
+  window._narEdit=null;
+  window._narPonudaFile=null;
+  const god=new Date().getFullYear();
+  const broj=await nextNarBroj(god);
+  document.getElementById('nar-modal-title').textContent='Nova narudžbenica';
+  document.getElementById('nar-broj').value=broj;
+  document.getElementById('nar-datum').value=new Date().toISOString().split('T')[0];
+  document.getElementById('nar-rok').value='';
+  document.getElementById('nar-mjesto').value='';
+  document.getElementById('nar-otprema').value='Po dogovoru';
+  document.getElementById('nar-nap').value='';
+  document.getElementById('nar-ponuda-broj').value='';
+  document.getElementById('nar-ponuda-preview').textContent='';
+  document.getElementById('nar-al').innerHTML='';
+  document.getElementById('nar-dob-naziv').value='';
+  document.getElementById('nar-dob-oib').value='';
+  document.getElementById('nar-dob-adresa').value='';
+
+  // Load dobavljaci
+  const {data:dobs}=await SB.from('dobavljaci').select('id,naziv,oib,adresa').eq('aktivan',true).order('naziv');
+  window._dobavljaciList=dobs||[];
+  document.getElementById('nar-dob-select').innerHTML='<option value="">– ili upiši ručno –</option>'+(dobs||[]).map(d=>`<option value="${d.id}">${d.naziv}</option>`).join('');
+
+  // Load zahtjevnice
+  const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').eq('status','odobrena').order('id',{ascending:false});
+  document.getElementById('nar-zah').innerHTML='<option value="">– bez veze –</option>'+(zahs||[]).map(z=>`<option value="${z.id}" ${z.id===zahId?'selected':''}>${z.broj} – ${z.mjesto_troska||''}</option>`).join('');
+
+  // If linked to zahtjevnica, prefill stavke
+  if(zahId){
+    const {data:zst}=await SB.from('zahtjevnice_stavke').select('*').eq('zahtjevnica_id',zahId).order('rbr');
+    window._narStavke=(zst||[]).map(s=>({naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina_trazena||1,cijena:0,pdv:25}));
+  } else {
+    window._narStavke=[{naziv:'',jed_mjere:'kom',kolicina:1,cijena:0,pdv:25}];
+  }
+  renderNarStavke();
+  openM('mo-narudzbenica');
+}
+
+function popuniDobavljaca(){
+  const id=parseInt(document.getElementById('nar-dob-select').value)||0;
+  const d=(window._dobavljaciList||[]).find(x=>x.id===id);
+  if(d){
+    document.getElementById('nar-dob-naziv').value=d.naziv||'';
+    document.getElementById('nar-dob-oib').value=d.oib||'';
+    document.getElementById('nar-dob-adresa').value=d.adresa||'';
+  }
+}
+
+function spremiNovogDobavljaca(){
+  // Auto-save new supplier to DB when name is entered and user moves on
+  // Will be saved on narudzbenica save
+}
+
+function previewPonuda(input){
+  const file=input.files[0];
+  if(file){
+    window._narPonudaFile=file;
+    document.getElementById('nar-ponuda-preview').textContent=`📎 ${file.name}`;
+  }
+}
+
+function renderNarStavke(){
+  const stavke=window._narStavke||[];
+  const tbody=document.getElementById('nar-stavke-body');
+  if(!tbody) return;
+  tbody.innerHTML=stavke.map((s,i)=>`<tr>
+    <td style="padding:3px 5px;text-align:center;color:var(--text2)">${i+1}.</td>
+    <td style="padding:3px 5px"><input type="text" value="${s.naziv||''}" placeholder="Opis" oninput="narSC(${i},'naziv',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px"></td>
+    <td style="padding:3px 5px"><input type="text" value="${s.jed_mjere||'kom'}" oninput="narSC(${i},'jed_mjere',this.value)" style="width:55px;border:1px solid var(--border);border-radius:4px;padding:3px 4px;text-align:center;font-size:12px"></td>
+    <td style="padding:3px 5px"><input type="number" value="${s.kolicina||1}" min="0.001" step="1" oninput="narSC(${i},'kolicina',parseFloat(this.value)||0);calcNarTotals()" style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:right;font-size:12px"></td>
+    <td style="padding:3px 5px"><input type="number" value="${s.cijena||0}" min="0" step="0.01" oninput="narSC(${i},'cijena',parseFloat(this.value)||0);calcNarTotals()" style="width:85px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:right;font-size:12px"></td>
+    <td style="padding:3px 5px"><select onchange="narSC(${i},'pdv',parseInt(this.value));calcNarTotals()" style="width:58px;border:1px solid var(--border);border-radius:4px;padding:3px 3px;font-size:12px">
+      <option value="0" ${s.pdv===0?'selected':''}>0%</option>
+      <option value="5" ${s.pdv===5?'selected':''}>5%</option>
+      <option value="13" ${s.pdv===13?'selected':''}>13%</option>
+      <option value="25" ${(s.pdv===25||s.pdv==null)?'selected':''}>25%</option>
+    </select></td>
+    <td style="padding:3px 5px;text-align:right;font-size:12px;font-weight:600" id="nar-row-${i}">${((s.kolicina||0)*(s.cijena||0)*(1+(s.pdv||25)/100)).toFixed(2)} €</td>
+    <td style="padding:3px 5px"><button onclick="narUkloni(${i})" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:18px;line-height:1">×</button></td>
+  </tr>`).join('');
+  calcNarTotals();
+}
+function narSC(i,f,v){if(window._narStavke)window._narStavke[i][f]=v;}
+function dodajNarStavku(){window._narStavke=window._narStavke||[];window._narStavke.push({naziv:'',jed_mjere:'kom',kolicina:1,cijena:0,pdv:25});renderNarStavke();}
+function narUkloni(i){if(window._narStavke&&window._narStavke.length>1){window._narStavke.splice(i,1);renderNarStavke();}}
+
+function calcNarTotals(){
+  let totBez=0,totPdv=0,totSpdv=0;
+  (window._narStavke||[]).forEach((s,i)=>{
+    const bez=(s.kolicina||0)*(s.cijena||0);
+    const pdv=bez*(s.pdv||25)/100;
+    const spdv=bez+pdv;
+    totBez+=bez;totPdv+=pdv;totSpdv+=spdv;
+    const el=document.getElementById(`nar-row-${i}`);
+    if(el) el.textContent=spdv.toFixed(2)+' €';
+  });
+  const eb=document.getElementById('nar-tot-bez');
+  const ep=document.getElementById('nar-tot-pdv-iznos');
+  const es=document.getElementById('nar-tot-spdv');
+  if(eb) eb.textContent=totBez.toFixed(2)+' €';
+  if(ep) ep.textContent='PDV: '+totPdv.toFixed(2)+' €';
+  if(es) es.textContent=totSpdv.toFixed(2)+' €';
+  window._narTotals={totBez,totPdv,totSpdv};
+}
+
+async function saveNarudzbenica(status){
+  const broj=document.getElementById('nar-broj').value.trim();
+  const datum=document.getElementById('nar-datum').value;
+  const zahId=document.getElementById('nar-zah').value||null;
+  const dobNaziv=document.getElementById('nar-dob-naziv').value.trim();
+  const dobOib=document.getElementById('nar-dob-oib').value.trim();
+  const dobAdresa=document.getElementById('nar-dob-adresa').value.trim();
+  const dobSelect=parseInt(document.getElementById('nar-dob-select').value)||null;
+  const rok=document.getElementById('nar-rok').value||null;
+  const mjesto=document.getElementById('nar-mjesto').value.trim();
+  const otprema=document.getElementById('nar-otprema').value.trim();
+  const nap=document.getElementById('nar-nap').value.trim();
+  const ponudaBroj=document.getElementById('nar-ponuda-broj').value.trim();
+  const stavke=(window._narStavke||[]).filter(s=>s.naziv.trim());
+  const god=new Date().getFullYear();
+
+  if(!datum){document.getElementById('nar-al').innerHTML='<div class="al ald">Datum je obavezan!</div>';return;}
+  if(!dobNaziv){document.getElementById('nar-al').innerHTML='<div class="al ald">Unesite naziv dobavljača!</div>';return;}
+  if(!stavke.length){document.getElementById('nar-al').innerHTML='<div class="al ald">Unesite barem jednu stavku!</div>';return;}
+
+  document.getElementById('nar-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
+
+  try{
+    // Auto-save dobavljač if new
+    let dobId=dobSelect;
+    if(!dobId&&dobNaziv){
+      const existing=window._dobavljaciList?.find(d=>d.naziv.toLowerCase()===dobNaziv.toLowerCase());
+      if(existing){
+        dobId=existing.id;
+      } else {
+        const {data:newDob}=await SB.from('dobavljaci').insert({naziv:dobNaziv,oib:dobOib,adresa:dobAdresa}).select().single();
+        if(newDob) dobId=newDob.id;
+      }
+    }
+
+    const totals=window._narTotals||{totBez:0,totPdv:0,totSpdv:0};
+    calcNarTotals();
+    const t=window._narTotals;
+
+    // Upload ponude if file selected
+    let ponudaUrl='';
+    const ponudaFile=window._narPonudaFile;
+    if(ponudaFile){
+      const ext=ponudaFile.name.split('.').pop();
+      const path=`ponude/${broj.replace(/[^a-z0-9]/gi,'_')}_${Date.now()}.${ext}`;
+      const {data:upData,error:upErr}=await SB.storage.from('ponude').upload(path,ponudaFile,{upsert:true});
+      if(!upErr){
+        const {data:urlData}=SB.storage.from('ponude').getPublicUrl(path);
+        ponudaUrl=urlData?.publicUrl||'';
+      }
+    }
+
+    const payload={broj,godina:god,datum,zahtjevnica_id:zahId||null,
+      dobavljac_id:dobId,dobavljac_naziv:dobNaziv,dobavljac_oib:dobOib,dobavljac_adresa:dobAdresa,
+      rok_isporuke:rok,mjesto_isporuke:mjesto,nacin_otpreme:otprema,napomene:nap,
+      ponuda_url:ponudaUrl||undefined,vrsta:'roba',status,
+      ukupno_bez_pdv:t.totBez,pdv_iznos:t.totPdv,ukupno_s_pdv:t.totSpdv,
+      created_by:SB_USER?.id,updated_at:new Date().toISOString()};
+
+    let narId=window._narEdit;
+    if(narId){
+      await SB.from('narudzbenice').update(payload).eq('id',narId);
+    } else {
+      const {data,error}=await SB.from('narudzbenice').insert(payload).select().single();
+      if(error) throw error;
+      narId=data.id;
+    }
+    await SB.from('narudzbenice_stavke').delete().eq('narudzbenica_id',narId);
+    await SB.from('narudzbenice_stavke').insert(stavke.map((s,i)=>({
+      narudzbenica_id:narId,rbr:i+1,naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',
+      kolicina:s.kolicina||1,cijena_bez_pdv:s.cijena||0,pdv_stopa:s.pdv||25,
+      ukupno_bez_pdv:(s.kolicina||0)*(s.cijena||0),
+      ukupno_s_pdv:(s.kolicina||0)*(s.cijena||0)*(1+(s.pdv||25)/100)
+    })));
+
+    closeM('mo-narudzbenica');
+    showToast(status==='kod_direktora'?'✅ Narudžbenica poslana direktoru!':'✅ Narudžbenica snimljena!','success');
+    loadNarudzbenice();
+  }catch(e){document.getElementById('nar-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+async function pregledNarudzbenica(id){
+  const {data:n}=await SB.from('narudzbenice').select('*').eq('id',id).single();
+  const {data:stavke}=await SB.from('narudzbenice_stavke').select('*').eq('narudzbenica_id',id).order('rbr');
+  if(!n) return;
+  document.getElementById('pregled-nab-title').textContent=`Narudžbenica ${n.broj}`;
+  const st=NAR_STATUS[n.status]||{lbl:n.status,cls:'bdg bgy'};
+
+  document.getElementById('pregled-nab-content').innerHTML=`
+    <!-- Header narudžbenice u stilu dokumenta -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+        <div>
+          <div style="font-size:11px;color:var(--text2)">Kupac (primatelj)</div>
+          <div style="font-weight:700">PARKOVI I NASADI d.o.o.</div>
+          <div style="font-size:12px">Bilice II 46D, 21000 Split</div>
+          <div style="font-size:12px">OIB: 64789478164</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;color:var(--blue)">Narudžbenica</div>
+          <div style="font-size:18px;font-weight:700">${n.broj}</div>
+          <div style="font-size:12px;color:var(--text2)">Datum: ${n.datum}</div>
+          <div style="margin-top:4px"><span class="${st.cls}">${st.lbl}</span></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:11px;color:var(--text2)">Isporučitelj (prodavatelj)</div>
+          <div style="font-weight:700">${n.dobavljac_naziv||'–'}</div>
+          ${n.dobavljac_adresa?`<div style="font-size:12px">${n.dobavljac_adresa}</div>`:''}
+          ${n.dobavljac_oib?`<div style="font-size:12px">OIB: ${n.dobavljac_oib}</div>`:''}
+        </div>
+        <div>
+          ${n.rok_isporuke?`<div style="font-size:12px"><strong>Rok isporuke:</strong> ${n.rok_isporuke}</div>`:''}
+          ${n.mjesto_isporuke?`<div style="font-size:12px"><strong>Mjesto isporuke:</strong> ${n.mjesto_isporuke}</div>`:''}
+          ${n.nacin_otpreme?`<div style="font-size:12px"><strong>Način otpreme:</strong> ${n.nacin_otpreme}</div>`:''}
+        </div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:1rem">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:7px 8px;width:35px">Rb.</th>
+        <th style="padding:7px 8px;text-align:left">Opis proizvoda/usluge</th>
+        <th style="padding:7px 8px;width:60px">Jed.</th>
+        <th style="padding:7px 8px;width:60px;text-align:right">Kol.</th>
+        <th style="padding:7px 8px;width:90px;text-align:right">Cijena</th>
+        <th style="padding:7px 8px;width:55px;text-align:center">PDV%</th>
+        <th style="padding:7px 8px;width:95px;text-align:right">Iznos stavke</th>
+      </tr></thead>
+      <tbody>${(stavke||[]).map(s=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;text-align:center">${s.rbr}</td>
+        <td style="padding:6px 8px">${s.naziv}</td>
+        <td style="padding:6px 8px;text-align:center">${s.jed_mjere}</td>
+        <td style="padding:6px 8px;text-align:right">${s.kolicina}</td>
+        <td style="padding:6px 8px;text-align:right">${parseFloat(s.cijena_bez_pdv||0).toFixed(2)} €</td>
+        <td style="padding:6px 8px;text-align:center">${s.pdv_stopa}%</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:600">${parseFloat(s.ukupno_s_pdv||0).toFixed(2)} €</td>
+      </tr>`).join('')}</tbody>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+      <div style="text-align:right;min-width:250px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--border)">
+          <span>Ukupno bez poreza:</span><strong>${parseFloat(n.ukupno_bez_pdv||0).toFixed(2)} €</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--border)">
+          <span>PDV:</span><strong>${parseFloat(n.pdv_iznos||0).toFixed(2)} €</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--bg3);font-size:15px;font-weight:700">
+          <span>Ukupan iznos naplate:</span><span>${parseFloat(n.ukupno_s_pdv||0).toFixed(2)} €</span>
+        </div>
+      </div>
+    </div>
+
+    ${n.napomene?`<div style="margin-bottom:1rem"><strong>Napomene:</strong><br>${n.napomene}</div>`:''}
+    ${n.ponuda_url?`<div style="margin-bottom:1rem"><a href="${n.ponuda_url}" target="_blank" class="btn bs" style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-file-download"></i> Priložena ponuda</a></div>`:''}
+    ${n.odobrio_ime?`<div style="padding:8px;background:rgba(34,134,58,.08);border-radius:6px"><strong>Odobrio:</strong> ${n.odobrio_ime} &nbsp;|&nbsp; ${n.datum_odobrenja?.split('T')[0]||''}</div>`:''}
+  `;
+
+  let actions=`<button class="btn bs" onclick="closeM('mo-pregled-nab')">Zatvori</button>`;
+  if(n.status==='nacrt') actions+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');editNarudzbenica(${id})"><i class="ti ti-edit"></i> Uredi</button>`;
+  if(n.status==='kod_direktora'&&CU?.role==='admin'){
+    actions+=`<button class="btn bp" onclick="odobriNarudzbenicu(${id},true)"><i class="ti ti-check"></i> Odobri</button>
+    <button class="btn bd" onclick="odobriNarudzbenicu(${id},false)"><i class="ti ti-x"></i> Odbij</button>`;
+  }
+  if(n.status==='odobrena') actions+=`<button class="btn bp" onclick="posaljiNarudzbenicu(${id})"><i class="ti ti-send"></i> Pošalji dobavljaču</button>`;
+  actions+=`<button class="btn bs" onclick="window.print()"><i class="ti ti-printer"></i> Ispis</button>`;
+  document.getElementById('pregled-nab-actions').innerHTML=actions;
+  openM('mo-pregled-nab');
+}
+
+async function editNarudzbenica(id){
+  const {data:n}=await SB.from('narudzbenice').select('*').eq('id',id).single();
+  const {data:stavke}=await SB.from('narudzbenice_stavke').select('*').eq('narudzbenica_id',id).order('rbr');
+  if(!n) return;
+  await openNovaNarudzbenica(n.zahtjevnica_id);
+  window._narEdit=id;
+  document.getElementById('nar-modal-title').textContent='Uredi narudžbenicu';
+  document.getElementById('nar-broj').value=n.broj;
+  document.getElementById('nar-datum').value=n.datum;
+  document.getElementById('nar-dob-naziv').value=n.dobavljac_naziv||'';
+  document.getElementById('nar-dob-oib').value=n.dobavljac_oib||'';
+  document.getElementById('nar-dob-adresa').value=n.dobavljac_adresa||'';
+  document.getElementById('nar-rok').value=n.rok_isporuke||'';
+  document.getElementById('nar-mjesto').value=n.mjesto_isporuke||'';
+  document.getElementById('nar-otprema').value=n.nacin_otpreme||'Po dogovoru';
+  document.getElementById('nar-nap').value=n.napomene||'';
+  window._narStavke=(stavke||[]).map(s=>({naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina||1,cijena:s.cijena_bez_pdv||0,pdv:s.pdv_stopa||25}));
+  renderNarStavke();
+}
+
+async function odobriNarudzbenicu(id,odobri){
+  if(!odobri){
+    const razlog=prompt('Razlog odbijanja:');
+    if(razlog===null) return;
+    await SB.from('narudzbenice').update({status:'odbijena',napomene:razlog,updated_at:new Date().toISOString()}).eq('id',id);
+    showToast('Narudžbenica odbijena','info');
+  } else {
+    const ime=CU?.name||'Administrator';
+    await SB.from('narudzbenice').update({status:'odobrena',odobrio_ime:ime,datum_odobrenja:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
+    showToast('✅ Narudžbenica odobrena!','success');
+  }
+  closeM('mo-pregled-nab');
+  loadNarudzbenice();
+}
+
+async function posaljiNarudzbenicu(id){
+  if(!confirm('Označiti narudžbenicu kao poslanu dobavljaču?')) return;
+  await SB.from('narudzbenice').update({status:'poslana',slano_dobavljacu:true,datum_slanja:new Date().toISOString().split('T')[0],updated_at:new Date().toISOString()}).eq('id',id);
+  showToast('✅ Narudžbenica označena kao poslana!','success');
+  closeM('mo-pregled-nab');
+  loadNarudzbenice();
+}
+
+// ══ DOBAVLJAČI ═════════════════════════════════════════════════
+
+async function setupDobavljaci(){
+  await loadDobavljaci();
+}
+
+async function loadDobavljaci(){
+  const {data,error}=await SB.from('dobavljaci').select('*').order('naziv');
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  window._dobavljaci=data||[];
+  filterDobavljaci();
+}
+
+function filterDobavljaci(){
+  const srch=(document.getElementById('dob-search')?.value||'').toLowerCase();
+  const data=(window._dobavljaci||[]).filter(d=>
+    d.naziv.toLowerCase().includes(srch)||(d.oib||'').includes(srch)||(d.email||'').toLowerCase().includes(srch)
+  );
+  const el=document.getElementById('dob-list');
+  if(!el) return;
+  if(!data.length){el.innerHTML='<div class="empty"><p>Nema dobavljača</p></div>';return;}
+  el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--bg3)">
+      <th style="padding:8px 10px;text-align:left">Naziv</th>
+      <th style="padding:8px 10px">OIB</th>
+      <th style="padding:8px 10px;text-align:left">Adresa</th>
+      <th style="padding:8px 10px;text-align:left">Kontakt</th>
+      <th style="padding:8px 10px;text-align:left">Email</th>
+      <th style="padding:8px 10px;text-align:left">IBAN</th>
+      <th style="padding:8px 10px"></th>
+    </tr></thead><tbody>${data.map(d=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;font-weight:500">${d.naziv}</td>
+      <td style="padding:8px 10px;text-align:center">${d.oib||'–'}</td>
+      <td style="padding:8px 10px">${d.adresa||'–'}</td>
+      <td style="padding:8px 10px">${d.kontakt||'–'}</td>
+      <td style="padding:8px 10px">${d.email||'–'}</td>
+      <td style="padding:8px 10px;font-size:11px">${d.iban||'–'}</td>
+      <td style="padding:8px 10px;display:flex;gap:4px">
+        <button class="btn bsm bs" onclick="editDobavljac(${d.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn bsm bd" onclick="delDobavljac(${d.id},'${d.naziv.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+window._dobEdit=null;
+function openNovDobavljac(){
+  window._dobEdit=null;
+  ['dob-naziv','dob-oib','dob-kontakt','dob-adresa','dob-grad','dob-email','dob-iban','dob-nap'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('dob-modal-title').textContent='Novi dobavljač';
+  document.getElementById('dob-al').innerHTML='';
+  openM('mo-dobavljac');
+}
+
+async function editDobavljac(id){
+  const d=window._dobavljaci?.find(x=>x.id===id);
+  if(!d) return;
+  window._dobEdit=id;
+  document.getElementById('dob-modal-title').textContent='Uredi dobavljača';
+  document.getElementById('dob-naziv').value=d.naziv||'';
+  document.getElementById('dob-oib').value=d.oib||'';
+  document.getElementById('dob-kontakt').value=d.kontakt||'';
+  document.getElementById('dob-adresa').value=d.adresa||'';
+  document.getElementById('dob-grad').value=d.grad||'';
+  document.getElementById('dob-email').value=d.email||'';
+  document.getElementById('dob-iban').value=d.iban||'';
+  document.getElementById('dob-nap').value=d.napomena||'';
+  document.getElementById('dob-al').innerHTML='';
+  openM('mo-dobavljac');
+}
+
+async function saveDobavljac(){
+  const naziv=document.getElementById('dob-naziv').value.trim();
+  if(!naziv){document.getElementById('dob-al').innerHTML='<div class="al ald">Naziv je obavezan!</div>';return;}
+  const payload={naziv,
+    oib:document.getElementById('dob-oib').value.trim(),
+    kontakt:document.getElementById('dob-kontakt').value.trim(),
+    adresa:document.getElementById('dob-adresa').value.trim(),
+    grad:document.getElementById('dob-grad').value.trim(),
+    email:document.getElementById('dob-email').value.trim(),
+    iban:document.getElementById('dob-iban').value.trim(),
+    napomena:document.getElementById('dob-nap').value.trim()};
+  document.getElementById('dob-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
+  try{
+    if(window._dobEdit){
+      await SB.from('dobavljaci').update(payload).eq('id',window._dobEdit);
+    } else {
+      await SB.from('dobavljaci').insert(payload);
+    }
+    closeM('mo-dobavljac');
+    showToast('✅ Dobavljač snimljen!','success');
+    loadDobavljaci();
+  }catch(e){document.getElementById('dob-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+async function delDobavljac(id,naziv){
+  if(!confirm(`Obrisati dobavljača "${naziv}"?`)) return;
+  await SB.from('dobavljaci').delete().eq('id',id);
+  showToast('✅ Obrisan','success');
+  loadDobavljaci();
+}
 
 function openM(id){document.getElementById(id).classList.add("open");}
 function closeM(id){document.getElementById(id).classList.remove("open");}
