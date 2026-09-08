@@ -599,6 +599,7 @@ select{cursor:pointer}
             </div>
             <div style="font-size:12px;color:var(--text2);margin-top:8px">
               <i class="ti ti-info-circle"></i> Upiši postotak samo za djelatnike koji dobivaju stimulaciju. Ostavite 0 za one koji ne dobivaju. Kumulativ se automatski računa iz prethodnih mjeseci.
+              <span id="stim-auto-info" style="color:var(--blue)"></span>
             </div>
           </div>
 
@@ -3470,8 +3471,75 @@ async function loadStimUnos(){
   if(jid>0) djels = djels.filter(d=>d.jid===jid);
   djels = djels.sort((a,b)=>a.prez.localeCompare(b.prez));
 
-  // Je li ovo travanj (4), kolovoz (8) ili prosinac (12) — dodaj 233€
-  const isDodatakMj = [4,8,12].includes(mj);
+  // Periodi za dodatak 233€:
+  // Period 1: mj 9,10,11,12 → isplata u mj 1 (siječanj)
+  // Period 2: mj 1,2,3,4   → isplata u mj 5 (svibanj)  
+  // Period 3: mj 5,6,7,8   → isplata u mj 9 (rujan)
+  const periodMap = {
+    1: [9,10,11,12], // siječanj = period 9-12 prethodne godine
+    5: [1,2,3,4],    // svibanj = period 1-4
+    9: [5,6,7,8]     // rujan = period 5-8
+  };
+  const isDodatakMj = mj in periodMap;
+  const periodMjeseci = periodMap[mj] || [];
+  
+  // Kolone koje isključuju pravo na 233€
+  const ISKLJUCENE_KOLONE = ['BO','PD','OC','NS','NI','NZR','NR','VJO'];
+  
+  // Automatska provjera prava na 233€ iz evidencije
+  let pravoNa233 = {}; // {djelatnik_id: true/false}
+  
+  if(isDodatakMj && periodMjeseci.length > 0){
+    // Dohvati evidenciju za period
+    // Ako je period 9-12, to je prethodna godina
+    const evidGodina = mj === 1 ? god - 1 : god;
+    const evMjeseci = periodMjeseci;
+    
+    // Dohvati sve djelatnike koji imaju evidenciju u tom periodu
+    const djIds = DB.djelatnici.filter(d=>vJ().includes(d.jid)).map(d=>d.id);
+    
+    const {data:evData} = await SB.from('evidencija')
+      .select('djelatnik_id, mjesec, sums')
+      .eq('godina', evidGodina)
+      .in('mjesec', evMjeseci)
+      .in('djelatnik_id', djIds);
+    
+    // Grupiraj po djelatniku
+    const evByDjel = {};
+    (evData||[]).forEach(ev=>{
+      if(!evByDjel[ev.djelatnik_id]) evByDjel[ev.djelatnik_id] = [];
+      evByDjel[ev.djelatnik_id].push(ev);
+    });
+    
+    // Provjeri svakoga
+    djIds.forEach(did=>{
+      const evs = evByDjel[did] || [];
+      
+      // Mora imati evidenciju za SVE mjesece perioda
+      const mjeseciSEvidencijom = evs.map(e=>e.mjesec);
+      const imaKontinuitet = evMjeseci.every(m=>mjeseciSEvidencijom.includes(m));
+      
+      if(!imaKontinuitet){
+        pravoNa233[did] = false;
+        return;
+      }
+      
+      // Provjeri ima li isključenih kolona u bilo kojem mjesecu
+      let imaIsklj = false;
+      for(const ev of evs){
+        const sums = ev.sums || {};
+        for(const kod of ISKLJUCENE_KOLONE){
+          if(sums[kod] && parseFloat(sums[kod]) > 0){
+            imaIsklj = true;
+            break;
+          }
+        }
+        if(imaIsklj) break;
+      }
+      
+      pravoNa233[did] = !imaIsklj;
+    });
+  }
 
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
     <thead>
@@ -3496,7 +3564,9 @@ async function loadStimUnos(){
     const kum = kumMap[d.id]||0;
     const ex  = existMap[d.id];
     const posto = ex ? parseFloat(ex.stimulacija_posto)||0 : 0;
-    const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : (isDodatakMj?233:0);
+    // Automatski dodaj 233€ ako ima pravo, inače 0
+    const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
+    const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
     const bolMj  = ex ? parseFloat(ex.dodatak_mjesecni)||0 : 0;
 
     // Izračunaj preview
@@ -3544,6 +3614,16 @@ async function loadStimUnos(){
   el.innerHTML = html;
   // Store data for save
   window._stimBatch = {god, mj, vrijBoda, djels, bodMap, kumMap};
+  
+  // Show info about automatic 233€ check
+  const infoEl = document.getElementById('stim-auto-info');
+  if(infoEl && isDodatakMj){
+    const brPrava = Object.values(pravoNa233).filter(v=>v===true).length;
+    const brBezPrava = Object.values(pravoNa233).filter(v=>v===false).length;
+    infoEl.innerHTML = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Auto provjera 233€: <strong style="color:#22863a">${brPrava} imaju pravo</strong>, <strong style="color:#c0392b">${brBezPrava} nemaju</strong> (bolovanje/kontinuitet)`;
+  } else if(infoEl){
+    infoEl.innerHTML = '';
+  }
 }
 
 // Recalc single row on input change
