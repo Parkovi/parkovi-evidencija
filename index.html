@@ -4312,7 +4312,7 @@ async function loadZahtjevnice(){
             <button class="btn bsm bs" onclick="pregledZahtjevnica(${z.id})"><i class="ti ti-eye"></i> Pregled</button>
             ${z.status==='nova'?`<button class="btn bsm bs" onclick="editZahtjevnica(${z.id})"><i class="ti ti-edit"></i></button>`:''}
             ${(z.status==='kod_direktora'&&CU?.role==='admin')?`<button class="btn bsm bp" onclick="odobriZahtjevnicu(${z.id},true)"><i class="ti ti-check"></i> Odobri</button><button class="btn bsm bd" onclick="odobriZahtjevnicu(${z.id},false)"><i class="ti ti-x"></i></button>`:''}
-            ${z.status==='odobrena'?`<button class="btn bsm bp" onclick="napraviNarudzbenicu(${z.id})"><i class="ti ti-shopping-cart"></i> Narudžb.</button>`:''}
+            ${z.status==='kod_nabave'?`<button class="btn bsm bp" onclick="napraviNarudzbenicu(${z.id})"><i class="ti ti-shopping-cart"></i> Narudžb.</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -4464,14 +4464,10 @@ async function pregledZahtjevnica(id){
   `;
 
   let actions=`<button class="btn bs" onclick="closeM('mo-pregled-nab')">Zatvori</button>`;
-  if(z.status==='kod_direktora'&&CU?.role==='admin'){
-    actions+=`<button class="btn bp" onclick="odobriZahtjevnicu(${id},true)"><i class="ti ti-check"></i> Odobri</button>
-    <button class="btn bd" onclick="odobriZahtjevnicu(${id},false)"><i class="ti ti-x"></i> Odbij</button>`;
-  }
-  if(z.status==='nova'||z.status==='kod_nabave'){
+  if(z.status==='nova'){
     actions+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');editZahtjevnica(${id})"><i class="ti ti-edit"></i> Uredi</button>`;
   }
-  if(z.status==='odobrena'){
+  if(z.status==='kod_nabave'){
     actions+=`<button class="btn bp" onclick="closeM('mo-pregled-nab');napraviNarudzbenicu(${id})"><i class="ti ti-shopping-cart"></i> Napravi narudžbenicu</button>`;
   }
   document.getElementById('pregled-nab-actions').innerHTML=actions;
@@ -4575,7 +4571,7 @@ async function openNovaNarudzbenica(zahId){
   document.getElementById('nar-dob-select').innerHTML='<option value="">– ili upiši ručno –</option>'+(dobs||[]).map(d=>`<option value="${d.id}">${d.naziv}</option>`).join('');
 
   // Load zahtjevnice
-  const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').eq('status','odobrena').order('id',{ascending:false});
+  const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').eq('status','kod_nabave').order('id',{ascending:false});
   document.getElementById('nar-zah').innerHTML='<option value="">– bez veze –</option>'+(zahs||[]).map(z=>`<option value="${z.id}" ${z.id===zahId?'selected':''}>${z.broj} – ${z.mjesto_troska||''}</option>`).join('');
 
   // If linked to zahtjevnica, prefill stavke
@@ -4730,6 +4726,10 @@ async function saveNarudzbenica(status){
       ukupno_bez_pdv:(s.kolicina||0)*(s.cijena||0),
       ukupno_s_pdv:(s.kolicina||0)*(s.cijena||0)*(1+(s.pdv||25)/100)
     })));
+
+    if(zahId){
+      await SB.from('zahtjevnice').update({status:'realizirana',updated_at:new Date().toISOString()}).eq('id',zahId);
+    }
 
     closeM('mo-narudzbenica');
     showToast(status==='kod_direktora'?'✅ Narudžbenica poslana direktoru!':'✅ Narudžbenica snimljena!','success');
