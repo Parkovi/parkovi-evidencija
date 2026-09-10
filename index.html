@@ -342,6 +342,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('org')" id="nav-org"><i class="ti ti-sitemap"></i> Org. struktura</div>
         <div class="ni" onclick="sP('vrste')" id="nav-vrste"><i class="ti ti-list-check"></i> Vrste radnog vremena</div>
         <div class="ni" onclick="sP('korisnici')" id="nav-korisnici"><i class="ti ti-shield-lock"></i> Korisnici i ovlasti</div>
+        <div class="ni" onclick="sP('postavke-tvrtke')" id="nav-postavke-tvrtke"><i class="ti ti-building"></i> Postavke tvrtke</div>
         <div class="ni" onclick="sP('izvjestaj')" id="nav-izvjestaj"><i class="ti ti-chart-bar"></i> Godisnji izvjestaj</div>
         <div class="ni" onclick="sP('audit')" id="nav-audit"><i class="ti ti-history"></i> Dnevnik promjena</div>
       </div>
@@ -421,6 +422,28 @@ select{cursor:pointer}
         <div class="ph"><div><div class="pt">Korisnici i ovlasti</div><div class="ps">Upravljanje pristupom sustavu</div></div>
         <div class="phr"><button class="btn bp" onclick="openAddUser()"><i class="ti ti-user-plus"></i> Dodaj korisnika</button></div></div>
         <div class="card"><div id="kw"></div></div>
+      </div>
+
+      <div class="page" id="page-postavke-tvrtke">
+        <div class="ph"><div><div class="pt">Postavke tvrtke</div><div class="ps">Podaci koji se prikazuju na narudžbenicama i drugim dokumentima</div></div></div>
+        <div class="card" style="max-width:600px">
+          <div id="pt-al"></div>
+          <div class="fb">
+            <div class="fg"><label class="fl">Naziv tvrtke</label><input type="text" id="pt-naziv" placeholder="Parkovi i nasadi d.o.o."></div>
+            <div class="fg"><label class="fl">Adresa (sjedište)</label><input type="text" id="pt-adresa" placeholder="Bilice II 46D, 21000 Split"></div>
+            <div class="fg"><label class="fl">Skladište</label><input type="text" id="pt-skladiste" placeholder="Duilovo 2, 21000 Split, HR"></div>
+            <div class="fg"><label class="fl">Web</label><input type="text" id="pt-web" placeholder="www.parkovi-st.hr"></div>
+            <div class="fg"><label class="fl">OIB</label><input type="text" id="pt-oib"></div>
+            <div class="fg"><label class="fl">Matični broj (MB)</label><input type="text" id="pt-mb"></div>
+            <div class="fg"><label class="fl">IBAN</label><input type="text" id="pt-iban"></div>
+            <div class="fg"><label class="fl">SWIFT</label><input type="text" id="pt-swift"></div>
+            <div class="fg"><label class="fl">Telefon</label><input type="text" id="pt-telefon"></div>
+            <div class="fg"><label class="fl">Email</label><input type="text" id="pt-email"></div>
+            <div class="fg"><label class="fl">Odgovorna osoba (npr. direktor)</label><input type="text" id="pt-odgovorna-osoba" placeholder="Ime i prezime"></div>
+            <div class="fg"><label class="fl">Pravna napomena (ispisuje se sitnim slovima na dnu narudžbenice)</label><textarea id="pt-pravna-napomena" rows="2" placeholder="ZA OBAVLJANJE ... DJELATNOSTI, Temeljni kapital ..., Direktor: ..., Predsjednik N.O.: ..."></textarea></div>
+          </div>
+          <button class="btn bp" onclick="savePostavkeTvrtke()" style="margin-top:12px"><i class="ti ti-device-floppy"></i> Spremi</button>
+        </div>
       </div>
 
       <div class="page" id="page-izvjestaj">
@@ -1589,7 +1612,7 @@ function sP(n){
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,zahtjevnice:setupZahtjevnice,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci,zahtjevnice:setupZahtjevnice,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,zahtjevnice:setupZahtjevnice,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -4312,7 +4335,7 @@ async function loadZahtjevnice(){
             <button class="btn bsm bs" onclick="pregledZahtjevnica(${z.id})"><i class="ti ti-eye"></i> Pregled</button>
             ${z.status==='nova'?`<button class="btn bsm bs" onclick="editZahtjevnica(${z.id})"><i class="ti ti-edit"></i></button>`:''}
             ${(z.status==='kod_direktora'&&CU?.role==='admin')?`<button class="btn bsm bp" onclick="odobriZahtjevnicu(${z.id},true)"><i class="ti ti-check"></i> Odobri</button><button class="btn bsm bd" onclick="odobriZahtjevnicu(${z.id},false)"><i class="ti ti-x"></i></button>`:''}
-            ${z.status==='kod_nabave'?`<button class="btn bsm bp" onclick="napraviNarudzbenicu(${z.id})"><i class="ti ti-shopping-cart"></i> Narudžb.</button>`:''}
+            ${['kod_nabave','u_obradi'].includes(z.status)?`<button class="btn bsm bp" onclick="napraviNarudzbenicu(${z.id})"><i class="ti ti-shopping-cart"></i> Narudžb.</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -4467,7 +4490,7 @@ async function pregledZahtjevnica(id){
   if(z.status==='nova'){
     actions+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');editZahtjevnica(${id})"><i class="ti ti-edit"></i> Uredi</button>`;
   }
-  if(z.status==='kod_nabave'){
+  if(['kod_nabave','u_obradi'].includes(z.status)){
     actions+=`<button class="btn bp" onclick="closeM('mo-pregled-nab');napraviNarudzbenicu(${id})"><i class="ti ti-shopping-cart"></i> Napravi narudžbenicu</button>`;
   }
   document.getElementById('pregled-nab-actions').innerHTML=actions;
@@ -4571,7 +4594,7 @@ async function openNovaNarudzbenica(zahId){
   document.getElementById('nar-dob-select').innerHTML='<option value="">– ili upiši ručno –</option>'+(dobs||[]).map(d=>`<option value="${d.id}">${d.naziv}</option>`).join('');
 
   // Load zahtjevnice
-  const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').eq('status','kod_nabave').order('id',{ascending:false});
+  const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').in('status',['kod_nabave','u_obradi']).order('id',{ascending:false});
   document.getElementById('nar-zah').innerHTML='<option value="">– bez veze –</option>'+(zahs||[]).map(z=>`<option value="${z.id}" ${z.id===zahId?'selected':''}>${z.broj} – ${z.mjesto_troska||''}</option>`).join('');
 
   // If linked to zahtjevnica, prefill stavke
@@ -4714,6 +4737,7 @@ async function saveNarudzbenica(status){
       ponuda_url:ponudaUrl||undefined,vrsta:'roba',status,
       ukupno_bez_pdv:t.totBez,pdv_iznos:t.totPdv,ukupno_s_pdv:t.totSpdv,
       created_by:SB_USER?.id,updated_at:new Date().toISOString()};
+    if(!window._narEdit) payload.sastavio_ime=CU?.name||'';
 
     let narId=window._narEdit;
     if(narId){
@@ -4749,6 +4773,7 @@ async function pregledNarudzbenica(id){
   const {data:n}=await SB.from('narudzbenice').select('*').eq('id',id).single();
   const {data:stavke}=await SB.from('narudzbenice_stavke').select('*').eq('narudzbenica_id',id).order('rbr');
   if(!n) return;
+  const pt=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal()||{};
   document.getElementById('pregled-nab-title').textContent=`Narudžbenica ${n.broj}`;
   const st=NAR_STATUS[n.status]||{lbl:n.status,cls:'bdg bgy'};
 
@@ -4758,9 +4783,9 @@ async function pregledNarudzbenica(id){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
         <div>
           <div style="font-size:11px;color:var(--text2)">Kupac (primatelj)</div>
-          <div style="font-weight:700">PARKOVI I NASADI d.o.o.</div>
-          <div style="font-size:12px">Bilice II 46D, 21000 Split</div>
-          <div style="font-size:12px">OIB: 64789478164</div>
+          <div style="font-weight:700">${pt.naziv||'PARKOVI I NASADI d.o.o.'}</div>
+          <div style="font-size:12px">${pt.adresa||'Bilice II 46D, 21000 Split'}</div>
+          <div style="font-size:12px">OIB: ${pt.oib||'64789478164'}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:22px;font-weight:800;color:var(--blue)">Narudžbenica</div>
@@ -4821,7 +4846,44 @@ async function pregledNarudzbenica(id){
 
     ${n.napomene?`<div style="margin-bottom:1rem"><strong>Napomene:</strong><br>${n.napomene}</div>`:''}
     ${n.ponuda_url?`<div style="margin-bottom:1rem"><a href="${n.ponuda_url}" target="_blank" class="btn bs" style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-file-download"></i> Priložena ponuda</a></div>`:''}
-    ${n.odobrio_ime?`<div style="padding:8px;background:rgba(34,134,58,.08);border-radius:6px"><strong>Odobrio:</strong> ${n.odobrio_ime} &nbsp;|&nbsp; ${n.datum_odobrenja?.split('T')[0]||''}</div>`:''}
+    ${n.odobrio_ime?`<div style="padding:8px;background:rgba(34,134,58,.08);border-radius:6px;margin-bottom:1rem"><strong>Odobrio:</strong> ${n.odobrio_ime} &nbsp;|&nbsp; ${n.datum_odobrenja?.split('T')[0]||''}</div>`:''}
+
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;padding-top:24px;margin-top:8px">
+      <div>
+        <div style="font-size:12px;font-weight:600">Odgovorna osoba</div>
+        <div style="height:40px"></div>
+        <div style="border-top:1px solid #333;width:200px;padding-top:4px;font-size:11px;color:var(--text2)">Potpis odgovorne osobe</div>
+      </div>
+      <div style="text-align:center;opacity:.35;transform:rotate(-12deg);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap;color:var(--text2)">
+        ${(pt.naziv||'PARKOVI I NASADI d.o.o.').toUpperCase()}<br>SPLIT
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;font-weight:600">Narudžbenicu sastavio/la</div>
+        <div style="height:40px"></div>
+        <div style="border-top:1px solid #333;width:200px;margin-left:auto;padding-top:4px;font-size:11px;color:var(--text2)">${n.sastavio_ime||''}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">
+      <div>
+        <div style="font-weight:700;color:var(--text1);margin-bottom:2px">Naše adrese</div>
+        ${pt.adresa?`<div>${pt.adresa}</div>`:''}
+        ${pt.skladiste?`<div>Skladište: ${pt.skladiste}</div>`:''}
+        ${pt.web?`<div>Internet: ${pt.web}</div>`:''}
+      </div>
+      <div>
+        <div style="font-weight:700;color:var(--text1);margin-bottom:2px">Pravni podaci</div>
+        ${pt.oib?`<div>OIB: ${pt.oib}</div>`:''}
+        ${pt.iban?`<div>IBAN: ${pt.iban}</div>`:''}
+        ${pt.swift?`<div>SWIFT: ${pt.swift}</div>`:''}
+      </div>
+      <div>
+        <div style="font-weight:700;color:var(--text1);margin-bottom:2px">Kontakti</div>
+        ${pt.telefon?`<div>Telefon: ${pt.telefon}</div>`:''}
+        ${pt.email?`<div>E-mail: ${pt.email}</div>`:''}
+      </div>
+    </div>
+    ${pt.pravna_napomena?`<div style="margin-top:10px;font-size:10px;color:var(--text3);line-height:1.4">${pt.pravna_napomena}</div>`:''}
   `;
 
   let actions=`<button class="btn bs" onclick="closeM('mo-pregled-nab')">Zatvori</button>`;
@@ -4877,6 +4939,61 @@ async function posaljiNarudzbenicu(id){
   showToast('✅ Narudžbenica označena kao poslana!','success');
   closeM('mo-pregled-nab');
   loadNarudzbenice();
+}
+
+// ══ POSTAVKE TVRTKE ════════════════════════════════════════════
+window.POSTAVKE_TVRTKE=null;
+
+async function loadPostavkeTvrtkeGlobal(){
+  try{
+    const {data}=await SB.from('postavke_tvrtke').select('*').eq('id',1).single();
+    window.POSTAVKE_TVRTKE=data||null;
+  }catch(e){ window.POSTAVKE_TVRTKE=null; }
+  return window.POSTAVKE_TVRTKE;
+}
+
+async function setupPostavkeTvrtke(){
+  const p=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal();
+  document.getElementById('pt-naziv').value=p?.naziv||'';
+  document.getElementById('pt-adresa').value=p?.adresa||'';
+  document.getElementById('pt-skladiste').value=p?.skladiste||'';
+  document.getElementById('pt-web').value=p?.web||'';
+  document.getElementById('pt-oib').value=p?.oib||'';
+  document.getElementById('pt-mb').value=p?.mb||'';
+  document.getElementById('pt-iban').value=p?.iban||'';
+  document.getElementById('pt-swift').value=p?.swift||'';
+  document.getElementById('pt-telefon').value=p?.telefon||'';
+  document.getElementById('pt-email').value=p?.email||'';
+  document.getElementById('pt-odgovorna-osoba').value=p?.odgovorna_osoba||'';
+  document.getElementById('pt-pravna-napomena').value=p?.pravna_napomena||'';
+}
+
+async function savePostavkeTvrtke(){
+  const payload={
+    id:1,
+    naziv:document.getElementById('pt-naziv').value.trim(),
+    adresa:document.getElementById('pt-adresa').value.trim(),
+    skladiste:document.getElementById('pt-skladiste').value.trim(),
+    web:document.getElementById('pt-web').value.trim(),
+    oib:document.getElementById('pt-oib').value.trim(),
+    mb:document.getElementById('pt-mb').value.trim(),
+    iban:document.getElementById('pt-iban').value.trim(),
+    swift:document.getElementById('pt-swift').value.trim(),
+    telefon:document.getElementById('pt-telefon').value.trim(),
+    email:document.getElementById('pt-email').value.trim(),
+    odgovorna_osoba:document.getElementById('pt-odgovorna-osoba').value.trim(),
+    pravna_napomena:document.getElementById('pt-pravna-napomena').value.trim(),
+    updated_at:new Date().toISOString()
+  };
+  try{
+    const {error}=await SB.from('postavke_tvrtke').upsert(payload);
+    if(error) throw error;
+    window.POSTAVKE_TVRTKE=payload;
+    document.getElementById('pt-al').innerHTML='';
+    showToast('✅ Postavke tvrtke spremljene!','success');
+  }catch(e){
+    document.getElementById('pt-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;
+  }
 }
 
 // ══ DOBAVLJAČI ═════════════════════════════════════════════════
