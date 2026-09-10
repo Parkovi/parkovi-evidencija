@@ -4693,6 +4693,7 @@ async function saveNarudzbenica(status){
 
     // Upload ponude if file selected
     let ponudaUrl='';
+    let ponudaUploadFailed=false;
     const ponudaFile=window._narPonudaFile;
     if(ponudaFile){
       const ext=ponudaFile.name.split('.').pop();
@@ -4701,6 +4702,9 @@ async function saveNarudzbenica(status){
       if(!upErr){
         const {data:urlData}=SB.storage.from('ponude').getPublicUrl(path);
         ponudaUrl=urlData?.publicUrl||'';
+      } else {
+        console.error('Upload ponude nije uspio:',upErr);
+        ponudaUploadFailed=true;
       }
     }
 
@@ -4732,7 +4736,11 @@ async function saveNarudzbenica(status){
     }
 
     closeM('mo-narudzbenica');
-    showToast(status==='kod_direktora'?'✅ Narudžbenica poslana direktoru!':'✅ Narudžbenica snimljena!','success');
+    if(ponudaUploadFailed){
+      showToast('⚠️ Narudžbenica spremljena, ali upload ponude NIJE uspio — provjeri Storage dozvole','error');
+    } else {
+      showToast(status==='kod_direktora'?'✅ Narudžbenica poslana direktoru!':'✅ Narudžbenica snimljena!','success');
+    }
     loadNarudzbenice();
   }catch(e){document.getElementById('nar-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
 }
