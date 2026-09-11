@@ -978,6 +978,19 @@ select{cursor:pointer}
       <div class="fg" style="margin-top:12px"><label class="fl">Napomena</label>
         <textarea id="zah-nap" rows="2" placeholder="Opcionalno..."></textarea>
       </div>
+
+      <!-- Upload ponude -->
+      <div style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-file-upload"></i> Priloži ponudu (opcionalno)</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label style="cursor:pointer;display:flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px">
+            <i class="ti ti-upload"></i> Upload PDF/JPG
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="previewZahPonuda(this)" style="display:none">
+          </label>
+          <span id="zah-ponuda-preview" style="font-size:12px;color:var(--text2)"></span>
+        </div>
+      </div>
+
       <div id="zah-al"></div>
     </div>
     <div class="mft">
@@ -4361,6 +4374,8 @@ async function openNovaZahtjevnica(){
   document.getElementById('zah-mjesto').value='';
   document.getElementById('zah-zatrazio').value='';
   document.getElementById('zah-nap').value='';
+  window._zahPonudaFile=null;
+  document.getElementById('zah-ponuda-preview').textContent='';
   document.getElementById('zah-al').innerHTML='';
   const vj=vJ(), jeds=DB.jedinice.filter(j=>vj.includes(j.id));
   document.getElementById('zah-jed').innerHTML=jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
@@ -4381,6 +4396,8 @@ async function editZahtjevnica(id){
   document.getElementById('zah-mjesto').value=z.mjesto_troska||'';
   document.getElementById('zah-zatrazio').value=z.zatrazio_ime||'';
   document.getElementById('zah-nap').value=z.napomena||'';
+  window._zahPonudaFile=null;
+  document.getElementById('zah-ponuda-preview').textContent=z.ponuda_url?'📎 Ponuda već priložena (odaberi novu datoteku za zamjenu)':'';
   document.getElementById('zah-al').innerHTML='';
   const vj=vJ(), jeds=DB.jedinice.filter(j=>vj.includes(j.id));
   document.getElementById('zah-jed').innerHTML=jeds.map(j=>`<option value="${j.id}" ${j.id===z.jedinica_id?'selected':''}>${j.name}</option>`).join('');
@@ -4423,8 +4440,26 @@ async function saveZahtjevnica(status){
 
   document.getElementById('zah-al').innerHTML='<div class="al ali"><i class="ti ti-loader-2"></i> Snimanje...</div>';
   try{
+    // Upload ponude if file selected
+    let ponudaUrl='';
+    let ponudaUploadFailed=false;
+    const ponudaFile=window._zahPonudaFile;
+    if(ponudaFile){
+      const ext=ponudaFile.name.split('.').pop();
+      const path=`zahtjevnice/${broj.replace(/[^a-z0-9]/gi,'_')}_${Date.now()}.${ext}`;
+      const {data:upData,error:upErr}=await SB.storage.from('ponude').upload(path,ponudaFile,{upsert:true});
+      if(!upErr){
+        const {data:urlData}=SB.storage.from('ponude').getPublicUrl(path);
+        ponudaUrl=urlData?.publicUrl||'';
+      } else {
+        console.error('Upload ponude nije uspio:',upErr);
+        ponudaUploadFailed=true;
+      }
+    }
+
     const payload={broj,godina:god,datum,vrsta,jedinica_id:jid,mjesto_troska:mjesto,
       zatrazio_ime:zatrazio,napomena:nap,status,created_by:SB_USER?.id,updated_at:new Date().toISOString()};
+    if(ponudaUrl) payload.ponuda_url=ponudaUrl;
     let zahId=window._zahEdit;
     if(zahId){
       await SB.from('zahtjevnice').update(payload).eq('id',zahId);
@@ -4439,9 +4474,21 @@ async function saveZahtjevnica(status){
       jed_mjere:s.jed_mjere||'kom',kolicina_trazena:parseFloat(s.kolicina)||1
     })));
     closeM('mo-zahtjevnica');
-    showToast(status==='kod_nabave'?'✅ Zahtjevnica poslana nabavi!':'✅ Zahtjevnica snimljena!','success');
+    if(ponudaUploadFailed){
+      showToast('⚠️ Zahtjevnica spremljena, ali upload ponude NIJE uspio','error');
+    } else {
+      showToast(status==='kod_nabave'?'✅ Zahtjevnica poslana nabavi!':'✅ Zahtjevnica snimljena!','success');
+    }
     loadZahtjevnice();
   }catch(e){document.getElementById('zah-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;}
+}
+
+function previewZahPonuda(input){
+  const file=input.files[0];
+  if(file){
+    window._zahPonudaFile=file;
+    document.getElementById('zah-ponuda-preview').textContent=`📎 ${file.name}`;
+  }
 }
 
 async function pregledZahtjevnica(id){
