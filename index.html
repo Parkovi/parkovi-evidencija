@@ -4608,6 +4608,7 @@ async function loadNarudzbenice(){
             <button class="btn bsm bs" onclick="pregledNarudzbenica(${n.id})"><i class="ti ti-eye"></i> Pregled</button>
             ${n.status==='nacrt'?`<button class="btn bsm bs" onclick="editNarudzbenica(${n.id})"><i class="ti ti-edit"></i></button>`:''}
             ${(n.status==='kod_direktora'&&CU?.role==='admin')?`<button class="btn bsm bp" onclick="odobriNarudzbenicu(${n.id},true)"><i class="ti ti-check"></i> Odobri</button><button class="btn bsm bd" onclick="odobriNarudzbenicu(${n.id},false)"><i class="ti ti-x"></i></button>`:''}
+            ${(n.status==='odobrena'&&CU?.role==='admin')?`<button class="btn bsm bs" onclick="ponistiOdobrenjeNarudzbenice(${n.id})"><i class="ti ti-arrow-back-up"></i> Makni odobrenje</button>`:''}
             ${n.status==='odobrena'?`<button class="btn bsm bp" onclick="posaljiNarudzbenicu(${n.id})"><i class="ti ti-send"></i> Pošalji</button>`:''}
           </div>
         </td>
@@ -4942,7 +4943,7 @@ async function pregledNarudzbenica(id){
       <div>
         <div style="font-size:12px;font-weight:600">Odgovorna osoba</div>
         <div style="height:40px"></div>
-        <div style="border-top:1px solid #333;width:200px;padding-top:4px;font-size:11px;color:var(--text2)">Potpis odgovorne osobe</div>
+        <div style="border-top:1px solid #333;width:200px;padding-top:4px;font-size:11px;color:var(--text2)">${pt.odgovorna_osoba||'Potpis odgovorne osobe'}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:12px;font-weight:600">Narudžbenicu sastavio/la</div>
@@ -4979,7 +4980,10 @@ async function pregledNarudzbenica(id){
     actions+=`<button class="btn bp" onclick="odobriNarudzbenicu(${id},true)"><i class="ti ti-check"></i> Odobri</button>
     <button class="btn bd" onclick="odobriNarudzbenicu(${id},false)"><i class="ti ti-x"></i> Odbij</button>`;
   }
-  if(n.status==='odobrena') actions+=`<button class="btn bp" onclick="posaljiNarudzbenicu(${id})"><i class="ti ti-send"></i> Pošalji dobavljaču</button>`;
+  if(n.status==='odobrena'){
+    if(CU?.role==='admin') actions+=`<button class="btn bs" onclick="ponistiOdobrenjeNarudzbenice(${id})"><i class="ti ti-arrow-back-up"></i> Makni odobrenje</button>`;
+    actions+=`<button class="btn bp" onclick="posaljiNarudzbenicu(${id})"><i class="ti ti-send"></i> Pošalji dobavljaču</button>`;
+  }
   actions+=`<button class="btn bs" onclick="window.print()"><i class="ti ti-printer"></i> Ispis</button>`;
   document.getElementById('pregled-nab-actions').innerHTML=actions;
   openM('mo-pregled-nab');
@@ -5022,6 +5026,14 @@ async function odobriNarudzbenicu(id,odobri){
     await SB.from('narudzbenice').update({status:'odobrena',odobrio_ime:ime,datum_odobrenja:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
     showToast('✅ Narudžbenica odobrena!','success');
   }
+  closeM('mo-pregled-nab');
+  loadNarudzbenice();
+}
+
+async function ponistiOdobrenjeNarudzbenice(id){
+  if(!confirm('Poništiti odobrenje ove narudžbenice? Vraća se u status "Kod direktora".')) return;
+  await SB.from('narudzbenice').update({status:'kod_direktora',odobrio_ime:null,datum_odobrenja:null,updated_at:new Date().toISOString()}).eq('id',id);
+  showToast('Odobrenje poništeno','info');
   closeM('mo-pregled-nab');
   loadNarudzbenice();
 }
