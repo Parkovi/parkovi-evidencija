@@ -1081,17 +1081,14 @@ select{cursor:pointer}
         <div class="fg" style="margin:0"><label class="fl">Narudžbenicu sastavio/la</label><input type="text" id="nar-sastavio" placeholder="Ime i prezime"></div>
       </div>
 
-      <!-- Upload ponude -->
+      <!-- Ponude (moguće više) -->
       <div style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-file-upload"></i> Priloži ponudu</div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="nar-ponuda-broj" placeholder="Broj ponude (npr. 638-26)" style="border:1px solid var(--border);border-radius:6px;padding:6px 10px;flex:1;min-width:150px">
-          <label style="cursor:pointer;display:flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px">
-            <i class="ti ti-upload"></i> Upload PDF/JPG
-            <input type="file" id="nar-ponuda-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="previewPonuda(this)">
-          </label>
-          <span id="nar-ponuda-preview" style="font-size:12px;color:var(--text2)"></span>
-        </div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-file-upload"></i> Ponude</div>
+        <div id="nar-ponude-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px">
+          <i class="ti ti-upload"></i> Dodaj ponudu (PDF/JPG)
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="dodajNarPonuduFile(this)">
+        </label>
       </div>
 
       <div id="nar-al" style="margin-top:8px"></div>
@@ -4623,7 +4620,6 @@ async function loadNarudzbenice(){
 
 async function openNovaNarudzbenica(zahId){
   window._narEdit=null;
-  window._narPonudaFile=null;
   const god=new Date().getFullYear();
   const broj=await nextNarBroj(god);
   document.getElementById('nar-modal-title').textContent='Nova narudžbenica';
@@ -4635,8 +4631,8 @@ async function openNovaNarudzbenica(zahId){
   document.getElementById('nar-nap').value='';
   const pts=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal();
   document.getElementById('nar-sastavio').value=pts?.sast_ime||CU?.name||'';
-  document.getElementById('nar-ponuda-broj').value='';
-  document.getElementById('nar-ponuda-preview').textContent='';
+  window._narPonude=[];
+  window._narPonudeRemoveIds=[];
   document.getElementById('nar-al').innerHTML='';
   document.getElementById('nar-dob-naziv').value='';
   document.getElementById('nar-dob-oib').value='';
@@ -4651,15 +4647,49 @@ async function openNovaNarudzbenica(zahId){
   const {data:zahs}=await SB.from('zahtjevnice').select('id,broj,mjesto_troska').in('status',['kod_nabave','u_obradi']).order('id',{ascending:false});
   document.getElementById('nar-zah').innerHTML='<option value="">– bez veze –</option>'+(zahs||[]).map(z=>`<option value="${z.id}" ${z.id===zahId?'selected':''}>${z.broj} – ${z.mjesto_troska||''}</option>`).join('');
 
-  // If linked to zahtjevnica, prefill stavke
+  // If linked to zahtjevnica, prefill stavke + prenesi eventualnu ponudu
   if(zahId){
     const {data:zst}=await SB.from('zahtjevnice_stavke').select('*').eq('zahtjevnica_id',zahId).order('rbr');
     window._narStavke=(zst||[]).map(s=>({naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina_trazena||1,cijena:0,pdv:25}));
+    const zSel=(zahs||[]).find(z=>z.id===zahId);
+    const {data:zFull}=await SB.from('zahtjevnice').select('ponuda_url').eq('id',zahId).single();
+    if(zFull?.ponuda_url){
+      window._narPonude.push({id:null,url:zFull.ponuda_url,naziv:'Ponuda iz zahtjevnice'});
+    }
   } else {
     window._narStavke=[{naziv:'',jed_mjere:'kom',kolicina:1,cijena:0,pdv:25}];
   }
   renderNarStavke();
+  renderNarPonude();
   openM('mo-narudzbenica');
+}
+
+function renderNarPonude(){
+  const list=window._narPonude||[];
+  const el=document.getElementById('nar-ponude-list');
+  if(!list.length){ el.innerHTML='<div style="font-size:12px;color:var(--text2)">Nema priloženih ponuda.</div>'; return; }
+  el.innerHTML=list.map((p,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px">
+      <span><i class="ti ti-file-text"></i> ${p.naziv}${p.file?' (novo)':''}</span>
+      <button type="button" class="btn bsm bs" style="color:var(--red)" onclick="ukloniNarPonuda(${i})"><i class="ti ti-x"></i> Makni</button>
+    </div>`).join('');
+}
+
+function dodajNarPonuduFile(input){
+  const file=input.files[0];
+  if(!file) return;
+  window._narPonude=window._narPonude||[];
+  window._narPonude.push({id:null,file,naziv:file.name});
+  renderNarPonude();
+  input.value='';
+}
+
+function ukloniNarPonuda(i){
+  const item=(window._narPonude||[])[i];
+  if(!item) return;
+  if(item.id){ window._narPonudeRemoveIds=window._narPonudeRemoveIds||[]; window._narPonudeRemoveIds.push(item.id); }
+  window._narPonude.splice(i,1);
+  renderNarPonude();
 }
 
 function popuniDobavljaca(){
@@ -4675,14 +4705,6 @@ function popuniDobavljaca(){
 function spremiNovogDobavljaca(){
   // Auto-save new supplier to DB when name is entered and user moves on
   // Will be saved on narudzbenica save
-}
-
-function previewPonuda(input){
-  const file=input.files[0];
-  if(file){
-    window._narPonudaFile=file;
-    document.getElementById('nar-ponuda-preview').textContent=`📎 ${file.name}`;
-  }
 }
 
 function renderNarStavke(){
@@ -4741,7 +4763,6 @@ async function saveNarudzbenica(status){
   const mjesto=document.getElementById('nar-mjesto').value.trim();
   const otprema=document.getElementById('nar-otprema').value.trim();
   const nap=document.getElementById('nar-nap').value.trim();
-  const ponudaBroj=document.getElementById('nar-ponuda-broj').value.trim();
   const stavke=(window._narStavke||[]).filter(s=>s.naziv.trim());
   const god=new Date().getFullYear();
 
@@ -4768,27 +4789,10 @@ async function saveNarudzbenica(status){
     calcNarTotals();
     const t=window._narTotals;
 
-    // Upload ponude if file selected
-    let ponudaUrl='';
-    let ponudaUploadFailed=false;
-    const ponudaFile=window._narPonudaFile;
-    if(ponudaFile){
-      const ext=ponudaFile.name.split('.').pop();
-      const path=`ponude/${broj.replace(/[^a-z0-9]/gi,'_')}_${Date.now()}.${ext}`;
-      const {data:upData,error:upErr}=await SB.storage.from('ponude').upload(path,ponudaFile,{upsert:true});
-      if(!upErr){
-        const {data:urlData}=SB.storage.from('ponude').getPublicUrl(path);
-        ponudaUrl=urlData?.publicUrl||'';
-      } else {
-        console.error('Upload ponude nije uspio:',upErr);
-        ponudaUploadFailed=true;
-      }
-    }
-
     const payload={broj,godina:god,datum,zahtjevnica_id:zahId||null,
       dobavljac_id:dobId,dobavljac_naziv:dobNaziv,dobavljac_oib:dobOib,dobavljac_adresa:dobAdresa,
       rok_isporuke:rok,mjesto_isporuke:mjesto,nacin_otpreme:otprema,napomene:nap,
-      ponuda_url:ponudaUrl||undefined,vrsta:'roba',status,
+      vrsta:'roba',status,
       ukupno_bez_pdv:t.totBez,pdv_iznos:t.totPdv,ukupno_s_pdv:t.totSpdv,
       created_by:SB_USER?.id,updated_at:new Date().toISOString()};
     if(!window._narEdit){
@@ -4814,6 +4818,30 @@ async function saveNarudzbenica(status){
       ukupno_s_pdv:(s.kolicina||0)*(s.cijena||0)*(1+(s.pdv||25)/100)
     })));
 
+    // Obradi ponude: obriši uklonjene, prenesi/uploadaj preostale
+    let ponudaUploadFailed=false;
+    for(const rid of (window._narPonudeRemoveIds||[])){
+      await SB.from('narudzbenice_ponude').delete().eq('id',rid);
+    }
+    for(const p of (window._narPonude||[])){
+      if(p.id) continue; // već spremljeno, nije mijenjano
+      if(p.file){
+        const ext=p.file.name.split('.').pop();
+        const path=`ponude/${broj.replace(/[^a-z0-9]/gi,'_')}_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+        const {error:upErr}=await SB.storage.from('ponude').upload(path,p.file,{upsert:true});
+        if(!upErr){
+          const {data:urlData}=SB.storage.from('ponude').getPublicUrl(path);
+          await SB.from('narudzbenice_ponude').insert({narudzbenica_id:narId,url:urlData?.publicUrl||'',naziv:p.naziv});
+        } else {
+          console.error('Upload ponude nije uspio:',upErr);
+          ponudaUploadFailed=true;
+        }
+      } else if(p.url){
+        // prenesena ponuda iz zahtjevnice - samo kopiraj referencu
+        await SB.from('narudzbenice_ponude').insert({narudzbenica_id:narId,url:p.url,naziv:p.naziv});
+      }
+    }
+
     if(zahId){
       await SB.from('zahtjevnice').update({status:'realizirana',updated_at:new Date().toISOString()}).eq('id',zahId);
     }
@@ -4831,6 +4859,7 @@ async function saveNarudzbenica(status){
 async function pregledNarudzbenica(id){
   const {data:n}=await SB.from('narudzbenice').select('*').eq('id',id).single();
   const {data:stavke}=await SB.from('narudzbenice_stavke').select('*').eq('narudzbenica_id',id).order('rbr');
+  const {data:ponude}=await SB.from('narudzbenice_ponude').select('*').eq('narudzbenica_id',id).order('id');
   if(!n) return;
   const pt=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal()||{};
   document.getElementById('pregled-nab-title').textContent=`Narudžbenica ${n.broj}`;
@@ -4904,7 +4933,9 @@ async function pregledNarudzbenica(id){
     </div>
 
     ${n.napomene?`<div style="margin-bottom:1rem"><strong>Napomene:</strong><br>${n.napomene}</div>`:''}
-    ${n.ponuda_url?`<div style="margin-bottom:1rem"><a href="${n.ponuda_url}" target="_blank" class="btn bs" style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-file-download"></i> Priložena ponuda</a></div>`:''}
+    ${(ponude&&ponude.length)?`<div style="margin-bottom:1rem;display:flex;flex-direction:column;gap:6px">
+      ${ponude.map(p=>`<a href="${p.url}" target="_blank" class="btn bs" style="display:inline-flex;align-items:center;gap:6px;width:fit-content"><i class="ti ti-file-download"></i> ${p.naziv||'Ponuda'}</a>`).join('')}
+    </div>`:''}
     ${n.odobrio_ime?`<div style="padding:8px;background:rgba(34,134,58,.08);border-radius:6px;margin-bottom:1rem"><strong>Odobrio:</strong> ${n.odobrio_ime} &nbsp;|&nbsp; ${n.datum_odobrenja?.split('T')[0]||''}</div>`:''}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;padding-top:24px;margin-top:8px">
@@ -4972,6 +5003,12 @@ async function editNarudzbenica(id){
   document.getElementById('nar-nap').value=n.napomene||'';
   window._narStavke=(stavke||[]).map(s=>({naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina||1,cijena:s.cijena_bez_pdv||0,pdv:s.pdv_stopa||25}));
   renderNarStavke();
+
+  // Učitaj stvarno spremljene ponude ove narudžbenice (zamjenjuje prefill iz zahtjevnice)
+  const {data:ponude}=await SB.from('narudzbenice_ponude').select('*').eq('narudzbenica_id',id).order('id');
+  window._narPonude=(ponude||[]).map(p=>({id:p.id,url:p.url,naziv:p.naziv}));
+  window._narPonudeRemoveIds=[];
+  renderNarPonude();
 }
 
 async function odobriNarudzbenicu(id,odobri){
