@@ -4811,7 +4811,10 @@ async function popuniNarPlanFilter(){
   // stavke svih verzija s istim predmetom smatramo istom stavkom plana
   window._planIstiPredmet={}; 
   rows.forEach(p=>{(window._planIstiPredmet[p.predmet_nabave]=window._planIstiPredmet[p.predmet_nabave]||[]).push(p.id);});
-  const aktivne=rows.filter(p=>(p.verzija||0)===maxV);
+  // jedna stavka po predmetu (najnovija verzija / najveći id), čak i ako su podaci u bazi duplicirani
+  const po={};
+  rows.forEach(p=>{const k=(p.redni_broj||'')+'|'+p.predmet_nabave; const o=po[k]; if(!o||(p.verzija||0)>(o.verzija||0)||((p.verzija||0)===(o.verzija||0)&&p.id>o.id)) po[k]=p;});
+  const aktivne=Object.values(po).sort((x,y)=>(x.redni_broj||9999)-(y.redni_broj||9999));
   sel.innerHTML='<option value="">Sve</option><option value="none">— bez veze s planom —</option>'+aktivne.map(p=>`<option value="${p.id}">${lbl(p).slice(0,80)}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
 }
