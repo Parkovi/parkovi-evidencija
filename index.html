@@ -1195,6 +1195,8 @@ select{cursor:pointer}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
         <div class="fg" style="margin:0"><label class="fl">Rok isporuke</label><input type="date" id="nar-rok"></div>
         <div class="fg" style="margin:0"><label class="fl">Mjesto isporuke</label><input type="text" id="nar-mjesto" placeholder="npr. Skladište, ul. ..."></div>
+        <div class="fg" style="margin:0"><label class="fl">Zahtjevnica br. (za ispis)</label><input type="text" id="nar-ref-zah" placeholder="npr. 006/26"></div>
+        <div class="fg" style="margin:0"><label class="fl">Ponuda br. (za ispis)</label><input type="text" id="nar-ref-pon" placeholder="npr. 123/2026 ili datum ponude"></div>
         <div class="fg" style="margin:0"><label class="fl">Način otpreme</label><input type="text" id="nar-otprema" value="Po dogovoru"></div>
         <div class="fg" style="margin:0"><label class="fl">Napomene</label><input type="text" id="nar-nap" placeholder="npr. Klasa/Urbroj, sekcija..."></div>
         <div class="fg" style="margin:0"><label class="fl">Narudžbenicu sastavio/la</label><input type="text" id="nar-sastavio" placeholder="Ime i prezime"></div>
@@ -4823,6 +4825,8 @@ async function openNovaNarudzbenica(zahId){
   document.getElementById('nar-mjesto').value='';
   document.getElementById('nar-otprema').value='Po dogovoru';
   document.getElementById('nar-nap').value='';
+  document.getElementById('nar-ref-zah').value='';
+  document.getElementById('nar-ref-pon').value='';
   const pts=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal();
   document.getElementById('nar-sastavio').value=pts?.sast_ime||CU?.name||'';
   window._narPonude=[];
@@ -4962,6 +4966,8 @@ async function saveNarudzbenica(status){
   const mjesto=document.getElementById('nar-mjesto').value.trim();
   const otprema=document.getElementById('nar-otprema').value.trim();
   const nap=document.getElementById('nar-nap').value.trim();
+  const refZah=document.getElementById('nar-ref-zah').value.trim()||null;
+  const refPon=document.getElementById('nar-ref-pon').value.trim()||null;
   const stavke=(window._narStavke||[]).filter(s=>s.naziv.trim());
   const god=datum?parseInt(datum.split('-')[0]):new Date().getFullYear();
 
@@ -4990,7 +4996,7 @@ async function saveNarudzbenica(status){
 
     const payload={broj,godina:god,datum,zahtjevnica_id:zahId||null,plan_stavka_id:planId,
       dobavljac_id:dobId,dobavljac_naziv:dobNaziv,dobavljac_oib:dobOib,dobavljac_adresa:dobAdresa,
-      rok_isporuke:rok,mjesto_isporuke:mjesto,nacin_otpreme:otprema,napomene:nap,
+      rok_isporuke:rok,mjesto_isporuke:mjesto,nacin_otpreme:otprema,napomene:nap,ref_zahtjevnica:refZah,ref_ponuda:refPon,
       vrsta:'roba',status,
       ukupno_bez_pdv:t.totBez,pdv_iznos:t.totPdv,ukupno_s_pdv:t.totSpdv,
       created_by:SB_USER?.id,updated_at:new Date().toISOString()};
@@ -5088,6 +5094,8 @@ async function pregledNarudzbenica(id){
   if(!n) return;
   let zahVeza=null;
   if(n.zahtjevnica_id){const {data:zz}=await SB.from('zahtjevnice').select('broj,broj_ponude,datum').eq('id',n.zahtjevnica_id).single(); zahVeza=zz||null;}
+  const zahBr=n.ref_zahtjevnica||zahVeza?.broj||'';
+  const ponBr=n.ref_ponuda||zahVeza?.broj_ponude||'';
   const pt=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal()||{};
   document.getElementById('pregled-nab-title').textContent=`Narudžbenica ${n.broj}`;
   const st=NAR_STATUS[n.status]||{lbl:n.status,cls:'bdg bgy'};
@@ -5125,7 +5133,7 @@ async function pregledNarudzbenica(id){
       </div>
     </div>
 
-    ${(zahVeza&&(zahVeza.broj||zahVeza.broj_ponude))?`<div style="font-size:12px;margin-bottom:10px">${zahVeza.broj?`<strong>Temeljem zahtjevnice br.:</strong> ${zahVeza.broj}`:''}${(zahVeza.broj&&zahVeza.broj_ponude)?' &nbsp;|&nbsp; ':''}${zahVeza.broj_ponude?`<strong>Ponuda br.:</strong> ${zahVeza.broj_ponude}`:''}</div>`:''}
+    ${(zahBr||ponBr)?`<div style="font-size:12px;margin-bottom:10px">${zahBr?`<strong>Temeljem zahtjevnice br.:</strong> ${zahBr}`:''}${(zahBr&&ponBr)?' &nbsp;|&nbsp; ':''}${ponBr?`<strong>Ponuda br.:</strong> ${ponBr}`:''}</div>`:''}
 
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:1rem">
       <thead><tr style="background:var(--bg3)">
@@ -5236,6 +5244,8 @@ async function editNarudzbenica(id){
   document.getElementById('nar-mjesto').value=n.mjesto_isporuke||'';
   document.getElementById('nar-otprema').value=n.nacin_otpreme||'Po dogovoru';
   document.getElementById('nar-nap').value=n.napomene||'';
+  document.getElementById('nar-ref-zah').value=n.ref_zahtjevnica||'';
+  document.getElementById('nar-ref-pon').value=n.ref_ponuda||'';
   await osvjeziNarPlanDropdown();
   if(n.plan_stavka_id) document.getElementById('nar-plan').value=n.plan_stavka_id;
   window._narStavke=(stavke||[]).map(s=>({naziv:s.naziv,jed_mjere:s.jed_mjere||'kom',kolicina:s.kolicina||1,cijena:s.cijena_bez_pdv||0,pdv:s.pdv_stopa||25}));
