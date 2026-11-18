@@ -295,7 +295,7 @@ select{cursor:pointer}
   <div class="tb">
     <div class="tbb">
       <div class="tbi"><i class="ti ti-shopping-cart"></i></div>
-      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026.</div></div>
+      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026. &middot; v18.11-D</div></div>
     </div>
     <div class="tbr">
       <div class="tbu">
@@ -4810,10 +4810,10 @@ async function popuniNarPlanFilter(){
   window._planMapNar={}; rows.forEach(p=>window._planMapNar[p.id]=lbl(p));
   // stavke svih verzija s istim predmetom smatramo istom stavkom plana
   window._planIstiPredmet={}; 
-  rows.forEach(p=>{(window._planIstiPredmet[p.predmet_nabave]=window._planIstiPredmet[p.predmet_nabave]||[]).push(p.id);});
+  rows.forEach(p=>{const kk=String(p.predmet_nabave||'').trim().toLowerCase().replace(/\s+/g,' ');(window._planIstiPredmet[kk]=window._planIstiPredmet[kk]||[]).push(p.id);});
   // jedna stavka po predmetu (najnovija verzija / najveći id), čak i ako su podaci u bazi duplicirani
   const po={};
-  rows.forEach(p=>{const k=(p.redni_broj||'')+'|'+p.predmet_nabave; const o=po[k]; if(!o||(p.verzija||0)>(o.verzija||0)||((p.verzija||0)===(o.verzija||0)&&p.id>o.id)) po[k]=p;});
+  rows.forEach(p=>{const k=String(p.predmet_nabave||'').trim().toLowerCase().replace(/\s+/g,' '); const o=po[k]; if(!o||(p.verzija||0)>(o.verzija||0)||((p.verzija||0)===(o.verzija||0)&&p.id>o.id)) po[k]=p;});
   const aktivne=Object.values(po).sort((x,y)=>(x.redni_broj||9999)-(y.redni_broj||9999));
   sel.innerHTML='<option value="">Sve</option><option value="none">— bez veze s planom —</option>'+aktivne.map(p=>`<option value="${p.id}">${lbl(p).slice(0,80)}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
