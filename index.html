@@ -295,7 +295,7 @@ select{cursor:pointer}
   <div class="tb">
     <div class="tbb">
       <div class="tbi"><i class="ti ti-shopping-cart"></i></div>
-      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026. &middot; v20.8-A</div></div>
+      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026. &middot; v20.8-B</div></div>
     </div>
     <div class="tbr">
       <div class="tbu">
@@ -5959,7 +5959,7 @@ async function pregledZN(id,mode){
   a+=`<button class="btn bs" onclick="printZN()"><i class="ti ti-printer"></i> Ispis</button>`;
   if(znSmijeUrediti(z)) a+=`<button class="btn bp" onclick="closeM('mo-pregled-nab');editZN(${id})"><i class="ti ti-edit"></i> ${z.status==='vracen'?'Doradi i ponovno pošalji':'Uredi'}</button>`;
   if(z.status==='nacrt'&&(z.created_by===SB_USER?.id||isAdmin())) a+=`<button class="btn bd" onclick="obrisiZN(${id})"><i class="ti ti-trash"></i> Obriši nacrt</button>`;
-  if(['odobren','proveden'].includes(z.status)&&canVoditiPostupak()) a+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');otvoriOdluku(${id})"><i class="ti ti-file-certificate"></i> Interna odluka${z.odluka_podaci?' ✔':''}</button>`;
+  if(['odobren','proveden'].includes(z.status)&&canOdluka()) a+=`<button class="btn bs" onclick="closeM('mo-pregled-nab');otvoriOdluku(${id})"><i class="ti ti-file-certificate"></i> Interna odluka${z.odluka_podaci?' ✔':''}</button>`;
   if(z.status==='odobren'&&canVoditiPostupak()) a+=`<button class="btn bp" onclick="closeM('mo-pregled-nab');otvoriPostupakZN(${id})"><i class="ti ti-gavel"></i> Upiši provedeni postupak i ugovor</button>`;
   if(z.status==='kod_direktora'&&canApprove()){
     a+=`<button class="btn bd" onclick="znOdluka(${id},'odbij')"><i class="ti ti-x"></i> Odbij</button>`;
@@ -6676,7 +6676,9 @@ function odDodajClana(c){
   d.querySelector('.odc-ul').onchange=function(){ const z=d.querySelector('.odc-zad'); const kat=document.getElementById('od-kat').value; const all=Object.values(OD_ZADACE).map(a=>a.join('\n')); if(!z.value.trim()||all.includes(z.value)) z.value=odZadace(this.value,kat); };
   document.getElementById('od-clanovi').appendChild(d);
 }
+function canOdluka(){return ['admin','direktor','javna_nabava'].includes(CU?.role);}
 async function otvoriOdluku(id){
+  if(!canOdluka()){showToast('Interna odluka je dostupna samo direktoru, voditelju javne nabave i administratoru','error');return;}
   const {data:z}=await SB.from('zahtjevi_nabave').select('*').eq('id',id).single(); if(!z) return;
   window._odId=id; window._odZ=z;
   const pt=window.POSTAVKE_TVRTKE||await loadPostavkeTvrtkeGlobal()||{};
@@ -6759,6 +6761,7 @@ function odWord(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿',html],{type:'application/msword'})); a.download=`Interna_odluka_${(o.evid||'nabava').replace(/[^\w.-]+/g,'_')}.doc`; document.body.appendChild(a); a.click(); a.remove();
 }
 async function odSpremi(){
+  if(!canOdluka()) return;
   const o=odPrikupi(), v=odValid(o), al=document.getElementById('od-al'); if(v){al.innerHTML=`<div class="al ald">${znEsc(v)}</div>`;return;}
   const {error}=await SB.from('zahtjevi_nabave').update({odluka_podaci:o,odluka_datum:o.datum}).eq('id',window._odId);
   if(error){ al.innerHTML=`<div class="al ald">Greška: ${znEsc(error.message)}. Je li pokrenut SQL zahtjevi_nabave_faza6.sql?</div>`; return; }
