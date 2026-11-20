@@ -295,7 +295,7 @@ select{cursor:pointer}
   <div class="tb">
     <div class="tbb">
       <div class="tbi"><i class="ti ti-shopping-cart"></i></div>
-      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026. &middot; v20.8-B</div></div>
+      <div><div style="font-size:13px;font-weight:700">Parkovi i nasadi d.o.o.</div><div style="font-size:10px;opacity:.6;margin-top:1px">Sustav nabave 2026. &middot; v20.9-A</div></div>
     </div>
     <div class="tbr">
       <div class="tbu">
@@ -329,6 +329,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('narudzbenice')" id="nav-narudzbenice"><i class="ti ti-shopping-cart"></i> Narudžbenice</div>
         <div class="ni" onclick="sP('zahtjevi-nabave')" id="nav-zahtjevi-nabave"><i class="ti ti-file-text"></i> Zahtjevi za nabavu</div>
         <div class="ni" onclick="sP('ugovori')" id="nav-ugovori"><i class="ti ti-gavel"></i> Ugovori</div>
+        <div class="ni" onclick="sP('odluke')" id="nav-odluke" style="display:none"><i class="ti ti-file-certificate"></i> Interne odluke</div>
         <div class="ni" onclick="sP('realizacija')" id="nav-realizacija"><i class="ti ti-chart-bar"></i> Realizacija</div>
         <div class="ni" onclick="sP('dobavljaci')" id="nav-dobavljaci"><i class="ti ti-building-store"></i> Dobavljači</div>
         <div class="ni" onclick="sP('plan-nabave')" id="nav-plan-nabave"><i class="ti ti-clipboard-list"></i> Plan nabave</div>
@@ -774,6 +775,10 @@ select{cursor:pointer}
       </div>
 
       <!-- UGOVORI -->
+      <div class="page" id="page-odluke">
+        <div class="ph"><div><div class="pt">Interne odluke</div><div class="ps">Odluke o pokretanju postupka i imenovanju stručnog povjerenstva. Vide ih samo direktor, voditelj javne nabave i administrator.</div></div></div>
+        <div class="card"><div id="od-list"></div></div>
+      </div>
       <div class="page" id="page-ugovori">
         <div class="ph">
           <div><div class="pt">Ugovori</div><div class="ps">Sklopljeni ugovori, aneksi i praćenje realizacije. Vide ih samo pratitelj, administrator, direktor i osobe kojima je pristup dodijeljen.</div></div>
@@ -2077,7 +2082,7 @@ function sP(n){
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,zahtjevnice:setupZahtjevnice,'zahtjevi-nabave':setupZahtjeviNabave,ugovori:setupUgovori,realizacija:setupRealizacija,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci,'postavke-tvrtke':setupPostavkeTvrtke,'sigurnosna-kopija':setupBackup,obrisano:setupKos,'dnevnik-nabave':loadDnevnikNabave,'plan-nabave':setupPlanNabave,registar:setupRegistar})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,zahtjevnice:setupZahtjevnice,'zahtjevi-nabave':setupZahtjeviNabave,ugovori:setupUgovori,realizacija:setupRealizacija,narudzbenice:setupNarudzbenice,dobavljaci:setupDobavljaci,'postavke-tvrtke':setupPostavkeTvrtke,'sigurnosna-kopija':setupBackup,odluke:setupOdluke,obrisano:setupKos,'dnevnik-nabave':loadDnevnikNabave,'plan-nabave':setupPlanNabave,registar:setupRegistar})[n]?.();
 }
 
 function vJ(){
@@ -3916,6 +3921,7 @@ async function loadKorisnikProfile(){
   document.getElementById('tAv').textContent = CU.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('tR').textContent = nazivUloge(CU.role);
   if(CU.role==='admin') document.getElementById('anav').style.display='block';
+  { const no=document.getElementById('nav-odluke'); if(no) no.style.display=canOdluka()?'':'none'; }
   ['dobavljaci','plan-nabave'].forEach(p=>{const e=document.getElementById('nav-'+p); if(e) e.style.display=seesAllNabava()?'':'none';});
 }
 
@@ -4040,6 +4046,7 @@ async function afterLoginSuccess(){
   document.getElementById('tN').textContent = CU.name||'';
   document.getElementById('tAv').textContent = (CU.name||'A').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   if(CU.role==='admin') document.getElementById('anav').style.display='block';
+  { const no=document.getElementById('nav-odluke'); if(no) no.style.display=canOdluka()?'':'none'; }
   ['dobavljaci','plan-nabave'].forEach(p=>{const e=document.getElementById('nav-'+p); if(e) e.style.display=seesAllNabava()?'':'none';});
   if(isLive()) document.getElementById('sb-config-banner').classList.add('hidden');
   document.getElementById('sb-mode-badge').textContent = isLive()?'● Live baza':'● Lokalno';
@@ -6768,6 +6775,18 @@ async function odSpremi(){
   try{ localStorage.setItem('znLastClanovi',JSON.stringify(o.clanovi)); }catch(e){}
   await logN('zahtjev_nabave',window._odId,window._odZ?.broj,'Izrađena interna odluka o pokretanju postupka',o.evid);
   showToast('✅ Odluka spremljena','success'); al.innerHTML='<div class="al als">Spremljeno. Možeš je ispisati ili preuzeti za Word.</div>';
+}
+
+async function setupOdluke(){
+  const el=document.getElementById('od-list'); if(!el) return;
+  if(!canOdluka()){ el.innerHTML='<div class="empty"><p>Nemaš pristup.</p></div>'; return; }
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  const {data,error}=await SB.from('zahtjevi_nabave').select('id,broj,predmet,vrsta,procijenjena_vrijednost,status,odluka_podaci,odluka_datum,datum_odobrenja').eq('godina',window.AKTIVNA_GODINA).in('status',['odobren','proveden']).order('id',{ascending:false});
+  if(error){ el.innerHTML=`<div class="al ald">Greška: ${znEsc(error.message)}. Je li pokrenut SQL zahtjevi_nabave_faza6.sql?</div>`; return; }
+  const th='padding:8px 10px;text-align:left';
+  el.innerHTML=!(data||[]).length?'<div class="empty"><i class="ti ti-file-certificate"></i><p>Nema odobrenih zahtjeva za nabavu. Odluka se izrađuje nakon što direktor odobri zahtjev.</p></div>':
+   `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--bg3)"><th style="${th}">Zahtjev</th><th style="${th}">Predmet</th><th style="${th};text-align:right">Procijenjeno</th><th style="${th}">Odluka</th><th></th></tr></thead><tbody>`+
+   data.map(z=>{const o=z.odluka_podaci; return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 10px"><strong>${znEsc(z.broj)}</strong></td><td style="padding:8px 10px">${znEsc(z.predmet)}</td><td style="padding:8px 10px;text-align:right">${fmtEUR(z.procijenjena_vrijednost)}</td><td style="padding:8px 10px">${o?`<span class="bdg bgr">Izrađena ${znEsc(o.datum||'')}</span><div style="font-size:11.5px;color:var(--text2)">Ev. broj ${znEsc(o.evid||'')}</div>`:'<span class="bdg bam">Nije izrađena</span>'}</td><td style="padding:8px 10px"><button class="btn bxs ${o?'bs':'bp'}" onclick="otvoriOdluku(${z.id})"><i class="ti ti-file-certificate"></i> ${o?'Otvori':'Izradi odluku'}</button></td></tr>`;}).join('')+'</tbody></table></div>';
 }
 
 function printZN(){
