@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evidencija radnog vremena â Parkovi i nasadi d.o.o.</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -690,6 +690,8 @@ select{cursor:pointer}
                 </select>
               </div>
               <button class="btn bp" onclick="loadStimPregled()" style="margin-bottom:1px"><i class="ti ti-search"></i> Pretraži</button>
+              <button class="btn bs" onclick="ispisStimPregled()" style="margin-bottom:1px"><i class="ti ti-printer"></i> Ispis / PDF</button>
+              <button class="btn btn-excel" onclick="excelStimPregled()" style="margin-bottom:1px"><i class="ti ti-file-spreadsheet"></i> Excel</button>
             </div>
           </div>
           <div class="card"><div id="stim-pregled-results"><div class="empty"><i class="ti ti-table"></i><p>Klikni Pretraži</p></div></div></div>
@@ -3861,6 +3863,7 @@ async function loadStimPregled(){
     const {data,error} = await q;
     if(error) throw error;
     if(!data||!data.length){
+      window._stimPregled = [];
       el.innerHTML='<div class="empty"><p>Nema podataka za odabrane filtere</p></div>';return;
     }
     renderStimPregled(data);
@@ -3870,6 +3873,7 @@ async function loadStimPregled(){
 }
 
 function renderStimPregled(data){
+  window._stimPregled = data;
   const el = document.getElementById('stim-pregled-results');
   let totNeopor=0,totOpor=0,totBruto2=0,totMj=0;
   let html=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -4493,6 +4497,59 @@ function exportStimKumulativ(){
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:28},{wch:28},{wch:8},{wch:13},{wch:15},{wch:15},{wch:13},{wch:12},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kumulativ');
   XLSX.writeFile(wb,`Stimulacije_kumulativ_${X.raspon.replace(/[^0-9A-Za-zčćžšđČĆŽŠĐ]+/g,'_')}.xlsx`);
+}
+
+// ── Pregled i ispis: ispis / PDF i Excel ──────────────────────
+function stimPregledRedovi(){
+  const n=x=>parseFloat(x)||0;
+  return (window._stimPregled||[]).map(r=>{const d=DB.djelatnici.find(x=>x.id===r.djelatnik_id);
+    return {ime:d?dF(d):'–', jed:d?jN(d.jid):'', mj:r.mjesec, god:r.godina, bod:r.bodovi, posto:n(r.stimulacija_posto),
+      stim:n(r.iznos_stimulacije), neop:n(r.iznos_neoporezivo), opor:n(r.iznos_oporezivo), bol:n(r.dodatak_bolovanje),
+      boln:n(r.dodatak_bol_neoporezivo), bolo:n(r.dodatak_bol_oporezivo), bruto2:n(r.dodatak_bol_bruto2), dmj:n(r.dodatak_mjesecni),
+      kum:n(r.kumulativ_neoporezivo), uk:n(r.iznos_stimulacije)+n(r.dodatak_bolovanje)+n(r.dodatak_mjesecni)};});
+}
+function stimPregledNaslov(){
+  const sel=id=>{const e=document.getElementById(id); return e?e.options[e.selectedIndex]?.text:'';};
+  const mj=parseInt(document.getElementById('stim-pmj')?.value)||0;
+  return {jed:sel('stim-pj'), djel:sel('stim-pd'), god:sel('stim-pgod'), mj:mj?MJ_HR[mj-1]:'Svi mjeseci'};
+}
+async function ispisStimPregled(){
+  const R=stimPregledRedovi();
+  if(!R.length){showToast('Najprije klikni Pretraži','info');return;}
+  const N=stimPregledNaslov();
+  let tv=window.POSTAVKE_TVRTKE; try{ if(!tv) tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
+  const e2=v=>v?v.toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
+  const T=R.reduce((t,r)=>{['stim','neop','opor','bol','boln','bolo','bruto2','dmj','uk'].forEach(k=>t[k]+=r[k]);return t;},{stim:0,neop:0,opor:0,bol:0,boln:0,bolo:0,bruto2:0,dmj:0,uk:0});
+  const w=window.open('','_blank'); if(!w){showToast('Preglednik je blokirao novi prozor – dopustite skočne prozore','error');return;}
+  w.document.write(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Stimulacije – ${hEsc(N.mj)} ${hEsc(N.god)}</title>
+  <style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#111;margin:0}
+  h1{font-size:15px;margin:8px 0 2px}.sub{color:#444;margin-bottom:10px}table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #999;padding:3px 5px}th{background:#eee;font-size:9.5px}td.r,th.r{text-align:right}
+  tfoot td{font-weight:bold;background:#f3f3f3}.foot{margin-top:14px;font-size:9px;color:#666}</style></head><body>
+  <div style="font-weight:bold">${hEsc(tv?.naziv||'Parkovi i nasadi d.o.o.')}</div>
+  <h1>Obračun stimulacija – ${hEsc(N.mj)} ${hEsc(N.god)}.</h1>
+  <div class="sub">Jedinica: <strong>${hEsc(N.jed)}</strong> · Djelatnik: <strong>${hEsc(N.djel)}</strong> · Zapisa: ${R.length}</div>
+  <table><thead><tr><th>R.br.</th><th>Djelatnik</th><th>Jedinica</th><th>Mj.</th><th class="r">Bod.</th><th class="r">%</th><th class="r">Stimulacija</th>
+  <th class="r">Neopor.</th><th class="r">Opor.</th><th class="r">Dod. bol.</th><th class="r">Bol. neopor.</th><th class="r">Bol. opor.</th><th class="r">Bruto2</th><th class="r">Dod. mj.</th><th class="r">Ukupno</th><th class="r">Kumul.</th></tr></thead>
+  <tbody>${R.map((r,i)=>`<tr><td>${i+1}.</td><td>${hEsc(r.ime)}</td><td>${hEsc(r.jed)}</td><td>${MJ_HR[r.mj-1]}</td><td class="r">${r.bod??''}</td><td class="r">${r.posto}%</td>
+   <td class="r">${e2(r.stim)}</td><td class="r">${e2(r.neop)}</td><td class="r">${e2(r.opor)}</td><td class="r">${e2(r.bol)}</td><td class="r">${e2(r.boln)}</td><td class="r">${e2(r.bolo)}</td>
+   <td class="r">${e2(r.bruto2)}</td><td class="r">${e2(r.dmj)}</td><td class="r"><strong>${e2(r.uk)}</strong></td><td class="r">${e2(r.kum)}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="6">UKUPNO (€)</td><td class="r">${e2(T.stim)}</td><td class="r">${e2(T.neop)}</td><td class="r">${e2(T.opor)}</td><td class="r">${e2(T.bol)}</td><td class="r">${e2(T.boln)}</td><td class="r">${e2(T.bolo)}</td><td class="r">${e2(T.bruto2)}</td><td class="r">${e2(T.dmj)}</td><td class="r">${e2(T.uk)}</td><td></td></tr></tfoot></table>
+  <div class="foot">Iznosi u eurima. Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div>
+  <script>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  w.document.close();
+}
+function excelStimPregled(){
+  const R=stimPregledRedovi();
+  if(!R.length){showToast('Najprije klikni Pretraži','info');return;}
+  if(typeof XLSX==='undefined'){showToast('Excel modul nije učitan','error');return;}
+  const N=stimPregledNaslov(); const r2=v=>Math.round(v*100)/100;
+  const aoa=[[`Obračun stimulacija – ${N.mj} ${N.god} – ${N.jed}`],[],
+    ['Djelatnik','Jedinica','Mjesec','Bodovi','%','Stimulacija €','Neoporezivo €','Oporezivo €','Dod. bolovanje €','Bol. neopor. €','Bol. opor. €','Bruto2 €','Dod. mjesečni €','Ukupno €','Kumulativ €'],
+    ...R.map(r=>[r.ime,r.jed,MJ_HR[r.mj-1],r.bod,r.posto,r2(r.stim),r2(r.neop),r2(r.opor),r2(r.bol),r2(r.boln),r2(r.bolo),r2(r.bruto2),r2(r.dmj),r2(r.uk),r2(r.kum)])];
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:26},{wch:26},{wch:11},{wch:8},{wch:6},{wch:12},{wch:13},{wch:12},{wch:14},{wch:13},{wch:12},{wch:10},{wch:14},{wch:11},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stimulacije');
+  XLSX.writeFile(wb,`Stimulacije_${N.god}_${N.mj.replace(/\s+/g,'_')}.xlsx`);
 }
 
 function openM(id){document.getElementById(id).classList.add("open");}
