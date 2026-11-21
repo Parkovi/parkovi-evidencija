@@ -325,6 +325,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('ispis')" id="nav-ispis"><i class="ti ti-printer"></i> Ispis evidencije</div>
         <div class="ni" onclick="sP('bolovanje')" id="nav-bolovanje"><i class="ti ti-stethoscope"></i> Pretraga bolovanja</div>
         <div class="ni" onclick="sP('stimulacije')" id="nav-stimulacije"><i class="ti ti-coin-euro"></i> Stimulacije</div>
+        <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
       </div>
       <div class="sg">
         <div class="sgl">Djelatnici</div>
@@ -575,6 +576,25 @@ select{cursor:pointer}
         </div>
       </div>
 
+      <div class="page" id="page-prijedlozi">
+        <div class="ph">
+          <div><div class="pt">Prijedlozi stimulacija</div><div class="ps">Voditelj predlaže · direktor odobrava · obračun plaće isplaćuje</div></div>
+          <button class="btn bp" onclick="novaPrijedlog()"><i class="ti ti-plus"></i> Novi prijedlog</button>
+        </div>
+        <div class="al ali" id="prij-info" style="margin-bottom:1rem"></div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="margin:0;min-width:100px"><label class="fl">Godina</label><select id="prij-fgod" onchange="loadPrijedlozi()"></select></div>
+            <div class="fg" style="margin:0;min-width:130px"><label class="fl">Mjesec</label><select id="prij-fmj" onchange="loadPrijedlozi()"></select></div>
+            <div class="fg" style="margin:0;min-width:200px"><label class="fl">Jedinica</label><select id="prij-fjed" onchange="loadPrijedlozi()"></select></div>
+            <div class="fg" style="margin:0;min-width:160px"><label class="fl">Status</label><select id="prij-fst" onchange="loadPrijedlozi()">
+              <option value="">Svi</option><option value="nacrt">Nacrt</option><option value="poslano">Čeka direktora</option><option value="vraceno">Vraćeno na doradu</option><option value="odobreno">Odobreno</option></select></div>
+            <button class="btn bs" onclick="loadPrijedlozi()" style="margin-bottom:1px"><i class="ti ti-refresh"></i> Osvježi</button>
+          </div>
+        </div>
+        <div class="card"><div id="prij-list"><div class="empty"><i class="ti ti-send"></i><p>Učitavam...</p></div></div></div>
+      </div>
+
       <div class="page" id="page-stimulacije">
         <div class="ph">
           <div>
@@ -587,6 +607,7 @@ select{cursor:pointer}
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1rem">
           <button id="stim-tab-unos" onclick="stimTab('unos')" style="padding:8px 20px;border:none;background:none;font-weight:600;font-size:13px;cursor:pointer;border-bottom:2px solid var(--blue);color:var(--blue);margin-bottom:-2px"><i class="ti ti-edit"></i> Unos po mjesecu</button>
           <button id="stim-tab-pregled" onclick="stimTab('pregled')" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-table"></i> Pregled i ispis</button>
+          <button id="stim-tab-kumulativ" onclick="stimTab('kumulativ')" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-chart-histogram"></i> Preglednik (kumulativ)</button>
           <button id="stim-tab-bodovi" onclick="openBodovi()" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-chart-dots"></i> Bodovi</button>
           <button id="stim-tab-vb" onclick="openVrijednostBoda()" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-settings"></i> Vrijednost boda</button>
         </div>
@@ -672,6 +693,21 @@ select{cursor:pointer}
             </div>
           </div>
           <div class="card"><div id="stim-pregled-results"><div class="empty"><i class="ti ti-table"></i><p>Klikni Pretraži</p></div></div></div>
+        </div>
+
+        <!-- TAB: Preglednik (kumulativ u razdoblju) -->
+        <div id="stim-panel-kumulativ" style="display:none">
+          <div class="card" style="padding:1rem;margin-bottom:1rem">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+              <div class="fg" style="margin:0"><label class="fl">Od</label><div style="display:flex;gap:4px"><select id="stk-mj-od"></select><select id="stk-god-od"></select></div></div>
+              <div class="fg" style="margin:0"><label class="fl">Do</label><div style="display:flex;gap:4px"><select id="stk-mj-do"></select><select id="stk-god-do"></select></div></div>
+              <div class="fg" style="min-width:200px;margin:0"><label class="fl">Jedinica</label><select id="stk-jed" onchange="stkFilterDjel()"></select></div>
+              <div class="fg" style="min-width:180px;margin:0"><label class="fl">Djelatnik</label><select id="stk-djel"></select></div>
+              <button class="btn bp" onclick="loadStimKumulativ()" style="margin-bottom:1px"><i class="ti ti-search"></i> Prikaži</button>
+            </div>
+            <div style="font-size:12px;color:var(--text2);margin-top:8px"><i class="ti ti-info-circle"></i> Zbroj obračunatih stimulacija i dodataka po djelatniku u odabranom razdoblju.</div>
+          </div>
+          <div class="card"><div id="stk-results"><div class="empty"><i class="ti ti-chart-histogram"></i><p>Odaberi razdoblje i klikni Prikaži</p></div></div></div>
         </div>
       </div>
 
@@ -907,6 +943,12 @@ select{cursor:pointer}
   <div class="mft"><button class="btn bs" onclick="closeM('mo-vrsta')">Odustani</button><button class="btn bp" onclick="saveVrsta()"><i class="ti ti-check"></i> Spremi</button></div>
 </div></div>
 
+<div class="mo" id="mo-prijedlog"><div class="md mdlg" style="max-width:900px">
+  <div class="mhd"><div class="mtt"><i class="ti ti-send"></i><span id="prij-title">Prijedlog stimulacije</span></div><button class="mcl" onclick="closeM('mo-prijedlog')"><i class="ti ti-x"></i></button></div>
+  <div id="prij-body"></div>
+  <div class="mft" id="prij-foot"></div>
+</div></div>
+
 <div class="mo" id="mo-user"><div class="md mdlg">
   <div class="mhd"><div class="mtt"><i class="ti ti-user-shield"></i><span id="mut">Dodaj korisnika</span></div><button class="mcl" onclick="closeM('mo-user')"><i class="ti ti-x"></i></button></div>
   <div id="mua"></div>
@@ -916,12 +958,13 @@ select{cursor:pointer}
   </div>
   <div class="fr c2">
     <div class="fg"><label class="fl">Lozinka</label><input type="password" id="mup" placeholder="Min. 6 znakova"></div>
-    <div class="fg"><label class="fl">Uloga</label><select id="mur"><option value="korisnik">Voditelj jedinice</option><option value="admin">Administrator</option></select></div>
+    <div class="fg"><label class="fl">Uloga</label><select id="mur"><option value="korisnik">Voditelj jedinice</option><option value="direktor">Direktor</option><option value="admin">Administrator</option></select></div>
   </div>
   <div class="fg"><label class="fl">Ovlast pregleda</label><select id="mua2" onchange="togAUI()"><option value="own">Jedna ili više jedinica (vlastite)</option><option value="selected">Odabrane jedinice (širi pregled)</option><option value="all">Sve jedinice (administrator)</option></select></div>
   <div id="mujw" style="display:none" class="fg"><label class="fl">Dostupne jedinice</label>
     <div id="mujeds" style="max-height:130px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:5px"></div>
   </div>
+  <div class="fg"><label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="muvs" style="width:auto"> Vidi stimulacije (iznose) i pretragu bolovanja <span style="color:var(--text3)">– admin i direktor uvijek vide</span></label></div>
   <div class="fg" id="mupj-wrap"><label class="fl">Primarna jedinica (za unos)</label><select id="mupj"></select></div>
   <div class="mft"><button class="btn bs" onclick="closeM('mo-user')">Odustani</button><button class="btn bp" onclick="saveUser()"><i class="ti ti-check"></i> Spremi</button></div>
 </div></div>
@@ -1314,11 +1357,12 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementB
 function doLogout(){if(isLive()){doLogoutSB();return;}CU=null;DB.evidencija={};document.getElementById("app").style.display="none";document.getElementById("ls").style.display="flex";document.getElementById("lal").innerHTML="";}
 
 function sP(n){
+  if((n==='stimulacije'||n==='bolovanje')&&!canStim()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,prijedlozi:setupPrijedlozi,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -1829,7 +1873,7 @@ async function rKor(){
           id:k.id, name:k.name||'–', username:k.id,
           role:k.role||'korisnik', access:k.access||'own',
           jedinice:k.jedinice_ids||[], pjid:k.prim_jed_id,
-          aktivan:k.aktivan!==false
+          aktivan:k.aktivan!==false, vidiStim:k.vidi_stimulacije===true
         });
       });
       // Set current user email
@@ -1847,7 +1891,7 @@ async function rKor(){
     const[bg,fg]=avC(u.name||'A');
     const isMe=u.id===CU?.id||u.id===SB_USER?.id;
     const isUUID=typeof u.id==='string'&&u.id.includes('-');
-    const roleBdg=u.role==='admin'?'<span class="bdg bgr">Administrator</span>':'<span class="bdg bgy">Voditelj</span>';
+    const roleBdg=(u.role==='admin'?'<span class="bdg bgr">Administrator</span>':u.role==='direktor'?'<span class="bdg bbl">Direktor</span>':'<span class="bdg bgy">Voditelj</span>')+(u.vidiStim?' <span class="bdg bam">Stimulacije</span>':'');
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:11px">
         <div style="width:38px;height:38px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${(u.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -1870,6 +1914,7 @@ function openAddUser(){
   document.getElementById("mut").textContent="Dodaj korisnika";
   ["mun","muu","mup"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("mur").value="korisnik";
+  document.getElementById("muvs").checked=false;
   document.getElementById("mua2").value="own";
   document.getElementById("mua").innerHTML="";
   const emailLbl=document.getElementById("mu-email-hint");
@@ -1885,7 +1930,11 @@ function openEditUser(id){
   document.getElementById("mun").value=u.name||"";
   document.getElementById("muu").value="";  // email hidden in edit
   document.getElementById("mup").value="";
-  document.getElementById("mur").value=u.role||"korisnik";
+  { const sel=document.getElementById("mur"), r=u.role||"korisnik";
+    // sačuvaj i uloge koje nisu na popisu (da se spremanjem ne izgube)
+    if(![...sel.options].some(o=>o.value===r)){const o=document.createElement('option');o.value=r;o.textContent='Ostalo: '+r;sel.appendChild(o);}
+    sel.value=r; }
+  document.getElementById("muvs").checked=!!u.vidiStim;
   document.getElementById("mua2").value=u.access||"own";
   document.getElementById("mua").innerHTML="";
   const emailLbl=document.getElementById("mu-email-hint");
@@ -1941,7 +1990,8 @@ async function saveUser(){
         }
         // Update existing korisnik profile in SB
         const{error}=await SB.from('korisnici').update({
-          name, role, access, jedinice_ids:jeds, prim_jed_id:pjid
+          name, role, access, jedinice_ids:jeds, prim_jed_id:pjid,
+          vidi_stimulacije:document.getElementById("muvs").checked
         }).eq('id',eUs);
         if(error) throw error;
         // Update password if provided
@@ -3126,13 +3176,15 @@ async function loadKorisnikProfile(){
   if(error||!data) return;
   CU.name    = data.name;
   CU.role    = data.role;
+  CU.vidiStim= data.vidi_stimulacije===true;
   CU.access  = data.access;
   CU.jedinice= data.jedinice_ids||[];
   CU.pjid    = data.prim_jed_id;
   document.getElementById('tN').textContent = CU.name;
   document.getElementById('tAv').textContent = CU.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('tR').textContent = CU.role==='admin'?'Administrator':'Voditelj';
+  document.getElementById('tR').textContent = nazivUlogeEv(CU.role);
   if(CU.role==='admin') document.getElementById('anav').style.display='block';
+  primijeniOvlastiStim();
 }
 
 // ── LOAD EVIDENCIJA (lazy — only when needed) ─────────────────────────────
@@ -3256,6 +3308,7 @@ async function afterLoginSuccess(){
   document.getElementById('tN').textContent = CU.name||'';
   document.getElementById('tAv').textContent = (CU.name||'A').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   if(CU.role==='admin') document.getElementById('anav').style.display='block';
+  primijeniOvlastiStim();
   if(isLive()) document.getElementById('sb-config-banner').classList.add('hidden');
   document.getElementById('sb-mode-badge').textContent = isLive()?'● Live baza':'● Lokalno';
   document.getElementById('sb-mode-badge').className = 'sb-mode-badge '+(isLive()?'sb-mode-live':'sb-mode-local');
@@ -3439,7 +3492,8 @@ const BRUTO2_STOPA = 0.165;
 const NEOPOR_MAX = 1200;
 
 function stimTab(tab){
-  ['unos','pregled'].forEach(t=>{
+  if(tab==='kumulativ') setupStimKumulativ();
+  ['unos','pregled','kumulativ'].forEach(t=>{
     document.getElementById('stim-panel-'+t).style.display = t===tab?'block':'none';
     const btn = document.getElementById('stim-tab-'+t);
     if(btn){
@@ -3506,6 +3560,8 @@ async function loadStimUnos(){
     .select('*').eq('godina',god).eq('mjesec',mj);
   const existMap = {};
   (existing||[]).forEach(e=>existMap[e.djelatnik_id]=e);
+  // Odobreni prijedlozi voditelja za ovaj mjesec
+  const {map:prijMap, cekaju:prijCekaju} = await dohvatiOdobrenePrijedloge(god, mj);
 
   // Dohvati kumulativ za svakog djelatnika (zadnji zapis prije ovog mjeseca)
   const {data:kumData} = await SB.from('stimulacije_obracun')
@@ -3613,7 +3669,7 @@ async function loadStimUnos(){
     const bod = bodMap[d.id]||0;
     const kum = kumMap[d.id]||0;
     const ex  = existMap[d.id];
-    const posto = ex ? parseFloat(ex.stimulacija_posto)||0 : 0;
+    const posto = ex ? parseFloat(ex.stimulacija_posto)||0 : (prijMap[d.id]?.posto||0);
     // Automatski dodaj 233€ ako ima pravo, inače 0
     const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
     const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
@@ -3634,6 +3690,7 @@ async function loadStimUnos(){
           style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center"
           onchange="recalcRow(${d.id},${bod},${kum},${vrijBoda})"
           id="stim-posto-${d.id}">
+        ${prijMap[d.id]?`<div title="${hEsc(prijMap[d.id].opisi.join('\n'))}" style="font-size:10px;color:var(--blue);margin-top:2px;cursor:help"><i class="ti ti-rosette-discount-check"></i> prijedlog ${prijMap[d.id].posto}%</div>`:''}
       </td>
       <td style="padding:6px 8px;text-align:center">
         <input type="number" value="${bolDod}" min="0" step="1"
@@ -3656,6 +3713,8 @@ async function loadStimUnos(){
 
   html += `</tbody></table>`;
   html += `<div style="padding:12px;font-size:12px;color:var(--text2)">
+    ${Object.keys(prijMap).length?`<span style="color:var(--blue)"><i class="ti ti-rosette-discount-check"></i> Odobreni prijedlozi upisani za ${Object.keys(prijMap).length} djelatnika (prijeđi mišem preko oznake za opis)</span> &nbsp;|&nbsp; `:''}
+    ${prijCekaju?`<span style="color:var(--amber)"><i class="ti ti-clock"></i> ${prijCekaju} prijedlog(a) još čeka direktora</span> &nbsp;|&nbsp; `:''}
     Vrijednost boda: <strong>${vrijBoda.toFixed(4)} €</strong> &nbsp;|&nbsp;
     Zeleni redovi = već uneseni u bazu &nbsp;|&nbsp;
     <strong>Klikni "Obračunaj i spremi sve"</strong> za snimanje svih koji imaju postotak > 0
@@ -4025,6 +4084,415 @@ async function savePostavkeTvrtke(){
   }catch(e){
     document.getElementById('pt-al').innerHTML=`<div class="al ald">Greška: ${e.message}</div>`;
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PRIJEDLOZI STIMULACIJA (voditelj → direktor → obračun) + PREGLEDNIK
+// ══════════════════════════════════════════════════════════════
+const MJ_HR=['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj','Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac'];
+const PRIJ_STATUS={
+  nacrt:{lbl:'Nacrt',cls:'bdg bgy'},
+  poslano:{lbl:'Čeka direktora',cls:'bdg bam'},
+  vraceno:{lbl:'Vraćeno na doradu',cls:'bdg brd'},
+  odobreno:{lbl:'Odobreno',cls:'bdg bgr'}
+};
+function hEsc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function canStim(){return !!CU&&(CU.role==='admin'||CU.role==='direktor'||CU.vidiStim===true);}
+function jeDirektor(){return CU?.role==='direktor';}
+function nazivUlogeEv(r){return ({admin:'Administrator',direktor:'Direktor'})[r]||'Voditelj';}
+function prijBroj(p){return `STIM-${p.godina}-${String(p.id).padStart(4,'0')}`;}
+function fmtDT(s){if(!s)return '–';const d=new Date(s);return d.toLocaleDateString('hr-HR')+' '+d.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});}
+
+// Skrivanje stranica prema ovlastima
+function primijeniOvlastiStim(){
+  ['nav-stimulacije','nav-bolovanje'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display=canStim()?'':'none';});
+  const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
+}
+
+// ── Stranica: popis prijedloga ────────────────────────────────
+async function setupPrijedlozi(){
+  const g=document.getElementById('prij-fgod');
+  if(g&&!g.options.length){
+    g.innerHTML=YEARS.map(y=>`<option value="${y}"${y===new Date().getFullYear()?' selected':''}>${y}</option>`).join('');
+    document.getElementById('prij-fmj').innerHTML='<option value="0">Svi mjeseci</option>'+MJ_HR.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  }
+  const fj=document.getElementById('prij-fjed');
+  if(fj){
+    const jeds=canStim()?DB.jedinice:DB.jedinice.filter(j=>vJ().includes(j.id));
+    const cur=fj.value;
+    fj.innerHTML='<option value="0">Sve jedinice</option>'+jeds.map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
+    if(cur) fj.value=cur;
+  }
+  const info=document.getElementById('prij-info');
+  if(info) info.innerHTML=jeDirektor()
+    ? '<i class="ti ti-info-circle"></i> Prijedlozi sa statusom <strong>Čeka direktora</strong> čekaju vaše odobrenje. Otvorite prijedlog, po potrebi ispravite postotke pa kliknite <strong>Odobri</strong> ili <strong>Vrati na doradu</strong>.'
+    : (canStim()
+      ? '<i class="ti ti-info-circle"></i> Odobreni prijedlozi su ovjereni od direktora – ispis (<i class="ti ti-printer"></i>) daje ovjereni primjerak.'
+      : '<i class="ti ti-info-circle"></i> Predložite postotak stimulacije za djelatnike svoje jedinice i upišite za što se daje. Prijedlog možete mijenjati dok ga direktor ne odobri.');
+  await loadPrijedlozi();
+}
+
+async function loadPrijedlozi(){
+  const el=document.getElementById('prij-list'); if(!el) return;
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  const god=parseInt(document.getElementById('prij-fgod')?.value)||new Date().getFullYear();
+  const mj=parseInt(document.getElementById('prij-fmj')?.value)||0;
+  const st=document.getElementById('prij-fst')?.value||'';
+  const jid=parseInt(document.getElementById('prij-fjed')?.value)||0;
+  try{
+    let q=SB.from('stimulacije_prijedlozi').select('*, stimulacije_prijedlozi_stavke(id)').eq('godina',god)
+      .order('mjesec',{ascending:false}).order('id',{ascending:false});
+    if(mj) q=q.eq('mjesec',mj);
+    if(st) q=q.eq('status',st);
+    if(jid) q=q.eq('jedinica_id',jid);
+    const {data,error}=await q; if(error) throw error;
+    window._prijList=data||[];
+    if(!data||!data.length){el.innerHTML='<div class="empty"><i class="ti ti-send"></i><p>Nema prijedloga za odabrane filtere</p></div>';return;}
+    el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:8px;text-align:left">Broj</th><th style="padding:8px;text-align:left">Jedinica</th>
+        <th style="padding:8px;text-align:left">Razdoblje</th><th style="padding:8px;text-align:left">Vrsta</th>
+        <th style="padding:8px;text-align:center">Djel.</th><th style="padding:8px;text-align:left">Status</th>
+        <th style="padding:8px;text-align:left">Predložio</th><th style="padding:8px;text-align:left">Odobrio</th><th></th>
+      </tr></thead><tbody>${data.map(p=>{
+        const s=PRIJ_STATUS[p.status]||{lbl:p.status,cls:'bdg bgy'};
+        const n=(p.stimulacije_prijedlozi_stavke||[]).length;
+        return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="otvoriPrijedlog(${p.id})">
+          <td style="padding:7px 8px;font-weight:600">${prijBroj(p)}</td>
+          <td style="padding:7px 8px">${hEsc(jN(p.jedinica_id))}</td>
+          <td style="padding:7px 8px">${MJ_HR[p.mjesec-1]} ${p.godina}</td>
+          <td style="padding:7px 8px">${p.vrsta==='pojedinacni'?'Pojedinačno':'Cijela jedinica'}</td>
+          <td style="padding:7px 8px;text-align:center">${n}</td>
+          <td style="padding:7px 8px"><span class="${s.cls}">${s.lbl}</span></td>
+          <td style="padding:7px 8px;font-size:11.5px">${hEsc(p.predlozio_ime||'–')}<br><span style="color:var(--text3)">${p.poslano_at?fmtDT(p.poslano_at):''}</span></td>
+          <td style="padding:7px 8px;font-size:11.5px">${p.status==='odobreno'?hEsc(p.odobrio_ime||'')+'<br><span style="color:var(--text3)">'+fmtDT(p.odobreno_at)+'</span>':'–'}</td>
+          <td style="padding:7px 8px;white-space:nowrap" onclick="event.stopPropagation()">
+            ${p.status==='odobreno'?`<button class="btn bxs bs" title="Ovjereni primjerak (ispis)" onclick="ispisPrijedloga(${p.id})"><i class="ti ti-printer"></i></button>`:''}
+            ${mozeObrisatiPrij(p)?`<button class="btn bxs bd" title="Obriši" onclick="obrisiPrijedlog(${p.id})"><i class="ti ti-trash"></i></button>`:''}
+          </td></tr>`;}).join('')}</tbody></table></div>`;
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${hEsc(e.message)}</div>`;}
+}
+
+function mozeUreditiPrij(p){
+  if(!p) return true;
+  if(p.status==='odobreno') return false;
+  return jeDirektor()||CU?.role==='admin'||vJ().includes(p.jedinica_id);
+}
+function mozeObrisatiPrij(p){
+  return CU?.role==='admin'||(['nacrt','vraceno'].includes(p.status)&&vJ().includes(p.jedinica_id));
+}
+
+// ── Modal: novi / uredi prijedlog ─────────────────────────────
+function djelatniciJedinice(jid,god,mj){
+  return DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===jid).sort((a,b)=>a.prez.localeCompare(b.prez));
+}
+
+function novaPrijedlog(){
+  const jeds=DB.jedinice.filter(j=>vJ().includes(j.id));
+  if(!jeds.length){showToast('Nemate dodijeljenu jedinicu','error');return;}
+  const now=new Date();
+  window._prij={id:null,status:'nacrt',vrsta:'jedinica',jedinica_id:(CU.pjid&&vJ().includes(CU.pjid))?CU.pjid:jeds[0].id,
+    godina:now.getFullYear(),mjesec:now.getMonth()+1,napomena:'',stavke:{}};
+  renderPrijModal(); openM('mo-prijedlog');
+}
+
+async function otvoriPrijedlog(id){
+  const {data:p,error}=await SB.from('stimulacije_prijedlozi').select('*').eq('id',id).single();
+  if(error||!p){showToast('Greška: '+(error?.message||'nije pronađen'),'error');return;}
+  const {data:st}=await SB.from('stimulacije_prijedlozi_stavke').select('*').eq('prijedlog_id',id);
+  const stavke={}; (st||[]).forEach(s=>stavke[s.djelatnik_id]={posto:parseFloat(s.posto)||0,opis:s.opis||''});
+  window._prij={...p,stavke};
+  renderPrijModal(); openM('mo-prijedlog');
+}
+
+function prijCitajUnos(){
+  const P=window._prij; if(!P) return;
+  document.querySelectorAll('#prij-rows tr[data-did]').forEach(tr=>{
+    const did=parseInt(tr.dataset.did);
+    const posto=parseFloat(tr.querySelector('.prij-posto')?.value)||0;
+    const opis=(tr.querySelector('.prij-opis')?.value||'').trim();
+    P.stavke[did]={posto,opis};
+  });
+  const n=document.getElementById('prij-napomena'); if(n) P.napomena=n.value;
+}
+
+function prijPromjenaZaglavlja(){
+  const P=window._prij; prijCitajUnos();
+  P.jedinica_id=parseInt(document.getElementById('prij-jed').value);
+  P.godina=parseInt(document.getElementById('prij-god').value);
+  P.mjesec=parseInt(document.getElementById('prij-mj').value);
+  P.vrsta=document.querySelector('input[name=prij-vrsta]:checked')?.value||'jedinica';
+  if(P.vrsta==='jedinica'){ // svi djelatnici jedinice
+  } else { // ostavi samo one s upisanim postotkom
+    Object.keys(P.stavke).forEach(k=>{if(!(P.stavke[k].posto>0)) delete P.stavke[k];});
+  }
+  renderPrijModal();
+}
+
+function prijDodajPojedinca(){
+  const P=window._prij; prijCitajUnos();
+  const did=parseInt(document.getElementById('prij-add-djel').value);
+  if(!did) return;
+  if(!P.stavke[did]) P.stavke[did]={posto:0,opis:''};
+  renderPrijModal();
+}
+function prijUkloni(did){const P=window._prij; prijCitajUnos(); delete P.stavke[did]; renderPrijModal();}
+
+function renderPrijModal(){
+  const P=window._prij;
+  const ured=mozeUreditiPrij(P.id?P:null);
+  const novi=!P.id;
+  // Jedinicu/mjesec/vrstu mijenja samo predlagatelj; direktor pri odobravanju mijenja samo postotke i opise
+  const zaglavljeUred=ured&&(novi||P.status!=='poslano'||!jeDirektor());
+  const jeds=DB.jedinice.filter(j=>vJ().includes(j.id)||j.id===P.jedinica_id);
+  const s=PRIJ_STATUS[P.status]||PRIJ_STATUS.nacrt;
+  document.getElementById('prij-title').textContent=novi?'Novi prijedlog stimulacije':`Prijedlog ${prijBroj(P)}`;
+  let svi=djelatniciJedinice(P.jedinica_id,P.godina,P.mjesec);
+  // Djelatnici koji su u prijedlogu, a više nisu u jedinici, ipak prikaži
+  Object.keys(P.stavke).map(Number).forEach(did=>{if(!svi.find(d=>d.id===did)){const d=DB.djelatnici.find(x=>x.id===did); if(d) svi.push(d);}});
+  const redovi=P.vrsta==='jedinica'?svi:svi.filter(d=>P.stavke[d.id]);
+  const dis=ured?'':'disabled';
+  let h='';
+  if(!novi) h+=`<div style="margin-bottom:10px"><span class="${s.cls}">${s.lbl}</span>
+     ${P.predlozio_ime?`<span style="font-size:11.5px;color:var(--text2);margin-left:8px">Predložio: ${hEsc(P.predlozio_ime)}${P.poslano_at?' · poslano '+fmtDT(P.poslano_at):''}</span>`:''}
+     ${P.status==='odobreno'?`<span style="font-size:11.5px;color:var(--green);margin-left:8px"><i class="ti ti-rosette-discount-check"></i> Odobrio: ${hEsc(P.odobrio_ime||'')} · ${fmtDT(P.odobreno_at)}</span>`:''}</div>`;
+  if(P.komentar_direktora&&P.status!=='odobreno') h+=`<div class="al ald"><i class="ti ti-message-exclamation"></i> Komentar direktora: ${hEsc(P.komentar_direktora)}</div>`;
+  h+=`<div class="fr c2" style="gap:10px">
+    <div class="fg"><label class="fl">Jedinica</label><select id="prij-jed" onchange="prijPromjenaZaglavlja()" ${zaglavljeUred?'':'disabled'}>${jeds.map(j=>`<option value="${j.id}"${j.id===P.jedinica_id?' selected':''}>${hEsc(j.name)}</option>`).join('')}</select></div>
+    <div class="fg" style="display:flex;gap:8px">
+      <div style="flex:1"><label class="fl">Godina</label><select id="prij-god" onchange="prijPromjenaZaglavlja()" ${zaglavljeUred?'':'disabled'}>${YEARS.map(y=>`<option value="${y}"${y===P.godina?' selected':''}>${y}</option>`).join('')}</select></div>
+      <div style="flex:1.4"><label class="fl">Mjesec</label><select id="prij-mj" onchange="prijPromjenaZaglavlja()" ${zaglavljeUred?'':'disabled'}>${MJ_HR.map((m,i)=>`<option value="${i+1}"${i+1===P.mjesec?' selected':''}>${m}</option>`).join('')}</select></div>
+    </div></div>
+  <div class="fg"><label class="fl">Vrsta prijedloga</label>
+    <div style="display:flex;gap:16px;font-size:12.5px">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="radio" name="prij-vrsta" value="jedinica" style="width:auto" ${P.vrsta==='jedinica'?'checked':''} ${zaglavljeUred?'':'disabled'} onchange="prijPromjenaZaglavlja()"> Cijela jedinica</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="radio" name="prij-vrsta" value="pojedinacni" style="width:auto" ${P.vrsta==='pojedinacni'?'checked':''} ${zaglavljeUred?'':'disabled'} onchange="prijPromjenaZaglavlja()"> Pojedinačno (posebna stimulacija)</label>
+    </div></div>
+  <div class="fg"><label class="fl">Zajednički opis <span style="font-weight:400;color:var(--text3)">(upisuje se svima s postotkom kojima opis nije upisan)</span></label>
+    <input type="text" id="prij-napomena" value="${hEsc(P.napomena||'')}" ${dis} placeholder="npr. Izvanredni rezultati na održavanju zelenila u studenom"></div>`;
+  if(P.vrsta==='pojedinacni'&&ured){
+    const dostupni=djelatniciJedinice(P.jedinica_id,P.godina,P.mjesec).filter(d=>!P.stavke[d.id]);
+    h+=`<div style="display:flex;gap:8px;margin-bottom:8px"><select id="prij-add-djel" style="flex:1"><option value="0">— odaberi djelatnika —</option>${dostupni.map(d=>`<option value="${d.id}">${hEsc(dF(d))}</option>`).join('')}</select>
+      <button class="btn bs" onclick="prijDodajPojedinca()"><i class="ti ti-plus"></i> Dodaj</button></div>`;
+  }
+  h+=`<div style="max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:var(--r)"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--bg3);position:sticky;top:0"><th style="padding:7px 8px;text-align:left">Djelatnik</th><th style="padding:7px 8px;text-align:left">Radno mjesto</th><th style="padding:7px 8px;width:90px">Stim. %</th><th style="padding:7px 8px;text-align:left">Za što se daje (opis)</th>${P.vrsta==='pojedinacni'&&ured?'<th></th>':''}</tr></thead>
+    <tbody id="prij-rows">${redovi.length?redovi.map(d=>{const v=P.stavke[d.id]||{posto:0,opis:''};return `<tr data-did="${d.id}" style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px;font-weight:500">${hEsc(dF(d))}</td>
+      <td style="padding:5px 8px;font-size:11px;color:var(--text2)">${hEsc(d.rm||'')}</td>
+      <td style="padding:5px 8px;text-align:center"><input class="prij-posto" type="number" min="0" max="100" step="5" value="${v.posto||0}" ${dis} style="width:70px;text-align:center;padding:3px 5px"></td>
+      <td style="padding:5px 8px"><input class="prij-opis" type="text" value="${hEsc(v.opis)}" ${dis} style="width:100%;padding:3px 6px" placeholder="za što se daje"></td>
+      ${P.vrsta==='pojedinacni'&&ured?`<td style="padding:5px 8px"><button class="btn bxs bd" onclick="prijUkloni(${d.id})"><i class="ti ti-x"></i></button></td>`:''}</tr>`;}).join('')
+      :`<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text3)">${P.vrsta==='pojedinacni'?'Dodajte djelatnika iznad':'Nema djelatnika u jedinici za taj mjesec'}</td></tr>`}</tbody></table></div>
+  <div style="font-size:11.5px;color:var(--text3);margin-top:6px"><i class="ti ti-info-circle"></i> Spremaju se samo djelatnici s postotkom većim od 0. Iznosi se ne prikazuju – računaju se u obračunu nakon odobrenja.</div>
+  <div id="prij-al" style="margin-top:8px"></div>`;
+  document.getElementById('prij-body').innerHTML=h;
+  // gumbi
+  let f=`<button class="btn bs" onclick="closeM('mo-prijedlog')">Zatvori</button>`;
+  if(P.status==='odobreno') f+=`<button class="btn bs" onclick="ispisPrijedloga(${P.id})"><i class="ti ti-printer"></i> Ovjereni primjerak</button>`;
+  if(ured&&!(jeDirektor()&&P.status==='poslano')){
+    f+=`<button class="btn bs" onclick="spremiPrijedlog('nacrt')"><i class="ti ti-device-floppy"></i> Spremi nacrt</button>`;
+    f+=`<button class="btn bp" onclick="spremiPrijedlog('poslano')"><i class="ti ti-send"></i> ${P.status==='poslano'?'Spremi izmjene':'Pošalji direktoru'}</button>`;
+  }
+  if(jeDirektor()&&P.status==='poslano'){
+    f+=`<button class="btn bd" onclick="vratiPrijedlog()"><i class="ti ti-arrow-back-up"></i> Vrati na doradu</button>`;
+    f+=`<button class="btn bg2" onclick="odobriPrijedlog()"><i class="ti ti-check"></i> Odobri</button>`;
+  }
+  document.getElementById('prij-foot').innerHTML=f;
+}
+
+function prijSkupiStavke(){
+  const P=window._prij; prijCitajUnos();
+  const zaj=(P.napomena||'').trim();
+  const out=[];
+  for(const [k,v] of Object.entries(P.stavke)){
+    if(!(v.posto>0)) continue;
+    if(v.posto>100) throw new Error('Postotak ne može biti veći od 100');
+    const opis=(v.opis||zaj).trim();
+    const d=DB.djelatnici.find(x=>x.id===parseInt(k));
+    if(!opis) throw new Error(`Upišite opis (za što se daje) za: ${d?dF(d):k}`);
+    out.push({djelatnik_id:parseInt(k),posto:v.posto,opis});
+  }
+  return out;
+}
+
+async function prijSpremiStavke(pid,stavke){
+  const {error:de}=await SB.from('stimulacije_prijedlozi_stavke').delete().eq('prijedlog_id',pid);
+  if(de) throw de;
+  if(stavke.length){
+    const {error}=await SB.from('stimulacije_prijedlozi_stavke').insert(stavke.map(s=>({...s,prijedlog_id:pid})));
+    if(error) throw error;
+  }
+}
+
+async function spremiPrijedlog(status){
+  const P=window._prij; const al=document.getElementById('prij-al');
+  try{
+    const stavke=prijSkupiStavke();
+    if(status==='poslano'&&!stavke.length) throw new Error('Upišite postotak barem za jednog djelatnika');
+    const zaglavlje={jedinica_id:P.jedinica_id,godina:P.godina,mjesec:P.mjesec,vrsta:P.vrsta,napomena:P.napomena||null,status};
+    let pid=P.id;
+    if(!pid){
+      const {data,error}=await SB.from('stimulacije_prijedlozi').insert(zaglavlje).select().single();
+      if(error) throw error; pid=data.id;
+    } else {
+      const {error}=await SB.from('stimulacije_prijedlozi').update(zaglavlje).eq('id',pid);
+      if(error) throw error;
+    }
+    await prijSpremiStavke(pid,stavke);
+    closeM('mo-prijedlog');
+    showToast(status==='poslano'?'✅ Prijedlog poslan direktoru':'✅ Nacrt spremljen','success');
+    loadPrijedlozi();
+  }catch(e){ if(al) al.innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> ${hEsc(e.message)}</div>`; }
+}
+
+async function odobriPrijedlog(){
+  const P=window._prij; const al=document.getElementById('prij-al');
+  try{
+    const stavke=prijSkupiStavke();
+    if(!stavke.length) throw new Error('Prijedlog nema nijednog djelatnika s postotkom');
+    if(!confirm(`Odobriti prijedlog ${prijBroj(P)} (${stavke.length} djelatnika)?\nNakon odobrenja prijedlog je zaključan.`)) return;
+    await prijSpremiStavke(P.id,stavke);
+    const {error}=await SB.from('stimulacije_prijedlozi').update({status:'odobreno',napomena:P.napomena||null}).eq('id',P.id);
+    if(error) throw error;
+    closeM('mo-prijedlog'); showToast('✅ Prijedlog odobren','success'); loadPrijedlozi();
+  }catch(e){ if(al) al.innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> ${hEsc(e.message)}</div>`; }
+}
+
+async function vratiPrijedlog(){
+  const P=window._prij;
+  const kom=prompt('Razlog vraćanja na doradu (vidi ga voditelj):','');
+  if(kom===null) return;
+  const {error}=await SB.from('stimulacije_prijedlozi').update({status:'vraceno',komentar_direktora:kom||null}).eq('id',P.id);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  closeM('mo-prijedlog'); showToast('Prijedlog vraćen voditelju','info'); loadPrijedlozi();
+}
+
+async function obrisiPrijedlog(id){
+  if(!confirm('Obrisati ovaj prijedlog?')) return;
+  const {error}=await SB.from('stimulacije_prijedlozi').delete().eq('id',id);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  showToast('✅ Obrisano','success'); loadPrijedlozi();
+}
+
+// ── Ovjereni primjerak (ispis) ────────────────────────────────
+async function ispisPrijedloga(id){
+  const {data:p}=await SB.from('stimulacije_prijedlozi').select('*').eq('id',id).single();
+  if(!p||p.status!=='odobreno'){showToast('Ovjereni primjerak postoji samo za odobrene prijedloge','error');return;}
+  const {data:st}=await SB.from('stimulacije_prijedlozi_stavke').select('*').eq('prijedlog_id',id);
+  let tv=window.POSTAVKE_TVRTKE; try{ if(!tv&&typeof loadPostavkeTvrtkeGlobal==='function') tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
+  const tvrtka=tv?.naziv||'Parkovi i nasadi d.o.o.';
+  const rows=(st||[]).map(s=>({s,d:DB.djelatnici.find(x=>x.id===s.djelatnik_id)}))
+    .sort((a,b)=>(a.d?dF(a.d):'').localeCompare(b.d?dF(b.d):''));
+  const w=window.open('','_blank'); if(!w){showToast('Preglednik je blokirao novi prozor – dopustite skočne prozore','error');return;}
+  w.document.write(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>${prijBroj(p)} – ovjereni primjerak</title>
+  <style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:28px 34px}h1{font-size:16px;text-align:center;margin:18px 0 4px}
+  .sub{text-align:center;color:#444;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}
+  th{background:#eee}.r{text-align:right}.meta td{border:none;padding:2px 0}.stamp{margin-top:22px;border:2px solid #1d6f42;color:#1d6f42;padding:10px 14px;border-radius:6px;display:inline-block}
+  .foot{margin-top:30px;font-size:10px;color:#666}.potpisi{display:flex;justify-content:space-between;margin-top:36px}.potpisi div{width:42%;text-align:center}
+  .crta{border-top:1px solid #333;margin-top:34px;padding-top:4px}@media print{button{display:none}}</style></head><body>
+  <div style="font-weight:bold;font-size:13px">${hEsc(tvrtka)}</div>${tv?.adresa?`<div>${hEsc(tv.adresa)}</div>`:''}${tv?.oib?`<div>OIB: ${hEsc(tv.oib)}</div>`:''}
+  <h1>PRIJEDLOG ZA ISPLATU STIMULACIJE</h1><div class="sub">Broj: <strong>${prijBroj(p)}</strong></div>
+  <table class="meta"><tr><td style="width:130px">Ustrojstvena jedinica:</td><td><strong>${hEsc(jN(p.jedinica_id))}</strong></td></tr>
+  <tr><td>Razdoblje:</td><td><strong>${MJ_HR[p.mjesec-1]} ${p.godina}.</strong></td></tr>
+  <tr><td>Vrsta:</td><td>${p.vrsta==='pojedinacni'?'Pojedinačna (posebna) stimulacija':'Stimulacija za jedinicu'}</td></tr></table>
+  <table><thead><tr><th style="width:34px">R.br.</th><th>Djelatnik</th><th>Radno mjesto</th><th class="r" style="width:70px">Stim. %</th><th>Za što se stimulacija daje</th></tr></thead>
+  <tbody>${rows.map((r,i)=>`<tr><td>${i+1}.</td><td>${hEsc(r.d?dF(r.d):'#'+r.s.djelatnik_id)}</td><td>${hEsc(r.d?.rm||'')}</td><td class="r">${parseFloat(r.s.posto)} %</td><td>${hEsc(r.s.opis)}</td></tr>`).join('')}</tbody></table>
+  <table class="meta" style="margin-top:14px"><tr><td style="width:130px">Predložio:</td><td>${hEsc(p.predlozio_ime||'–')}${p.poslano_at?', '+fmtDT(p.poslano_at):''}</td></tr></table>
+  <div class="stamp"><strong>ODOBRENO</strong><br>Direktor: ${hEsc(p.odobrio_ime||'')}<br>Datum i vrijeme odobrenja: ${fmtDT(p.odobreno_at)}<br>
+  <span style="font-size:10.5px">Elektronički odobreno u sustavu Evidencija radnog vremena</span></div>
+  <div class="potpisi"><div><div class="crta">Predlagatelj</div></div><div><div class="crta">Direktor</div></div></div>
+  <div class="foot">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')} · ${prijBroj(p)}</div>
+  <script>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ── Stimulacije → Unos: odobreni prijedlozi ───────────────────
+async function dohvatiOdobrenePrijedloge(god,mj){
+  const map={}; let cekaju=0;
+  try{
+    const {data}=await SB.from('stimulacije_prijedlozi')
+      .select('id,godina,mjesec,status,jedinica_id,predlozio_ime,stimulacije_prijedlozi_stavke(djelatnik_id,posto,opis)')
+      .eq('godina',god).eq('mjesec',mj).in('status',['odobreno','poslano']);
+    (data||[]).forEach(p=>{
+      if(p.status!=='odobreno'){cekaju++;return;}
+      (p.stimulacije_prijedlozi_stavke||[]).forEach(s=>{
+        const m=map[s.djelatnik_id]||(map[s.djelatnik_id]={posto:0,opisi:[]});
+        m.posto+=parseFloat(s.posto)||0;
+        m.opisi.push(`${prijBroj(p)} (${p.predlozio_ime||''}): ${s.posto}% – ${s.opis}`);
+      });
+    });
+  }catch(e){console.warn(e);}
+  return {map,cekaju};
+}
+
+// ── Stimulacije → Preglednik (kumulativ u razdoblju) ──────────
+function setupStimKumulativ(){
+  const y=new Date().getFullYear();
+  const yo=YEARS.map(v=>`<option value="${v}"${v===y?' selected':''}>${v}</option>`).join('');
+  const mo=MJ_HR.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  ['stk-god-od','stk-god-do'].forEach(id=>{const e=document.getElementById(id); if(e&&!e.options.length) e.innerHTML=yo;});
+  ['stk-mj-od','stk-mj-do'].forEach(id=>{const e=document.getElementById(id); if(e&&!e.options.length) e.innerHTML=mo;});
+  const md=document.getElementById('stk-mj-do'); if(md&&!md.dataset.init){md.value=new Date().getMonth()+1; md.dataset.init='1';}
+  const jo=document.getElementById('stk-jed');
+  if(jo){const vj=vJ(); jo.innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');}
+  stkFilterDjel();
+}
+function stkFilterDjel(){
+  const jid=parseInt(document.getElementById('stk-jed')?.value)||0;
+  const dj=(jid?DB.djelatnici.filter(d=>d.jid===jid):DB.djelatnici.filter(d=>vJ().includes(d.jid))).sort((a,b)=>a.prez.localeCompare(b.prez));
+  const e=document.getElementById('stk-djel'); if(e) e.innerHTML='<option value="0">Svi djelatnici</option>'+dj.map(d=>`<option value="${d.id}">${hEsc(dF(d))}</option>`).join('');
+}
+async function loadStimKumulativ(){
+  const el=document.getElementById('stk-results'); if(!el) return;
+  const gOd=parseInt(document.getElementById('stk-god-od').value), mOd=parseInt(document.getElementById('stk-mj-od').value);
+  const gDo=parseInt(document.getElementById('stk-god-do').value), mDo=parseInt(document.getElementById('stk-mj-do').value);
+  const jid=parseInt(document.getElementById('stk-jed').value)||0, did=parseInt(document.getElementById('stk-djel').value)||0;
+  const od=gOd*100+mOd, dO=gDo*100+mDo;
+  if(od>dO){el.innerHTML='<div class="al ald">Početak razdoblja je nakon kraja</div>';return;}
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  try{
+    let q=SB.from('stimulacije_obracun').select('*').gte('godina',gOd).lte('godina',gDo);
+    if(did) q=q.eq('djelatnik_id',did);
+    const {data,error}=await q; if(error) throw error;
+    const dozvoljeni=new Set((jid?DB.djelatnici.filter(d=>d.jid===jid):DB.djelatnici.filter(d=>vJ().includes(d.jid))).map(d=>d.id));
+    const rows=(data||[]).filter(r=>{const k=r.godina*100+r.mjesec; return k>=od&&k<=dO&&(did||dozvoljeni.has(r.djelatnik_id));});
+    const agg={};
+    rows.forEach(r=>{
+      const a=agg[r.djelatnik_id]||(agg[r.djelatnik_id]={mj:0,stim:0,neop:0,opor:0,bol:0,dmj:0,uk:0});
+      const n=x=>parseFloat(x)||0;
+      a.mj++; a.stim+=n(r.iznos_stimulacije); a.bol+=n(r.dodatak_bolovanje); a.dmj+=n(r.dodatak_mjesecni);
+      a.neop+=n(r.iznos_neoporezivo)+n(r.dodatak_bol_neoporezivo);
+      a.opor+=n(r.iznos_oporezivo)+n(r.dodatak_bol_oporezivo)+n(r.dodatak_mjesecni);
+      a.uk+=n(r.iznos_stimulacije)+n(r.dodatak_bolovanje)+n(r.dodatak_mjesecni);
+    });
+    const lista=Object.entries(agg).map(([k,a])=>{const d=DB.djelatnici.find(x=>x.id===parseInt(k)); return {d,ime:d?dF(d):'#'+k,jed:d?jN(d.jid):'',...a};})
+      .sort((a,b)=>b.uk-a.uk);
+    window._stkExport={lista,raspon:`${MJ_HR[mOd-1]} ${gOd} – ${MJ_HR[mDo-1]} ${gDo}`};
+    if(!lista.length){el.innerHTML='<div class="empty"><p>Nema isplaćenih stimulacija u tom razdoblju</p></div>';return;}
+    const T=lista.reduce((t,a)=>{['mj','stim','neop','opor','bol','dmj','uk'].forEach(k=>t[k]+=a[k]);return t;},{mj:0,stim:0,neop:0,opor:0,bol:0,dmj:0,uk:0});
+    const e2=v=>v?v.toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €':'–';
+    el.innerHTML=`<div style="padding:8px 4px;font-size:12px;color:var(--text2)">Razdoblje: <strong>${window._stkExport.raspon}</strong> · ${lista.length} djelatnika
+      <button class="btn bsm btn-excel" style="float:right" onclick="exportStimKumulativ()"><i class="ti ti-file-spreadsheet"></i> Excel</button></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:var(--bg3)">
+      <th style="padding:7px 8px;text-align:left">Djelatnik</th><th style="padding:7px 8px;text-align:left">Jedinica</th><th style="padding:7px 8px;text-align:center">Mjeseci</th>
+      <th style="padding:7px 8px;text-align:right">Stimulacija</th><th style="padding:7px 8px;text-align:right">Dod. bolovanje</th><th style="padding:7px 8px;text-align:right">Dod. mjesečni</th>
+      <th style="padding:7px 8px;text-align:right;color:#22863a">Neoporezivo</th><th style="padding:7px 8px;text-align:right;color:#c0392b">Oporezivo</th><th style="padding:7px 8px;text-align:right">UKUPNO</th></tr></thead>
+      <tbody>${lista.map(a=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 8px;font-weight:500">${hEsc(a.ime)}</td><td style="padding:6px 8px;font-size:11px;color:var(--text2)">${hEsc(a.jed)}</td>
+        <td style="padding:6px 8px;text-align:center">${a.mj}</td><td style="padding:6px 8px;text-align:right">${e2(a.stim)}</td><td style="padding:6px 8px;text-align:right">${e2(a.bol)}</td><td style="padding:6px 8px;text-align:right">${e2(a.dmj)}</td>
+        <td style="padding:6px 8px;text-align:right;color:#22863a">${e2(a.neop)}</td><td style="padding:6px 8px;text-align:right;color:#c0392b">${e2(a.opor)}</td><td style="padding:6px 8px;text-align:right;font-weight:700">${e2(a.uk)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr style="background:var(--bg3);font-weight:700"><td colspan="3" style="padding:7px 8px">UKUPNO</td><td style="padding:7px 8px;text-align:right">${e2(T.stim)}</td><td style="padding:7px 8px;text-align:right">${e2(T.bol)}</td><td style="padding:7px 8px;text-align:right">${e2(T.dmj)}</td>
+        <td style="padding:7px 8px;text-align:right;color:#22863a">${e2(T.neop)}</td><td style="padding:7px 8px;text-align:right;color:#c0392b">${e2(T.opor)}</td><td style="padding:7px 8px;text-align:right">${e2(T.uk)}</td></tr></tfoot></table></div>`;
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${hEsc(e.message)}</div>`;}
+}
+function exportStimKumulativ(){
+  const X=window._stkExport; if(!X||typeof XLSX==='undefined') return;
+  const r2=v=>Math.round(v*100)/100;
+  const aoa=[[`Stimulacije – kumulativ: ${X.raspon}`],[],['Djelatnik','Jedinica','Mjeseci','Stimulacija €','Dod. bolovanje €','Dod. mjesečni €','Neoporezivo €','Oporezivo €','Ukupno €'],
+    ...X.lista.map(a=>[a.ime,a.jed,a.mj,r2(a.stim),r2(a.bol),r2(a.dmj),r2(a.neop),r2(a.opor),r2(a.uk)])];
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:28},{wch:28},{wch:8},{wch:13},{wch:15},{wch:15},{wch:13},{wch:12},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kumulativ');
+  XLSX.writeFile(wb,`Stimulacije_kumulativ_${X.raspon.replace(/[^0-9A-Za-zčćžšđČĆŽŠĐ]+/g,'_')}.xlsx`);
 }
 
 function openM(id){document.getElementById(id).classList.add("open");}
