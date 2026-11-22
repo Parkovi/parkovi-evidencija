@@ -3671,7 +3671,7 @@ async function loadStimUnos(){
     const bod = bodMap[d.id]||0;
     const kum = kumMap[d.id]||0;
     const ex  = existMap[d.id];
-    const posto = (ex && (parseFloat(ex.stimulacija_posto)||0)>0) ? parseFloat(ex.stimulacija_posto) : (prijMap[d.id]?.posto||0);
+    const posto = ex ? (parseFloat(ex.stimulacija_posto)||0) : (prijMap[d.id]?.posto||0);
     // Automatski dodaj 233€ ako ima pravo, inače 0
     const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
     const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
@@ -3692,7 +3692,7 @@ async function loadStimUnos(){
           style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center"
           onchange="recalcRow(${d.id},${bod},${kum},${vrijBoda})"
           id="stim-posto-${d.id}">
-        ${prijMap[d.id]?`<div title="${hEsc(prijMap[d.id].opisi.join('\n'))}" style="font-size:10px;color:var(--blue);margin-top:2px;cursor:help"><i class="ti ti-rosette-discount-check"></i> prijedlog ${prijMap[d.id].posto}%</div>`:''}
+        ${prijMap[d.id]?`<div title="${hEsc(prijMap[d.id].opisi.join('\n'))}" style="font-size:10px;color:${ex&&Math.abs((parseFloat(ex.stimulacija_posto)||0)-prijMap[d.id].posto)>0.001?'var(--amber)':'var(--blue)'};margin-top:2px;cursor:help"><i class="ti ti-rosette-discount-check"></i> prijedlog ${prijMap[d.id].posto}%${ex&&Math.abs((parseFloat(ex.stimulacija_posto)||0)-prijMap[d.id].posto)>0.001?' (razlikuje se)':''}</div>`:''}
       </td>
       <td style="padding:6px 8px;text-align:center">
         <input type="number" value="${bolDod}" min="0" step="1"
@@ -3724,7 +3724,7 @@ async function loadStimUnos(){
 
   el.innerHTML = html;
   // Store data for save
-  window._stimBatch = {god, mj, vrijBoda, djels, bodMap, kumMap};
+  window._stimBatch = {god, mj, vrijBoda, djels, bodMap, kumMap, existMap, prijMap};
   
   // Show info about automatic 233€ check
   const infoEl = document.getElementById('stim-auto-info');
@@ -3757,7 +3757,8 @@ function recalcRow(did, bod, kum, vrijBoda){
 // ── Batch save ─────────────────────────────────────────────────
 async function obracunajSve(){
   if(!window._stimBatch){showToast('Prvo učitaj podatke','error');return;}
-  const {god, mj, vrijBoda, djels, bodMap, kumMap} = window._stimBatch;
+  const {god, mj, vrijBoda, djels, bodMap, kumMap, existMap={}, prijMap={}} = window._stimBatch;
+  const zaBrisanje = [];
 
   // Collect all rows with posto > 0
   const toSave = [];
@@ -3771,7 +3772,12 @@ async function obracunajSve(){
     const bod    = bodMap[d.id]||0;
     const kum    = runningKum[d.id]||0;
 
-    if(posto===0 && bolDod===0 && bolMj===0) continue;
+    if(posto===0 && bolDod===0 && bolMj===0){
+      // Bez stimulacije i dodataka: stari obračun se uklanja. Ako postoji odobreni prijedlog,
+      // sprema se 0 % da odluka ostane zapamćena (inače bi se prijedlog ponovno ponudio).
+      if(!existMap[d.id]) continue;
+      if(!prijMap[d.id]){ zaBrisanje.push(existMap[d.id].id); continue; }
+    }
 
     const r = calcStim(bod, posto, vrijBoda, kum, bolDod, bolMj);
 
@@ -3794,7 +3800,17 @@ async function obracunajSve(){
     });
   }
 
-  if(!toSave.length){showToast('Nema podataka za snimanje (svi postoci su 0)','info');return;}
+  if(zaBrisanje.length){
+    const {error:de} = await SB.from('stimulacije_obracun').delete().in('id', zaBrisanje);
+    if(de){showToast('Greška pri brisanju: '+de.message,'error');return;}
+    addAuditLog({userName:CU?.name, action:'stim_obracun_brisanje', target:`${MJ_HR[mj-1]} ${god}`, jedinica:'',
+      details:`Obrisano obračuna postavljenih na 0: ${zaBrisanje.length}`});
+  }
+  if(!toSave.length){
+    showToast(zaBrisanje.length?`✅ Uklonjeno ${zaBrisanje.length} obračuna (postavljeno na 0)`:'Nema podataka za snimanje (svi postoci su 0)', zaBrisanje.length?'success':'info');
+    if(zaBrisanje.length) await loadStimUnos();
+    return;
+  }
 
   showToast(`Snimam ${toSave.length} zapisa...`,'info');
 
@@ -3803,7 +3819,7 @@ async function obracunajSve(){
 
   if(error){showToast('Greška: '+error.message,'error');return;}
 
-  showToast(`✅ Snimljeno ${toSave.length} zapisa!`,'success');
+  showToast(`✅ Snimljeno ${toSave.length} zapisa${zaBrisanje.length?`, uklonjeno ${zaBrisanje.length}`:''}!`,'success');
   await loadStimUnos(); // Refresh
 }
 
