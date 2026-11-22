@@ -3671,7 +3671,7 @@ async function loadStimUnos(){
     const bod = bodMap[d.id]||0;
     const kum = kumMap[d.id]||0;
     const ex  = existMap[d.id];
-    const posto = ex ? parseFloat(ex.stimulacija_posto)||0 : (prijMap[d.id]?.posto||0);
+    const posto = (ex && (parseFloat(ex.stimulacija_posto)||0)>0) ? parseFloat(ex.stimulacija_posto) : (prijMap[d.id]?.posto||0);
     // Automatski dodaj 233€ ako ima pravo, inače 0
     const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
     const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
@@ -4379,13 +4379,66 @@ async function vratiPrijedlog(){
   closeM('mo-prijedlog'); showToast('Prijedlog vraćen voditelju','info'); loadPrijedlozi();
 }
 
+// ── Usklađivanje obračuna kad se odobreni prijedlog obriše ili vrati na doradu ──
+// Od obračunatog postotka oduzima se postotak iz prijedloga, iznos se ponovno računa (calcStim),
+// prazni redak se briše, a kumulativ i neoporezivo/oporezivo se preračunavaju za kasnije mjesece.
+async function ukloniPrijedlogIzObracuna(p){
+  const out={promjene:[],greske:[]};
+  if(!p||p.status!=='odobreno') return out;
+  const {data:st,error:se}=await SB.from('stimulacije_prijedlozi_stavke').select('djelatnik_id,posto').eq('prijedlog_id',p.id);
+  if(se){out.greske.push(se.message);return out;}
+  const r2=v=>Math.round(v*100)/100;
+  for(const s of (st||[])){
+    const did=s.djelatnik_id, d=DB.djelatnici.find(x=>x.id===did), ime=d?dF(d):('#'+did);
+    try{
+      const {data:rows,error}=await SB.from('stimulacije_obracun').select('*').eq('djelatnik_id',did).eq('godina',p.godina);
+      if(error) throw error;
+      const svi=(rows||[]).sort((a,b)=>a.mjesec-b.mjesec);
+      const ovaj=svi.find(r=>r.mjesec===p.mjesec);
+      if(!ovaj) continue; // još nije obračunato – nema što brisati
+      const stari=parseFloat(ovaj.stimulacija_posto)||0;
+      const novi=Math.max(0,r2(stari-(parseFloat(s.posto)||0)));
+      const prije=svi.filter(r=>r.mjesec<p.mjesec);
+      let kum=prije.length?(parseFloat(prije[prije.length-1].kumulativ_neoporezivo)||0):0;
+      for(const r of svi.filter(r=>r.mjesec>=p.mjesec)){
+        const n=x=>parseFloat(x)||0;
+        const posto=r.mjesec===p.mjesec?novi:n(r.stimulacija_posto);
+        if(r.mjesec===p.mjesec&&posto===0&&n(r.dodatak_bolovanje)===0&&n(r.dodatak_mjesecni)===0){
+          const {error:de}=await SB.from('stimulacije_obracun').delete().eq('id',r.id); if(de) throw de;
+          out.promjene.push(`${ime}: ${MJ_HR[r.mjesec-1]} – obračun obrisan (bilo ${stari}%, ${n(r.iznos_stimulacije).toFixed(2)} €)`);
+          continue;
+        }
+        const c=calcStim(n(r.bodovi),posto,n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni));
+        const upd={stimulacija_posto:posto,iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,
+          dodatak_bol_neoporezivo:c.bolNeopor,dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon};
+        const mijenja=Object.keys(upd).some(k=>Math.abs(n(r[k])-n(upd[k]))>0.004);
+        if(mijenja){
+          const {error:ue}=await SB.from('stimulacije_obracun').update(upd).eq('id',r.id); if(ue) throw ue;
+          out.promjene.push(r.mjesec===p.mjesec
+            ? `${ime}: ${MJ_HR[r.mjesec-1]} – ${stari}% → ${posto}%, iznos ${n(r.iznos_stimulacije).toFixed(2)} € → ${c.iznos.toFixed(2)} €`
+            : `${ime}: ${MJ_HR[r.mjesec-1]} – preračunat kumulativ/neoporezivo`);
+        }
+        kum=c.kumNakon;
+      }
+    }catch(e){ out.greske.push(`${ime}: ${e.message}`); }
+  }
+  if(out.promjene.length) addAuditLog({userName:CU?.name, action:'stim_obracun_uskladen', target:prijBroj(p), jedinica:jN(p.jedinica_id),
+    details:out.promjene.join('; ')});
+  return out;
+}
+function prikaziUskladjenje(u){
+  if(u.greske.length) alert('Obračun NIJE do kraja usklađen – provjerite Stimulacije → Unos:\n\n'+u.greske.join('\n'));
+  else if(u.promjene.length) alert('Obračun stimulacija je usklađen:\n\n'+u.promjene.join('\n'));
+}
+
 async function obrisiPrijedlog(id,izModala){
   const p=(window._prijList||[]).find(x=>x.id===id)||(window._prij?.id===id?window._prij:null);
   const odobren=p?.status==='odobreno';
   const poruka=odobren
-    ? `Obrisati ODOBRENI prijedlog ${prijBroj(p)}?\n\nOvjereni primjerak više neće postojati. Ako je stimulacija već obračunata u Stimulacije → Unos, taj obračun se NE mijenja – ispravite ga ručno.`
+    ? `Obrisati ODOBRENI prijedlog ${prijBroj(p)}?\n\nOvjereni primjerak više neće postojati, a ako je stimulacija već obračunata, iznosi iz ovog prijedloga uklanjaju se i iz obračuna (dodaci za bolovanje ostaju).`
     : 'Obrisati ovaj prijedlog?';
   if(!confirm(poruka)) return;
+  const usk=odobren?await ukloniPrijedlogIzObracuna(p):{promjene:[],greske:[]};
   const {data,error}=await SB.from('stimulacije_prijedlozi').delete().eq('id',id).select('id');
   if(error){showToast('Greška: '+error.message,'error');return;}
   if(!data||!data.length){showToast('Prijedlog nije obrisan – nemate ovlast','error');return;}
@@ -4393,12 +4446,14 @@ async function obrisiPrijedlog(id,izModala){
     details:`Obrisan prijedlog (${PRIJ_STATUS[p.status]?.lbl||p.status}) za ${MJ_HR[p.mjesec-1]} ${p.godina}${odobren?' – bio odobren: '+(p.odobrio_ime||'')+', '+fmtDT(p.odobreno_at):''}`});
   if(izModala) closeM('mo-prijedlog');
   showToast('✅ Obrisano','success'); loadPrijedlozi();
+  prikaziUskladjenje(usk);
 }
 
 async function doradaOdobrenog(){
   const P=window._prij;
-  const kom=prompt(`Otvoriti odobreni prijedlog ${prijBroj(P)} za doradu?\n\nOdobrenje se poništava, prijedlog dobiva status „Vraćeno na doradu“ i mogu ga ispraviti voditelj ili direktor, a zatim ga direktor ponovno odobri.\n\nRazlog dorade (vidi ga voditelj):`,'');
+  const kom=prompt(`Otvoriti odobreni prijedlog ${prijBroj(P)} za doradu?\n\nOdobrenje se poništava, iznosi iz ovog prijedloga uklanjaju se iz obračuna, prijedlog dobiva status „Vraćeno na doradu“ i mogu ga ispraviti voditelj ili direktor, a zatim ga direktor ponovno odobri.\n\nRazlog dorade (vidi ga voditelj):`,'');
   if(kom===null) return;
+  const usk=await ukloniPrijedlogIzObracuna(P);
   const {data,error}=await SB.from('stimulacije_prijedlozi').update({status:'vraceno',komentar_direktora:kom||'Otvoreno za doradu'}).eq('id',P.id).select('id');
   if(error){showToast('Greška: '+error.message,'error');return;}
   if(!data||!data.length){showToast('Nemate ovlast za doradu','error');return;}
@@ -4406,6 +4461,7 @@ async function doradaOdobrenog(){
     details:`Poništeno odobrenje (${P.odobrio_ime||''}, ${fmtDT(P.odobreno_at)}) i otvoreno za doradu. Razlog: ${kom||'–'}`});
   showToast('Prijedlog otvoren za doradu','info');
   await otvoriPrijedlog(P.id); loadPrijedlozi();
+  prikaziUskladjenje(usk);
 }
 
 // Ispis bez otvaranja nove stranice: sadržaj se ispisuje iz skrivenog okvira
