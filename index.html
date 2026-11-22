@@ -4183,8 +4183,9 @@ function mozeUreditiPrij(p){
   return jeDirektor()||CU?.role==='admin'||vJ().includes(p.jedinica_id);
 }
 function mozeObrisatiPrij(p){
-  return CU?.role==='admin'||(['nacrt','vraceno'].includes(p.status)&&vJ().includes(p.jedinica_id));
+  return CU?.role==='admin'||jeDirektor()||(['nacrt','vraceno'].includes(p.status)&&vJ().includes(p.jedinica_id));
 }
+function mozeDoraditiOdobreno(p){ return !!p&&p.status==='odobreno'&&(CU?.role==='admin'||jeDirektor()); }
 
 // ── Modal: novi / uredi prijedlog ─────────────────────────────
 function djelatniciJedinice(jid,god,mj){
@@ -4293,6 +4294,10 @@ function renderPrijModal(){
   document.getElementById('prij-body').innerHTML=h;
   // gumbi
   let f=`<button class="btn bs" onclick="closeM('mo-prijedlog')">Zatvori</button>`;
+  if(mozeDoraditiOdobreno(P)){
+    f+=`<button class="btn bd" onclick="obrisiPrijedlog(${P.id},true)"><i class="ti ti-trash"></i> Obriši</button>`;
+    f+=`<button class="btn bs" onclick="doradaOdobrenog()"><i class="ti ti-pencil"></i> Otvori za doradu</button>`;
+  }
   if(P.status==='odobreno') f+=`<button class="btn bs" onclick="ispisPrijedloga(${P.id})"><i class="ti ti-printer"></i> Ovjereni primjerak</button>`;
   if(ured&&!(jeDirektor()&&P.status==='poslano')){
     f+=`<button class="btn bs" onclick="spremiPrijedlog('nacrt')"><i class="ti ti-device-floppy"></i> Spremi nacrt</button>`;
@@ -4300,6 +4305,8 @@ function renderPrijModal(){
   }
   if(jeDirektor()&&P.status==='poslano'){
     f+=`<button class="btn bd" onclick="vratiPrijedlog()"><i class="ti ti-arrow-back-up"></i> Vrati na doradu</button>`;
+  }
+  if(jeDirektor()&&P.id&&['poslano','nacrt','vraceno'].includes(P.status)){
     f+=`<button class="btn bg2" onclick="odobriPrijedlog()"><i class="ti ti-check"></i> Odobri</button>`;
   }
   document.getElementById('prij-foot').innerHTML=f;
@@ -4372,11 +4379,51 @@ async function vratiPrijedlog(){
   closeM('mo-prijedlog'); showToast('Prijedlog vraćen voditelju','info'); loadPrijedlozi();
 }
 
-async function obrisiPrijedlog(id){
-  if(!confirm('Obrisati ovaj prijedlog?')) return;
-  const {error}=await SB.from('stimulacije_prijedlozi').delete().eq('id',id);
+async function obrisiPrijedlog(id,izModala){
+  const p=(window._prijList||[]).find(x=>x.id===id)||(window._prij?.id===id?window._prij:null);
+  const odobren=p?.status==='odobreno';
+  const poruka=odobren
+    ? `Obrisati ODOBRENI prijedlog ${prijBroj(p)}?\n\nOvjereni primjerak više neće postojati. Ako je stimulacija već obračunata u Stimulacije → Unos, taj obračun se NE mijenja – ispravite ga ručno.`
+    : 'Obrisati ovaj prijedlog?';
+  if(!confirm(poruka)) return;
+  const {data,error}=await SB.from('stimulacije_prijedlozi').delete().eq('id',id).select('id');
   if(error){showToast('Greška: '+error.message,'error');return;}
+  if(!data||!data.length){showToast('Prijedlog nije obrisan – nemate ovlast','error');return;}
+  if(p) addAuditLog({userName:CU?.name, action:'stim_prijedlog_brisanje', target:prijBroj(p), jedinica:jN(p.jedinica_id),
+    details:`Obrisan prijedlog (${PRIJ_STATUS[p.status]?.lbl||p.status}) za ${MJ_HR[p.mjesec-1]} ${p.godina}${odobren?' – bio odobren: '+(p.odobrio_ime||'')+', '+fmtDT(p.odobreno_at):''}`});
+  if(izModala) closeM('mo-prijedlog');
   showToast('✅ Obrisano','success'); loadPrijedlozi();
+}
+
+async function doradaOdobrenog(){
+  const P=window._prij;
+  const kom=prompt(`Otvoriti odobreni prijedlog ${prijBroj(P)} za doradu?\n\nOdobrenje se poništava, prijedlog dobiva status „Vraćeno na doradu“ i mogu ga ispraviti voditelj ili direktor, a zatim ga direktor ponovno odobri.\n\nRazlog dorade (vidi ga voditelj):`,'');
+  if(kom===null) return;
+  const {data,error}=await SB.from('stimulacije_prijedlozi').update({status:'vraceno',komentar_direktora:kom||'Otvoreno za doradu'}).eq('id',P.id).select('id');
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  if(!data||!data.length){showToast('Nemate ovlast za doradu','error');return;}
+  addAuditLog({userName:CU?.name, action:'stim_prijedlog_dorada', target:prijBroj(P), jedinica:jN(P.jedinica_id),
+    details:`Poništeno odobrenje (${P.odobrio_ime||''}, ${fmtDT(P.odobreno_at)}) i otvoreno za doradu. Razlog: ${kom||'–'}`});
+  showToast('Prijedlog otvoren za doradu','info');
+  await otvoriPrijedlog(P.id); loadPrijedlozi();
+}
+
+// Ispis bez otvaranja nove stranice: sadržaj se ispisuje iz skrivenog okvira
+function ispisUPozadini(html){
+  document.getElementById('print-frame')?.remove();
+  const f=document.createElement('iframe');
+  f.id='print-frame';
+  f.style.cssText='position:fixed;left:-10000px;top:0;width:1100px;height:800px;border:0';
+  document.body.appendChild(f);
+  const d=f.contentWindow.document; d.open(); d.write(html); d.close();
+  const naslov=(d.title||'').trim(), stari=document.title;
+  setTimeout(()=>{
+    if(naslov) document.title=naslov;            // naziv PDF-a pri spremanju
+    const vrati=()=>{document.title=stari;};
+    f.contentWindow.addEventListener('afterprint',vrati,{once:true});
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ showToast('Ispis nije uspio: '+e.message,'error'); }
+    setTimeout(vrati,3000);
+  },350);
 }
 
 // ── Ovjereni primjerak (ispis) ────────────────────────────────
@@ -4388,8 +4435,7 @@ async function ispisPrijedloga(id){
   const tvrtka=tv?.naziv||'Parkovi i nasadi d.o.o.';
   const rows=(st||[]).map(s=>({s,d:DB.djelatnici.find(x=>x.id===s.djelatnik_id)}))
     .sort((a,b)=>(a.d?dF(a.d):'').localeCompare(b.d?dF(b.d):''));
-  const w=window.open('','_blank'); if(!w){showToast('Preglednik je blokirao novi prozor – dopustite skočne prozore','error');return;}
-  w.document.write(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>${prijBroj(p)} – ovjereni primjerak</title>
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>${prijBroj(p)} – ovjereni primjerak</title>
   <style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:28px 34px}h1{font-size:16px;text-align:center;margin:18px 0 4px}
   .sub{text-align:center;color:#444;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}
   th{background:#eee}.r{text-align:right}.meta td{border:none;padding:2px 0}.stamp{margin-top:22px;border:2px solid #1d6f42;color:#1d6f42;padding:10px 14px;border-radius:6px;display:inline-block}
@@ -4407,8 +4453,7 @@ async function ispisPrijedloga(id){
   <span style="font-size:10.5px">Elektronički odobreno u sustavu Evidencija radnog vremena</span></div>
   <div class="potpisi"><div><div class="crta">Predlagatelj</div></div><div><div class="crta">Direktor</div></div></div>
   <div class="foot">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')} · ${prijBroj(p)}</div>
-  <script>setTimeout(()=>window.print(),300)<\/script></body></html>`);
-  w.document.close();
+</body></html>`);
 }
 
 // ── Stimulacije → Unos: odobreni prijedlozi ───────────────────
@@ -4520,8 +4565,7 @@ async function ispisStimPregled(){
   let tv=window.POSTAVKE_TVRTKE; try{ if(!tv) tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
   const e2=v=>v?v.toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
   const T=R.reduce((t,r)=>{['stim','neop','opor','bol','boln','bolo','bruto2','dmj','uk'].forEach(k=>t[k]+=r[k]);return t;},{stim:0,neop:0,opor:0,bol:0,boln:0,bolo:0,bruto2:0,dmj:0,uk:0});
-  const w=window.open('','_blank'); if(!w){showToast('Preglednik je blokirao novi prozor – dopustite skočne prozore','error');return;}
-  w.document.write(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Stimulacije – ${hEsc(N.mj)} ${hEsc(N.god)}</title>
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Stimulacije – ${hEsc(N.mj)} ${hEsc(N.god)}</title>
   <style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#111;margin:0}
   h1{font-size:15px;margin:8px 0 2px}.sub{color:#444;margin-bottom:10px}table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #999;padding:3px 5px}th{background:#eee;font-size:9.5px}td.r,th.r{text-align:right}
@@ -4536,8 +4580,7 @@ async function ispisStimPregled(){
    <td class="r">${e2(r.bruto2)}</td><td class="r">${e2(r.dmj)}</td><td class="r"><strong>${e2(r.uk)}</strong></td><td class="r">${e2(r.kum)}</td></tr>`).join('')}</tbody>
   <tfoot><tr><td colspan="6">UKUPNO (€)</td><td class="r">${e2(T.stim)}</td><td class="r">${e2(T.neop)}</td><td class="r">${e2(T.opor)}</td><td class="r">${e2(T.bol)}</td><td class="r">${e2(T.boln)}</td><td class="r">${e2(T.bolo)}</td><td class="r">${e2(T.bruto2)}</td><td class="r">${e2(T.dmj)}</td><td class="r">${e2(T.uk)}</td><td></td></tr></tfoot></table>
   <div class="foot">Iznosi u eurima. Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div>
-  <script>setTimeout(()=>window.print(),300)<\/script></body></html>`);
-  w.document.close();
+</body></html>`);
 }
 function excelStimPregled(){
   const R=stimPregledRedovi();
