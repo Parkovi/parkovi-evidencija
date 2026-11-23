@@ -579,7 +579,7 @@ select{cursor:pointer}
       </div>
 
       <div class="page" id="page-obracun">
-        <div class="ph"><div><div class="pt">Obračun plaća</div><div class="ps">Što su voditelji unijeli, što je preuzeto u program za plaće i zaključavanje mjeseca</div></div></div>
+        <div class="ph"><div><div class="pt">Obračun plaća</div><div class="ps">Zaključavanje unesenih dana po jedinicama</div></div></div>
         <div class="card" style="padding:1rem;margin-bottom:1rem"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
           <div class="fg" style="margin:0;min-width:100px"><label class="fl">Godina</label><select id="obr-god" onchange="loadObracun()"></select></div>
           <div class="fg" style="margin:0;min-width:140px"><label class="fl">Mjesec</label><select id="obr-mj" onchange="loadObracun()"></select></div>
@@ -4800,78 +4800,98 @@ async function loadObracun(){
   const jeds=[...DB.jedinice].sort((a,b)=>(a.sort_order??a.id)-(b.sort_order??b.id)).map(j=>{
     const dj=DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===j.id);
     const ids=new Set(dj.map(d=>d.id));
-    const p=preMap[j.id];
-    const nove=prom.filter(x=>(x.jedinica_id===j.id||(x.jedinica_id==null&&ids.has(x.djelatnik_id)))&&(!p||new Date(x.vrijeme)>new Date(p.preuzeto_at)));
-    return {j,n:dj.length,s:dj.filter(d=>evMap[d.id]&&zadnjiDan(evMap[d.id])>0).length,
-      zadnji:Math.max(0,...dj.map(d=>zadnjiDan(evMap[d.id]))),p,nove};
+    const p=preMap[j.id]; const doD=p?.do_dana||0;
+    // "novo": uneseno/promijenjeno za dane nakon "zaključano do" (to još nije u plaćama)
+    const nove=prom.filter(x=>(x.jedinica_id===j.id||(x.jedinica_id==null&&ids.has(x.djelatnik_id)))&&x.dan>doD);
+    return {j,n:dj.length,zadnji:Math.max(0,...dj.map(d=>zadnjiDan(evMap[d.id]))),p,doD,nove};
   }).filter(x=>x.n>0||x.p);
   const smije=smijeObracun(), z=st.zakljucan, dani=dim(god,mj);
-  const ukNove=jeds.reduce((t,x)=>t+x.nove.length,0);
+  const mm=String(mj).padStart(2,'0'), iso=d=>`${god}-${mm}-${String(d).padStart(2,'0')}`;
   window._obr={god,mj,zakljucan:z,jeds,dani};
-  el.innerHTML=`<div class="card" style="padding:1rem;margin-bottom:1rem;border-left:4px solid ${z?'var(--red)':'var(--green)'}">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <div><div style="font-size:15px;font-weight:700">${MJ_HR[mj-1]} ${god}: ${z?'<span style="color:var(--red)"><i class="ti ti-lock"></i> ZAKLJUČAN</span>':'<span style="color:var(--green)"><i class="ti ti-lock-open"></i> otključan</span>'}</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:3px">${z?`Zaključao: ${hEsc(z.zakljucao_ime||'')} · ${fmtDT(z.zakljucano_at)} — nitko ne može mijenjati evidenciju ni stimulacije za ovaj mjesec.`:'Voditelji unose; dani označeni kao preuzeti voditeljima su zaključani.'}</div>
-        <div style="font-size:12.5px;margin-top:6px">${ukNove?`<span style="color:var(--amber);font-weight:600"><i class="ti ti-bell"></i> ${ukNove} novih/izmijenjenih dana za prijepis</span>`:'<span style="color:var(--green)"><i class="ti ti-check"></i> Nema novih unosa od zadnjeg preuzimanja</span>'}</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn bs" onclick="sP('ispis')"><i class="ti ti-printer"></i> Ispis evidencije</button>
-        ${canStim()?`<button class="btn bs" onclick="sP('stimulacije');stimTab('pregled')"><i class="ti ti-coin-euro"></i> Stimulacije</button>`:''}
-        ${smije?(z?`<button class="btn bd" onclick="otkljucajMjesec()"><i class="ti ti-lock-open"></i> Otključaj</button>`
-                  :`<button class="btn bp" onclick="zakljucajMjesec()"><i class="ti ti-lock"></i> Zaključaj mjesec</button>`):''}
-      </div></div></div>
+  const zakljSve=jeds.filter(x=>x.doD>=dani).length;
+  el.innerHTML=`
+  <div class="al ali" style="margin-bottom:1rem"><i class="ti ti-info-circle"></i>
+    <div>Za svaku jedinicu upišite <strong>do kojeg datuma ste podatke unijeli u program za plaće</strong> i kliknite <strong>Zaključaj</strong>.
+    Ti dani se zaključavaju – voditelj ih više ne može mijenjati, a Obračun plaće može. Voditelj normalno nastavlja unositi dane nakon tog datuma.</div></div>
+  ${z?`<div class="al ald" style="margin-bottom:1rem"><i class="ti ti-lock"></i> <strong>${MJ_HR[mj-1]} ${god} je konačno zaključan</strong> (${hEsc(z.zakljucao_ime||'')}, ${fmtDT(z.zakljucano_at)}) – nitko ništa ne može mijenjati, ni evidenciju ni stimulacije.</div>`:''}
   <div class="card"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
-    <thead><tr style="background:var(--bg3)"><th style="padding:8px;text-align:left">Jedinica</th><th style="padding:8px;text-align:center">Djelatnika</th>
-      <th style="padding:8px;text-align:center">S unosom</th><th style="padding:8px;text-align:center">Uneseno do</th>
-      <th style="padding:8px;text-align:left">Preuzeto u obračun do</th><th style="padding:8px;text-align:left">Novo za prijepis</th></tr></thead>
+    <thead><tr style="background:var(--bg3)">
+      <th style="padding:8px;text-align:left">Jedinica</th><th style="padding:8px;text-align:center">Djelatnika</th>
+      <th style="padding:8px;text-align:center">Voditelj unio do</th>
+      <th style="padding:8px;text-align:left">Zaključano do (uneseno u plaće)</th>
+      <th style="padding:8px;text-align:left">Uneseno nakon zaključanog</th></tr></thead>
     <tbody>${jeds.map(x=>`<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:7px 8px;font-weight:500">${hEsc(x.j.name)}</td>
-      <td style="padding:7px 8px;text-align:center">${x.n}</td>
-      <td style="padding:7px 8px;text-align:center;${x.s<x.n?'color:var(--amber);font-weight:600':''}">${x.s}</td>
-      <td style="padding:7px 8px;text-align:center">${x.zadnji?x.zadnji+'.':'–'}</td>
-      <td style="padding:7px 8px;white-space:nowrap">${smije&&!z
-        ?`<input type="number" id="obr-do-${x.j.id}" min="0" max="${dani}" value="${x.p?.do_dana??0}" style="width:56px;text-align:center;padding:3px 4px"> . dana
-          <button class="btn bxs bs" onclick="spremiPreuzeto(${x.j.id})" title="Spremi"><i class="ti ti-check"></i></button>
-          ${x.zadnji&&x.zadnji!==(x.p?.do_dana??0)?`<button class="btn bxs bp" onclick="spremiPreuzeto(${x.j.id},${x.zadnji})" title="Označi preuzeto do zadnjeg unesenog dana">do ${x.zadnji}.</button>`:''}`
-        :(x.p?`<strong>${x.p.do_dana}.</strong>`:'–')}
-        ${x.p?`<div style="font-size:10.5px;color:var(--text3)">${hEsc(x.p.preuzeo_ime||'')} · ${fmtDT(x.p.preuzeto_at)}</div>`:''}</td>
-      <td style="padding:7px 8px">${x.nove.length?`<button class="btn bxs bs" style="color:var(--amber);font-weight:600" onclick="prikaziNove(${x.j.id})"><i class="ti ti-bell"></i> ${x.nove.length} dan(a) – prikaži</button>`:'<span style="color:var(--text3)">–</span>'}</td>
+      <td style="padding:8px;font-weight:600">${hEsc(x.j.name)}</td>
+      <td style="padding:8px;text-align:center">${x.n}</td>
+      <td style="padding:8px;text-align:center">${x.zadnji?`${x.zadnji}.${mj}.`:'<span style="color:var(--text3)">ništa</span>'}</td>
+      <td style="padding:8px">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${x.doD?`<span class="bdg ${x.doD>=dani?'brd':'bam'}" style="font-size:12px"><i class="ti ti-lock"></i> ${x.doD>=dani?'cijeli mjesec':`do ${x.doD}.${mj}.`}</span>`:'<span class="bdg bgy">otključano</span>'}
+          ${smije&&!z?`<input type="date" id="obr-do-${x.j.id}" min="${iso(1)}" max="${iso(dani)}" value="${iso(Math.min(Math.max(x.doD,x.zadnji)||1,dani))}" style="width:140px;padding:3px 6px">
+            <button class="btn bxs bp" onclick="spremiPreuzeto(${x.j.id})"><i class="ti ti-lock"></i> Zaključaj</button>
+            ${x.doD<dani?`<button class="btn bxs bs" onclick="spremiPreuzeto(${x.j.id},${dani})" title="Zaključaj cijeli mjesec za ovu jedinicu">Cijeli mjesec</button>`:''}
+            ${x.doD?`<button class="btn bxs bs" onclick="otkljucajJedinicu(${x.j.id})" title="Otključaj jedinicu"><i class="ti ti-lock-open"></i></button>`:''}`:''}
+        </div>
+        ${x.p&&x.doD?`<div style="font-size:10.5px;color:var(--text3);margin-top:3px">${hEsc(x.p.preuzeo_ime||'')} · ${fmtDT(x.p.preuzeto_at)}</div>`:''}</td>
+      <td style="padding:8px">${x.nove.length?`<button class="btn bxs bs" onclick="prikaziNove(${x.j.id})"><i class="ti ti-list-details"></i> ${new Set(x.nove.map(c=>c.djelatnik_id+'_'+c.dan)).size} dan(a) – prikaži</button>`:'<span style="color:var(--text3)">–</span>'}</td>
     </tr>`).join('')}</tbody></table></div></div>
-  <div style="font-size:11.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> „Novo za prijepis” su dani uneseni ili promijenjeni nakon zadnjeg „Preuzeto do”. Kad ih prepišete u program za plaće, upišite do kojeg dana ste preuzeli – voditelj te dane više ne može mijenjati.</div>`;
+  <div style="font-size:11.5px;color:var(--text3);margin:6px 2px 1rem"><i class="ti ti-info-circle"></i> „Uneseno nakon zaključanog” pokazuje što je voditelj unio ili mijenjao za dane nakon datuma zaključavanja – to je ono što još treba unijeti u plaće. Zaključano cijeli mjesec: ${zakljSve} / ${jeds.length} jedinica.</div>
+  ${smije?`<div class="card" style="padding:1rem;border-left:4px solid ${z?'var(--red)':'var(--border)'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><div style="font-weight:700"><i class="ti ti-lock"></i> Konačno zaključavanje mjeseca</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px">Kad je obračun plaća za ${MJ_HR[mj-1]} gotov: zaključava sve jedinice i stimulacije – i za Obračun plaće. Za ispravak treba otključati (uz razlog).</div></div>
+      ${z?`<button class="btn bd" onclick="otkljucajMjesec()"><i class="ti ti-lock-open"></i> Otključaj mjesec</button>`:`<button class="btn bs" onclick="zakljucajMjesec()"><i class="ti ti-lock"></i> Konačno zaključaj ${MJ_HR[mj-1]}</button>`}
+    </div></div>`:''}`;
 }
 
 function prikaziNove(jid){
   const O=window._obr; const x=O?.jeds.find(y=>y.j.id===jid); if(!x) return;
   const red=[...x.nove].sort((a,b)=>{const da=DB.djelatnici.find(d=>d.id===a.djelatnik_id),db=DB.djelatnici.find(d=>d.id===b.djelatnik_id);
     return (da?dF(da):'').localeCompare(db?dF(db):'')||a.dan-b.dan||new Date(a.vrijeme)-new Date(b.vrijeme);});
-  document.getElementById('nove-title').textContent=`${x.j.name} – ${MJ_HR[O.mj-1]} ${O.god}: novo za prijepis`;
+  document.getElementById('nove-title').textContent=`${x.j.name} – uneseno nakon zaključanog (${x.doD?`zaključano do ${x.doD}.${O.mj}.`:'ništa nije zaključano'})`;
   document.getElementById('nove-body').innerHTML=`<div style="max-height:60vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
     <thead><tr style="background:var(--bg3);position:sticky;top:0"><th style="padding:6px 8px;text-align:left">Djelatnik</th><th style="padding:6px 8px">Dan</th><th style="padding:6px 8px;text-align:left">Bilo</th><th style="padding:6px 8px;text-align:left">Sada</th><th style="padding:6px 8px;text-align:left">Unio</th><th style="padding:6px 8px;text-align:left">Kada</th></tr></thead>
     <tbody>${red.map(c=>{const d=DB.djelatnici.find(z=>z.id===c.djelatnik_id);const izmjena=c.staro!=null;
       return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-weight:500">${hEsc(d?dF(d):'#'+c.djelatnik_id)}${d?.sifra?` <span style="color:var(--text3);font-size:10.5px">(${hEsc(d.sifra)})</span>`:''}</td>
-        <td style="padding:5px 8px;text-align:center">${c.dan}.</td>
+        <td style="padding:5px 8px;text-align:center">${c.dan}.${O.mj}.</td>
         <td style="padding:5px 8px;color:var(--text3)">${izmjena?hEsc(satiTekst(c.staro)):'<span class="bdg bgr">novi unos</span>'}</td>
         <td style="padding:5px 8px;font-weight:600;${izmjena?'color:var(--amber)':''}">${hEsc(satiTekst(c.novo))}</td>
         <td style="padding:5px 8px;font-size:11.5px">${hEsc(c.korisnik_ime||'')}</td><td style="padding:5px 8px;font-size:11.5px">${fmtDT(c.vrijeme)}</td></tr>`;}).join('')}</tbody></table></div>`;
-  window._noveJid=jid;
   openM('mo-nove');
 }
 
 async function spremiPreuzeto(jid,doDana){
   const O=window._obr; if(!O) return;
-  const v=doDana??parseInt(document.getElementById('obr-do-'+jid)?.value);
-  if(isNaN(v)||v<0||v>O.dani){showToast(`Upišite dan od 0 do ${O.dani}`,'error');return;}
+  let v=doDana;
+  if(v==null){
+    const val=document.getElementById('obr-do-'+jid)?.value||'';
+    const [g,m,d]=val.split('-').map(Number);
+    if(g!==O.god||m!==O.mj||!d){showToast(`Odaberite datum u ${MJ_HR[O.mj-1]} ${O.god}`,'error');return;}
+    v=d;
+  }
+  const staro=O.jeds.find(x=>x.j.id===jid)?.doD||0;
+  if(v<staro&&!confirm(`${jN(jid)}: smanjiti zaključano s ${staro}.${O.mj}. na ${v}.${O.mj}.?\n\nDani ${v+1}.–${staro}. ponovno postaju dostupni voditelju za izmjene.`)) return;
   const {error}=await SB.from('evidencija_preuzeto').upsert({jedinica_id:jid,godina:O.god,mjesec:O.mj,do_dana:v},{onConflict:'jedinica_id,godina,mjesec'});
   if(error){showToast('Greška: '+error.message,'error');return;}
-  addAuditLog({userName:CU?.name, action:'evidencija_preuzeto', target:`${jN(jid)} — ${MJ_HR[O.mj-1]} ${O.god}`, jedinica:jN(jid), details:`Preuzeto u obračun do ${v}. dana`});
-  showToast(`✅ ${jN(jid)}: preuzeto do ${v}.`,'success');
+  addAuditLog({userName:CU?.name, action:'evidencija_zakljucano_do', target:`${jN(jid)} — ${MJ_HR[O.mj-1]} ${O.god}`, jedinica:jN(jid), details:`Zaključano do ${v}.${O.mj}. (prije: ${staro?staro+'.'+O.mj+'.':'otključano'})`});
+  showToast(`🔒 ${jN(jid)}: zaključano do ${v}.${O.mj}.`,'success');
   closeM('mo-nove'); loadObracun();
+}
+async function otkljucajJedinicu(jid){
+  const O=window._obr; if(!O) return;
+  const razlog=prompt(`Otključati ${jN(jid)} za ${MJ_HR[O.mj-1]} ${O.god}?\nVoditelj će ponovno moći mijenjati sve dane.\n\nRazlog (upisuje se u dnevnik):`,'');
+  if(razlog===null) return;
+  const {error}=await SB.from('evidencija_preuzeto').upsert({jedinica_id:jid,godina:O.god,mjesec:O.mj,do_dana:0},{onConflict:'jedinica_id,godina,mjesec'});
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  addAuditLog({userName:CU?.name, action:'evidencija_otkljucano', target:`${jN(jid)} — ${MJ_HR[O.mj-1]} ${O.god}`, jedinica:jN(jid), details:`Otključano. Razlog: ${razlog||'–'}`});
+  showToast(`🔓 ${jN(jid)} otključana`,'info'); loadObracun();
 }
 
 async function zakljucajMjesec(){
   const O=window._obr; if(!O) return;
-  const nove=O.jeds.reduce((t,x)=>t+x.nove.length,0);
-  if(!confirm(`Zaključati ${MJ_HR[O.mj-1]} ${O.god}?\n\nNakon zaključavanja nitko ne može mijenjati evidenciju, stimulacije ni prijedloge za taj mjesec dok se ne otključa.`
-     +(nove?`\n\nPAŽNJA – još ${nove} novih/izmijenjenih dana nije označeno kao preuzeto.`:''))) return;
+  const nisu=O.jeds.filter(x=>x.doD<O.dani).map(x=>x.j.name);
+  if(!confirm(`Konačno zaključati ${MJ_HR[O.mj-1]} ${O.god}?\n\nNakon toga NITKO (ni Obračun plaće) ne može mijenjati evidenciju, stimulacije ni prijedloge za taj mjesec dok se ne otključa.`
+     +(nisu.length?`\n\nPAŽNJA – nisu zaključane do kraja mjeseca (${nisu.length}): ${nisu.join(', ')}`:''))) return;
   const {error}=await SB.from('obracun_zakljucani_mjeseci').insert({godina:O.god,mjesec:O.mj});
   if(error){showToast('Greška: '+error.message,'error');return;}
   addAuditLog({userName:CU?.name, action:'obracun_zakljucavanje', target:`${MJ_HR[O.mj-1]} ${O.god}`, jedinica:'', details:'Mjesec zaključan za obračun plaća'});
@@ -4914,7 +4934,7 @@ async function primijeniZakljucaneDane(){
   if(st.zakljucan){
     el.innerHTML=`<div class="al ald" style="margin-bottom:10px"><i class="ti ti-lock"></i> <strong>${MJ_HR[mj-1]} ${god} je zaključan za obračun plaća</strong> (${hEsc(st.zakljucan.zakljucao_ime||'')}, ${fmtDT(st.zakljucan.zakljucano_at)}). Izmjene nisu moguće.</div>`;
   } else if(doDana){
-    el.innerHTML=`<div class="al" style="margin-bottom:10px;background:#fff7e6;border:1px solid #f0c36d;color:#8a5a00"><i class="ti ti-lock"></i> Dani <strong>1.–${doDana}.</strong> su preuzeti u obračun plaća (${hEsc(p.preuzeo_ime||'')}, ${fmtDT(p.preuzeto_at)}).
+    el.innerHTML=`<div class="al" style="margin-bottom:10px;background:#fff7e6;border:1px solid #f0c36d;color:#8a5a00"><i class="ti ti-lock"></i> Jedinica je <strong>zaključana do ${doDana}.${mj}.</strong> – ti dani su uneseni u plaće (${hEsc(p.preuzeo_ime||'')}, ${fmtDT(p.preuzeto_at)}).
       ${smijeObracun()?' Kao obračun plaća/admin ih i dalje možete mijenjati.':' Ti dani su zaključani – za ispravak se obratite obračunu plaća.'}</div>`;
   } else el.innerHTML='';
 }
