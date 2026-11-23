@@ -326,6 +326,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('bolovanje')" id="nav-bolovanje"><i class="ti ti-stethoscope"></i> Pretraga bolovanja</div>
         <div class="ni" onclick="sP('stimulacije')" id="nav-stimulacije"><i class="ti ti-coin-euro"></i> Stimulacije</div>
         <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
+        <div class="ni" onclick="sP('obracun')" id="nav-obracun" style="display:none"><i class="ti ti-calculator"></i> Obračun plaća</div>
       </div>
       <div class="sg">
         <div class="sgl">Djelatnici</div>
@@ -359,6 +360,7 @@ select{cursor:pointer}
           <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="ug" onchange="onUJ()"></select></div>
           <div class="fg" style="margin:0"><label class="fl">Mjesec</label><select id="um" onchange="loadUF()"></select></div>
         </div></div>
+        <div id="predaja-banner"></div>
         <div id="uw"></div>
       </div>
 
@@ -574,6 +576,16 @@ select{cursor:pointer}
           </div>
           <div class="tw" id="au-tbl"></div>
         </div>
+      </div>
+
+      <div class="page" id="page-obracun">
+        <div class="ph"><div><div class="pt">Obračun plaća</div><div class="ps">Predaja evidencije po jedinicama i zaključavanje mjeseca</div></div></div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="fg" style="margin:0;min-width:100px"><label class="fl">Godina</label><select id="obr-god" onchange="loadObracun()"></select></div>
+          <div class="fg" style="margin:0;min-width:140px"><label class="fl">Mjesec</label><select id="obr-mj" onchange="loadObracun()"></select></div>
+          <button class="btn bs" onclick="loadObracun()" style="margin-bottom:1px"><i class="ti ti-refresh"></i> Osvježi</button>
+        </div></div>
+        <div id="obr-body"></div>
       </div>
 
       <div class="page" id="page-prijedlozi">
@@ -896,6 +908,7 @@ select{cursor:pointer}
   <div id="mda"></div>
   <div class="fr c2">
     <div class="fg"><label class="fl">Prezime <span class="req">*</span></label><input type="text" id="mdp" placeholder="PREZIME"></div>
+    <div class="fg"><label class="fl">Šifra djelatnika</label><input type="text" id="mdsif" placeholder="npr. 2136"></div>
     <div class="fg"><label class="fl">Ime <span class="req">*</span></label><input type="text" id="mdi" placeholder="Ime"></div>
   </div>
   <div class="fr c2">
@@ -960,7 +973,7 @@ select{cursor:pointer}
   </div>
   <div class="fr c2">
     <div class="fg"><label class="fl">Lozinka</label><input type="password" id="mup" placeholder="Min. 6 znakova"></div>
-    <div class="fg"><label class="fl">Uloga</label><select id="mur"><option value="korisnik">Voditelj jedinice</option><option value="direktor">Direktor</option><option value="admin">Administrator</option></select></div>
+    <div class="fg"><label class="fl">Uloga</label><select id="mur"><option value="korisnik">Voditelj jedinice</option><option value="direktor">Direktor</option><option value="obracun">Obračun plaće</option><option value="admin">Administrator</option></select></div>
   </div>
   <div class="fg"><label class="fl">Ovlast pregleda</label><select id="mua2" onchange="togAUI()"><option value="own">Jedna ili više jedinica (vlastite)</option><option value="selected">Odabrane jedinice (širi pregled)</option><option value="all">Sve jedinice (administrator)</option></select></div>
   <div id="mujw" style="display:none" class="fg"><label class="fl">Dostupne jedinice</label>
@@ -1360,11 +1373,12 @@ function doLogout(){if(isLive()){doLogoutSB();return;}CU=null;DB.evidencija={};d
 
 function sP(n){
   if((n==='stimulacije'||n==='bolovanje')&&!canStim()) n='dashboard';
+  if(n==='obracun'&&!vidiObracun()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+n)?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,prijedlozi:setupPrijedlozi,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,prijedlozi:setupPrijedlozi,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -1443,6 +1457,7 @@ async function onUJ(){
   loadUF();
 }
 function loadUF(){
+  renderPredajaBanner();
   const did=parseInt(document.getElementById("ud")?.value)||0;
   const god=parseInt(document.getElementById("ug")?.value)||2026;
   const mj=parseInt(document.getElementById("um")?.value)||0;
@@ -1511,6 +1526,7 @@ function aFill(){
   rTots(god,mj);
 }
 async function saveU(did,god,mj){
+  if(await unosBlokiran(did,god,mj)) return;
   const days=dim(god,mj),rows=[],sums={};let uk=0;
   DB.vrste.forEach(v=>sums[v.code]=0);
   for(let d=1;d<=days;d++){
@@ -1614,7 +1630,8 @@ function expCSV(){
 function dlC(c,fn){const b=new Blob(["\uFEFF"+c],{type:"text/csv;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=fn;a.click();}
 
 // DJELATNICI
-function setupDjel(){
+async function setupDjel(){
+  await ucitajBodoveDjelatnika();
   const vj=vJ();
   const jeds=DB.jedinice.filter(j=>vj.includes(j.id));
   document.getElementById("djfj").innerHTML='<option value="0">Sve jedinice</option>'+jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join("");
@@ -1631,11 +1648,12 @@ function rDjel(){
   const w=document.getElementById("djw");
   if(!djels.length){w.innerHTML='<div class="empty"><i class="ti ti-users"></i><p>Nema djelatnika</p></div>';return;}
   w.innerHTML=`<div class="card"><div class="tw"><table>
-    <thead><tr><th>#</th><th>Prezime i ime</th><th>Radno mjesto</th><th>Maticna jedinica</th><th>Trenutna jedinica</th><th>OIB</th><th>Zaposlen</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Šifra</th><th>Prezime i ime</th><th>Radno mjesto</th><th>Maticna jedinica</th><th>Trenutna jedinica</th><th>OIB</th><th>Zaposlen</th>${canStim()?'<th>Bodovi</th>':''}<th></th></tr></thead>
     <tbody>${djels.map((d,i)=>{
       const mj=jN(d.jid),aj=jN(gAJ(d.id)),diff=d.jid!==gAJ(d.id);
       const[bg,fg]=avC(d.prez);
       return `<tr><td style="color:var(--text3)">${i+1}.</td>
+        <td style="font-family:monospace;font-size:12px;font-weight:600">${hEsc(d.sifra||'–')}</td>
         <td><div style="display:flex;align-items:center;gap:9px">
           <div style="width:32px;height:32px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${(d.prez[0]||"")+(d.ime[0]||"")}</div>
           <div><div style="font-weight:600">${dF(d)}</div><div style="font-size:10.5px;color:var(--text3)">${d.poc}-${d.kraj}</div></div>
@@ -1644,6 +1662,9 @@ function rDjel(){
         <td>${diff?'<span class="bdg bam">'+aj+'</span>':aj}</td>
         <td style="font-family:monospace;font-size:11.5px">${d.oib||"-"}</td>
         <td style="font-size:11.5px">${d.dat||"-"}</td>
+        ${canStim()?`<td>${smijeObracun()
+          ?`<input type="number" min="0" step="100" value="${window._bodMap[d.id]?.bodovi??''}" placeholder="–" title="Bodovi za stimulaciju" onchange="spremiBodoveDjelatnika(${d.id},this)" style="width:78px;text-align:right;padding:3px 6px">`
+          :`<span style="font-weight:600">${window._bodMap[d.id]?.bodovi??'–'}</span>`}</td>`:''}
         <td><div style="display:flex;gap:4px">
           <button class="btn bsm bp" onclick="openEditDjel(${d.id})" title="Uredi" style="gap:4px;padding:4px 10px"><i class="ti ti-edit" style="font-size:15px"></i> Uredi</button>
           <button class="btn bsm bs" onclick="openAddRasp(${d.id})" title="Premjesti" style="padding:4px 8px"><i class="ti ti-arrows-transfer-up" style="font-size:15px"></i></button>
@@ -1653,7 +1674,7 @@ function rDjel(){
 }
 function openAddDjel(){
   eDj=null;document.getElementById("mdt").textContent="Dodaj djelatnika";
-  ["mdp","mdi","mdoib","mddat","mdrm","mdnap"].forEach(id=>document.getElementById(id).value="");
+  ["mdp","mdi","mdoib","mddat","mdrm","mdnap","mdsif"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("mdpoc").value="07:00";document.getElementById("mdkraj").value="15:00";
   const vj=vJ();document.getElementById("mdj").innerHTML=DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${j.name}</option>`).join("");
   document.getElementById("mda").innerHTML="";openM("mo-djel");
@@ -1665,17 +1686,26 @@ function openEditDjel(id){
   document.getElementById("mdoib").value=d.oib||"";document.getElementById("mddat").value=d.dat||"";
   document.getElementById("mdrm").value=d.rm||"";document.getElementById("mdpoc").value=d.poc||"07:00";
   document.getElementById("mdkraj").value=d.kraj||"15:00";document.getElementById("mdnap").value=d.nap||"";
+  document.getElementById("mdsif").value=d.sifra||"";
   const vj=vJ();const sel=document.getElementById("mdj");
   sel.innerHTML=DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${j.name}</option>`).join("");
   sel.value=d.jid;document.getElementById("mda").innerHTML="";openM("mo-djel");
 }
-function saveDjel(){
+async function saveDjel(){
   const prez=document.getElementById("mdp").value.trim().toUpperCase(),ime=document.getElementById("mdi").value.trim();
   const jid=parseInt(document.getElementById("mdj").value);
   if(!prez||!ime||!jid){document.getElementById("mda").innerHTML='<div class="al ald"><i class="ti ti-alert-circle"></i> Prezime, ime i jedinica su obavezni!</div>';return;}
-  const obj={prez,ime,oib:document.getElementById("mdoib").value.trim(),dat:document.getElementById("mddat").value.trim(),jid,rm:document.getElementById("mdrm").value.trim(),poc:document.getElementById("mdpoc").value,kraj:document.getElementById("mdkraj").value,nap:document.getElementById("mdnap").value.trim()};
+  const obj={sifra:document.getElementById("mdsif").value.trim(),prez,ime,oib:document.getElementById("mdoib").value.trim(),dat:document.getElementById("mddat").value.trim(),jid,rm:document.getElementById("mdrm").value.trim(),poc:document.getElementById("mdpoc").value,kraj:document.getElementById("mdkraj").value,nap:document.getElementById("mdnap").value.trim()};
+  if(isLive()){
+    const row={sifra:obj.sifra||null,prezime:obj.prez,ime:obj.ime,oib:obj.oib||null,datum_zap:obj.dat||null,jedinica_id:obj.jid,
+      radno_mjesto:obj.rm||null,poc_rada:obj.poc,kraj_rada:obj.kraj,napomena:obj.nap||null};
+    const res=eDj?await SB.from('djelatnici').update(row).eq('id',eDj).select():await SB.from('djelatnici').insert({...row,aktivan:true}).select();
+    if(res.error||!res.data?.length){document.getElementById("mda").innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Nije spremljeno: ${hEsc(res.error?.message||'nemate ovlast (djelatnike uređuje administrator)')}</div>`;return;}
+    if(!eDj) obj.id=res.data[0].id;
+    addAuditLog({userName:CU?.name, action:eDj?'djelatnik_izmjena':'djelatnik_unos', target:`${obj.prez} ${obj.ime}`, jedinica:jN(obj.jid), details:`Šifra: ${obj.sifra||'–'}`});
+  }
   if(eDj)Object.assign(DB.djelatnici.find(x=>x.id===eDj),obj);
-  else DB.djelatnici.push({id:DB.nid.djel++,...obj});
+  else DB.djelatnici.push({id:obj.id||DB.nid.djel++,...obj});
   closeM("mo-djel");rDjel();
 }
 function delDjel(id){
@@ -1893,7 +1923,7 @@ async function rKor(){
     const[bg,fg]=avC(u.name||'A');
     const isMe=u.id===CU?.id||u.id===SB_USER?.id;
     const isUUID=typeof u.id==='string'&&u.id.includes('-');
-    const roleBdg=(u.role==='admin'?'<span class="bdg bgr">Administrator</span>':u.role==='direktor'?'<span class="bdg bbl">Direktor</span>':'<span class="bdg bgy">Voditelj</span>')+(u.vidiStim?' <span class="bdg bam">Stimulacije</span>':'');
+    const roleBdg=(u.role==='admin'?'<span class="bdg bgr">Administrator</span>':u.role==='direktor'?'<span class="bdg bbl">Direktor</span>':u.role==='obracun'?'<span class="bdg bbl">Obračun plaće</span>':'<span class="bdg bgy">Voditelj</span>')+(u.vidiStim?' <span class="bdg bam">Stimulacije</span>':'');
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:11px">
         <div style="width:38px;height:38px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${(u.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -4117,15 +4147,16 @@ const PRIJ_STATUS={
   odobreno:{lbl:'Odobreno',cls:'bdg bgr'}
 };
 function hEsc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function canStim(){return !!CU&&(CU.role==='admin'||CU.role==='direktor'||CU.vidiStim===true);}
+function canStim(){return !!CU&&(CU.role==='admin'||CU.role==='direktor'||CU.role==='obracun'||CU.vidiStim===true);}
 function jeDirektor(){return CU?.role==='direktor';}
-function nazivUlogeEv(r){return ({admin:'Administrator',direktor:'Direktor'})[r]||'Voditelj';}
+function nazivUlogeEv(r){return ({admin:'Administrator',direktor:'Direktor',obracun:'Obračun plaće'})[r]||'Voditelj';}
 function prijBroj(p){return `STIM-${p.godina}-${String(p.id).padStart(4,'0')}`;}
 function fmtDT(s){if(!s)return '–';const d=new Date(s);return d.toLocaleDateString('hr-HR')+' '+d.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});}
 
 // Skrivanje stranica prema ovlastima
 function primijeniOvlastiStim(){
   ['nav-stimulacije','nav-bolovanje'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display=canStim()?'':'none';});
+  { const e=document.getElementById('nav-obracun'); if(e) e.style.display=vidiObracun()?'':'none'; }
   const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
 }
 
@@ -4665,6 +4696,175 @@ function excelStimPregled(){
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:26},{wch:26},{wch:11},{wch:8},{wch:6},{wch:12},{wch:13},{wch:12},{wch:14},{wch:13},{wch:12},{wch:10},{wch:14},{wch:11},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stimulacije');
   XLSX.writeFile(wb,`Stimulacije_${N.god}_${N.mj.replace(/\s+/g,'_')}.xlsx`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// OBRAČUN PLAĆA: zaključavanje mjeseca, predaja evidencije, bodovi
+// ══════════════════════════════════════════════════════════════
+function jeObracun(){return CU?.role==='obracun';}
+function smijeObracun(){return CU?.role==='admin'||jeObracun();}            // zaključava, otključava, vraća predaje, mijenja bodove
+function vidiObracun(){return smijeObracun()||jeDirektor();}                // vidi stranicu Obračun plaća
+
+async function dohvatiStatusMjeseca(god,mj){
+  const [z,p]=await Promise.all([
+    SB.from('obracun_zakljucani_mjeseci').select('*').eq('godina',god).eq('mjesec',mj),
+    SB.from('evidencija_predaje').select('*').eq('godina',god).eq('mjesec',mj)
+  ]);
+  return {zakljucan:(z.data||[])[0]||null, predaje:p.data||[], greska:z.error||p.error};
+}
+
+// ── Stranica Obračun plaća ────────────────────────────────────
+async function setupObracun(){
+  const g=document.getElementById('obr-god');
+  if(g&&!g.options.length){
+    const now=new Date();
+    // zadani mjesec: prethodni (za njega se obično radi obračun)
+    const pm=now.getMonth()===0?12:now.getMonth(), pg=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+    g.innerHTML=YEARS.map(y=>`<option value="${y}"${y===pg?' selected':''}>${y}</option>`).join('');
+    document.getElementById('obr-mj').innerHTML=MJ_HR.map((m,i)=>`<option value="${i+1}"${i+1===pm?' selected':''}>${m}</option>`).join('');
+  }
+  await loadObracun();
+}
+
+async function loadObracun(){
+  const el=document.getElementById('obr-body'); if(!el) return;
+  const god=parseInt(document.getElementById('obr-god').value), mj=parseInt(document.getElementById('obr-mj').value);
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  const st=await dohvatiStatusMjeseca(god,mj);
+  if(st.greska){el.innerHTML=`<div class="al ald">Greška: ${hEsc(st.greska.message)}</div>`;return;}
+  // evidencija za mjesec (osvježi iz baze da broj bude točan)
+  let evid=new Set();
+  try{
+    const {data}=await SB.from('evidencija').select('djelatnik_id').eq('godina',god).eq('mjesec',mj);
+    (data||[]).forEach(r=>evid.add(r.djelatnik_id));
+  }catch(e){ Object.keys(DB.evidencija).forEach(k=>{const [d,g2,m2]=k.split('_').map(Number); if(g2===god&&m2===mj) evid.add(d);}); }
+  const predMap={}; st.predaje.forEach(p=>predMap[p.jedinica_id]=p);
+  const jeds=[...DB.jedinice].sort((a,b)=>(a.sort_order??a.id)-(b.sort_order??b.id)).map(j=>{
+    const dj=DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===j.id);
+    return {j,n:dj.length,s:dj.filter(d=>evid.has(d.id)).length,p:predMap[j.id]};
+  }).filter(x=>x.n>0||x.p);
+  const predano=jeds.filter(x=>x.p).length, smije=smijeObracun(), z=st.zakljucan;
+  window._obr={god,mj,zakljucan:z,jeds};
+  let h=`<div class="card" style="padding:1rem;margin-bottom:1rem;border-left:4px solid ${z?'var(--red)':'var(--green)'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><div style="font-size:15px;font-weight:700">${MJ_HR[mj-1]} ${god}: ${z?'<span style="color:var(--red)"><i class="ti ti-lock"></i> ZAKLJUČAN</span>':'<span style="color:var(--green)"><i class="ti ti-lock-open"></i> otključan</span>'}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">${z?`Zaključao: ${hEsc(z.zakljucao_ime||'')} · ${fmtDT(z.zakljucano_at)} — evidencija, stimulacije i prijedlozi za ovaj mjesec ne mogu se mijenjati.`:'Evidencija i stimulacije za ovaj mjesec mogu se mijenjati.'}</div>
+        <div style="font-size:12.5px;margin-top:6px">Predalo: <strong>${predano} / ${jeds.length}</strong> jedinica</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn bs" onclick="sP('ispis')"><i class="ti ti-printer"></i> Ispis evidencije</button>
+        ${canStim()?`<button class="btn bs" onclick="sP('stimulacije');stimTab('pregled')"><i class="ti ti-coin-euro"></i> Stimulacije</button>`:''}
+        ${smije?(z?`<button class="btn bd" onclick="otkljucajMjesec()"><i class="ti ti-lock-open"></i> Otključaj</button>`
+                  :`<button class="btn bp" onclick="zakljucajMjesec()"><i class="ti ti-lock"></i> Zaključaj mjesec</button>`):''}
+      </div></div></div>
+  <div class="card"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--bg3)"><th style="padding:8px;text-align:left">Jedinica</th><th style="padding:8px;text-align:center">Djelatnika</th>
+      <th style="padding:8px;text-align:center">S evidencijom</th><th style="padding:8px;text-align:left">Predaja</th><th></th></tr></thead>
+    <tbody>${jeds.map(x=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 8px;font-weight:500">${hEsc(x.j.name)}</td>
+      <td style="padding:7px 8px;text-align:center">${x.n}</td>
+      <td style="padding:7px 8px;text-align:center;${x.s<x.n?'color:var(--amber);font-weight:600':''}">${x.s}${x.s<x.n?` <span style="font-size:10.5px">(fali ${x.n-x.s})</span>`:''}</td>
+      <td style="padding:7px 8px">${x.p?`<span class="bdg bgr"><i class="ti ti-check"></i> Predano</span> <span style="font-size:11px;color:var(--text2)">${hEsc(x.p.predao_ime||'')} · ${fmtDT(x.p.predano_at)}</span>`:'<span class="bdg bgy">Nije predano</span>'}</td>
+      <td style="padding:7px 8px;white-space:nowrap">${smije&&!z?(x.p?`<button class="btn bxs bs" onclick="vratiPredaju(${x.j.id})"><i class="ti ti-arrow-back-up"></i> Vrati na ispravak</button>`
+          :`<button class="btn bxs bs" onclick="predajEvidenciju(${x.j.id},${god},${mj},true)"><i class="ti ti-check"></i> Označi predano</button>`):''}</td></tr>`).join('')}</tbody></table></div></div>`;
+  el.innerHTML=h;
+}
+
+async function zakljucajMjesec(){
+  const O=window._obr; if(!O) return;
+  const nisu=O.jeds.filter(x=>!x.p).map(x=>x.j.name);
+  if(!confirm(`Zaključati ${MJ_HR[O.mj-1]} ${O.god}?\n\nNakon zaključavanja nitko ne može mijenjati evidenciju, stimulacije ni prijedloge za taj mjesec dok se ne otključa.`
+     +(nisu.length?`\n\nPAŽNJA – nisu predali (${nisu.length}): ${nisu.join(', ')}`:''))) return;
+  const {error}=await SB.from('obracun_zakljucani_mjeseci').insert({godina:O.god,mjesec:O.mj});
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  addAuditLog({userName:CU?.name, action:'obracun_zakljucavanje', target:`${MJ_HR[O.mj-1]} ${O.god}`, jedinica:'',
+    details:`Mjesec zaključan za obračun plaća${nisu.length?` (nisu predali: ${nisu.join(', ')})`:''}`});
+  showToast('🔒 Mjesec zaključan','success'); loadObracun();
+}
+async function otkljucajMjesec(){
+  const O=window._obr; if(!O) return;
+  const razlog=prompt(`Otključati ${MJ_HR[O.mj-1]} ${O.god}?\n\nRazlog otključavanja (upisuje se u dnevnik promjena):`,'');
+  if(razlog===null) return;
+  if(!razlog.trim()){showToast('Upišite razlog otključavanja','error');return;}
+  const {data,error}=await SB.from('obracun_zakljucani_mjeseci').delete().eq('godina',O.god).eq('mjesec',O.mj).select('godina');
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  if(!data||!data.length){showToast('Nemate ovlast za otključavanje','error');return;}
+  addAuditLog({userName:CU?.name, action:'obracun_otkljucavanje', target:`${MJ_HR[O.mj-1]} ${O.god}`, jedinica:'', details:`Razlog: ${razlog.trim()}`});
+  showToast('🔓 Mjesec otključan','info'); loadObracun();
+}
+
+async function predajEvidenciju(jid,god,mj,izObracuna){
+  const dj=DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===jid);
+  const bez=dj.filter(d=>!DB.evidencija[`${d.id}_${god}_${mj}`]);
+  if(!confirm(`Predati evidenciju: ${jN(jid)} – ${MJ_HR[mj-1]} ${god}?`
+    +(bez.length?`\n\nPAŽNJA – bez unesene evidencije (${bez.length}): ${bez.slice(0,12).map(dF).join(', ')}${bez.length>12?'…':''}`:'')
+    +(izObracuna?'':'\n\nNakon predaje evidenciju za taj mjesec više ne možete mijenjati – za ispravak se obratite obračunu plaća.'))) return;
+  const {error}=await SB.from('evidencija_predaje').insert({jedinica_id:jid,godina:god,mjesec:mj});
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  addAuditLog({userName:CU?.name, action:'evidencija_predaja', target:`${jN(jid)} — ${MJ_HR[mj-1]} ${god}`, jedinica:jN(jid),
+    details:izObracuna?'Označeno kao predano (obračun plaća)':`Predano${bez.length?`, bez evidencije: ${bez.length}`:''}`});
+  showToast('✅ Evidencija predana','success');
+  if(izObracuna) loadObracun(); else { renderPredajaBanner(); }
+}
+async function vratiPredaju(jid){
+  const O=window._obr; if(!O) return;
+  const razlog=prompt(`Vratiti evidenciju jedinice ${jN(jid)} (${MJ_HR[O.mj-1]} ${O.god}) voditelju na ispravak?\n\nRazlog (upisuje se u dnevnik):`,'');
+  if(razlog===null) return;
+  const {data,error}=await SB.from('evidencija_predaje').delete().eq('jedinica_id',jid).eq('godina',O.god).eq('mjesec',O.mj).select('jedinica_id');
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  if(!data||!data.length){showToast('Nemate ovlast','error');return;}
+  addAuditLog({userName:CU?.name, action:'evidencija_vracena', target:`${jN(jid)} — ${MJ_HR[O.mj-1]} ${O.god}`, jedinica:jN(jid), details:`Vraćeno na ispravak. Razlog: ${razlog||'–'}`});
+  showToast('Evidencija vraćena voditelju','info'); loadObracun();
+}
+
+// ── Unos podataka: traka predaje / zaključanosti ──────────────
+async function renderPredajaBanner(){
+  const el=document.getElementById('predaja-banner'); if(!el) return;
+  const jid=parseInt(document.getElementById('uj')?.value)||0;
+  const god=parseInt(document.getElementById('ug')?.value)||0, mj=parseInt(document.getElementById('um')?.value)||0;
+  if(!jid||!god||!mj||!isLive()){el.innerHTML='';window._unosBlok=null;return;}
+  const st=await dohvatiStatusMjeseca(god,mj);
+  const p=st.predaje.find(x=>x.jedinica_id===jid);
+  window._unosBlok={jid,god,mj,zakljucan:!!st.zakljucan,predano:!!p};
+  if(st.zakljucan){
+    el.innerHTML=`<div class="al ald" style="margin-bottom:10px"><i class="ti ti-lock"></i> <strong>${MJ_HR[mj-1]} ${god} je zaključan za obračun plaća</strong> (${hEsc(st.zakljucan.zakljucao_ime||'')}, ${fmtDT(st.zakljucan.zakljucano_at)}). Izmjene nisu moguće.</div>`;
+  } else if(p){
+    el.innerHTML=`<div class="al alw" style="margin-bottom:10px;background:#fff7e6;border:1px solid #f0c36d;color:#8a5a00"><i class="ti ti-send"></i> Evidencija jedinice <strong>${hEsc(jN(jid))}</strong> za ${MJ_HR[mj-1]} ${god} je <strong>predana</strong> (${hEsc(p.predao_ime||'')}, ${fmtDT(p.predano_at)}).
+      ${smijeObracun()?' Kao obračun plaća/admin i dalje možete mijenjati.':' Izmjene nisu moguće – za ispravak se obratite obračunu plaća.'}</div>`;
+  } else {
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:8px 12px;border:1px dashed var(--border);border-radius:var(--r);background:var(--bg2)">
+      <span style="font-size:12.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> Kad završite evidenciju jedinice <strong>${hEsc(jN(jid))}</strong> za ${MJ_HR[mj-1]} ${god}, predajte je obračunu plaća.</span>
+      <button class="btn bp bsm" onclick="predajEvidenciju(${jid},${god},${mj},false)"><i class="ti ti-send"></i> Predaj evidenciju za ${MJ_HR[mj-1]}</button></div>`;
+  }
+}
+async function unosBlokiran(did,god,mj){
+  if(!isLive()) return false;
+  const st=await dohvatiStatusMjeseca(god,mj);
+  if(st.zakljucan){showToast(`${MJ_HR[mj-1]} ${god} je zaključan za obračun plaća – izmjene nisu moguće`,'error');return true;}
+  const jid=gAJ(did,god,mj);
+  if(!smijeObracun()&&st.predaje.some(p=>p.jedinica_id===jid)){showToast('Evidencija je predana – za ispravak se obratite obračunu plaća','error');return true;}
+  return false;
+}
+
+// ── Djelatnici: bodovi ────────────────────────────────────────
+window._bodMap={};
+async function ucitajBodoveDjelatnika(){
+  if(!canStim()||!isLive()){window._bodMap={};return;}
+  const {data,error}=await SB.from('stimulacije_bodovi').select('id,djelatnik_id,bodovi');
+  window._bodMap={}; if(!error)(data||[]).forEach(b=>window._bodMap[b.djelatnik_id]=b);
+}
+async function spremiBodoveDjelatnika(did,inp){
+  const bodovi=parseInt(inp.value);
+  if(isNaN(bodovi)||bodovi<0){showToast('Upišite ispravan broj bodova','error');return;}
+  const st=window._bodMap[did]; const staro=st?.bodovi;
+  let res;
+  if(st) res=await SB.from('stimulacije_bodovi').update({bodovi,updated_at:new Date().toISOString()}).eq('id',st.id).select();
+  else res=await SB.from('stimulacije_bodovi').insert({djelatnik_id:did,bodovi}).select();
+  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error'); inp.value=staro??''; return;}
+  window._bodMap[did]=res.data[0];
+  const d=DB.djelatnici.find(x=>x.id===did);
+  addAuditLog({userName:CU?.name, action:'bodovi_izmjena', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Bodovi: ${staro??'–'} → ${bodovi}`});
+  inp.style.background='#e6f6ec'; setTimeout(()=>inp.style.background='',1200);
+  showToast('✅ Bodovi spremljeni','success');
 }
 
 function openM(id){document.getElementById(id).classList.add("open");}
