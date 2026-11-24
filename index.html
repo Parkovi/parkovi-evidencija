@@ -270,6 +270,17 @@ select{cursor:pointer}
 .evh-h2-r{flex:1;text-align:right;font-size:12px;font-weight:700;color:#4e3a26;text-transform:capitalize}
 .evh-potpisi{display:flex;justify-content:space-between;gap:40px;padding:10px 16px 6px;font-size:10px;color:#4e3a26}
 .evh-potpisi div{flex:1;display:flex;align-items:flex-end;gap:6px}.evh-potpisi span{flex:1;border-bottom:1px solid #8a7d66;height:14px}
+/* Bodovi u djelatniku */
+.bod-sec{margin-top:.6rem;padding:.8rem 1rem;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg)}
+.bod-sec-t{font-weight:700;font-size:12.5px;margin-bottom:.6rem;display:flex;align-items:center;gap:6px;color:var(--blue-dk)}
+.bod-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem}
+.bod-kpi div{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:6px 8px}
+.bod-kpi span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.bod-kpi b{font-size:14px}
+.bod-tbl{width:100%;border-collapse:collapse;font-size:12px;background:var(--bg2)}
+.bod-tbl th{font-size:10px;text-transform:uppercase;color:var(--text3);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
+.bod-tbl td{padding:5px 6px;border-bottom:1px solid var(--border)}
+.bod-tbl tr.bod-cur td{background:var(--blue-lt)}
 /* Zaključani dani (Obračun plaće) – samo na ekranu */
 .evh-tbl td.zk{box-shadow:inset 0 0 0 100px rgba(96,128,58,.15)}
 .evh-tbl th.zk{box-shadow:inset 0 -4px 0 #9dbb74}
@@ -397,7 +408,7 @@ select{cursor:pointer}
       </div>
 
       <div class="page" id="page-djelatnici">
-        <div class="ph"><div><div class="pt">Djelatnici</div><div class="ps">Evidencija svih djelatnika</div></div>
+        <div class="ph"><div><div class="pt">Djelatnici</div><div class="ps">Evidencija svih djelatnika<span id="dj-vb"></span></div></div>
         <div class="phr">
           <select id="djfj" onchange="rDjel()" style="width:auto;min-width:160px"><option value="0">Sve jedinice</option></select>
           <label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer"><input type="checkbox" id="djneak" onchange="rDjel()" style="width:auto"> Neaktivni<span id="djneak-n"></span></label>
@@ -838,6 +849,7 @@ select{cursor:pointer}
         </select>
         <input type="text" id="bod-search" placeholder="Pretraži ime..." oninput="filterBodovi()" style="flex:1;min-width:150px;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
       </div>
+      <div id="bod-od-wrap" class="al ali" style="display:flex;align-items:center;gap:8px;margin-bottom:.8rem"><i class="ti ti-calendar"></i> Promjene upisane ovdje vrijede od: <input type="date" id="bod-od" style="width:auto"> <span style="font-size:11px">(raniji mjeseci ostaju sa starim bodovima)</span></div>
       <div id="bodovi-list" style="max-height:60vh;overflow-y:auto"></div>
     </div>
     <div class="mft">
@@ -944,7 +956,14 @@ select{cursor:pointer}
     <div class="fg"><label class="fl">Uobicajeni kraj</label><input type="time" id="mdkraj" value="15:00"></div>
   </div>
   <div class="fg"><label class="fl">Napomena</label><textarea id="mdnap" rows="2"></textarea></div>
+  <div id="md-bod-sec"></div>
   <div class="mft"><button class="btn bs" onclick="closeM('mo-djel')">Odustani</button><button class="btn bp" onclick="saveDjel()"><i class="ti ti-check"></i> Spremi</button></div>
+</div></div>
+
+<div class="mo" id="mo-bodpov"><div class="md" style="max-width:560px">
+  <div class="mhd"><div class="mtt"><i class="ti ti-chart-dots"></i><span id="bodpov-t">Bodovi</span></div><button class="mcl" onclick="closeM('mo-bodpov')"><i class="ti ti-x"></i></button></div>
+  <div id="bodpov-body"></div>
+  <div class="mft"><button class="btn bs" onclick="closeM('mo-bodpov')">Zatvori</button></div>
 </div></div>
 
 <div class="mo" id="mo-rasp"><div class="md">
@@ -1746,9 +1765,7 @@ function rDjel(){
         <td>${diff?'<span class="bdg bam">'+aj+'</span>':aj}</td>
         <td style="font-family:monospace;font-size:11.5px">${d.oib||"-"}</td>
         <td style="font-size:11.5px">${d.dat||"-"}</td>
-        ${canStim()?`<td>${smijeObracun()
-          ?`<input type="number" min="0" step="100" value="${window._bodMap[d.id]?.bodovi??''}" placeholder="–" title="Bodovi za stimulaciju" onchange="spremiBodoveDjelatnika(${d.id},this)" style="width:78px;text-align:right;padding:3px 6px">`
-          :`<span style="font-weight:600">${window._bodMap[d.id]?.bodovi??'–'}</span>`}</td>`:''}
+        ${canStim()?`<td>${bodCelija(d.id)}</td>`:''}
         <td><div style="display:flex;gap:4px">
           ${smijeUredjivatiDjelatnike()?`<button class="btn bsm bp" onclick="openEditDjel(${d.id})" title="Uredi" style="gap:4px;padding:4px 10px"><i class="ti ti-edit" style="font-size:15px"></i> Uredi</button>
           ${ne?'':`<button class="btn bsm bs" onclick="openAddRasp(${d.id})" title="Premjesti u drugu jedinicu" style="padding:4px 8px"><i class="ti ti-arrows-transfer-up" style="font-size:15px"></i></button>`}`:''}
@@ -1763,7 +1780,7 @@ function openAddDjel(){
   ["mdp","mdi","mdoib","mddat","mdrm","mdnap","mdsif"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("mdpoc").value="07:00";document.getElementById("mdkraj").value="15:00";
   const vj=vJ();document.getElementById("mdj").innerHTML=DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${j.name}</option>`).join("");
-  document.getElementById("mda").innerHTML="";openM("mo-djel");
+  document.getElementById("mda").innerHTML="";renderBodSekcija(null,'md-bod-sec');openM("mo-djel");
 }
 function openEditDjel(id){
   eDj=id;const d=DB.djelatnici.find(x=>x.id===id);if(!d)return;
@@ -1775,7 +1792,7 @@ function openEditDjel(id){
   document.getElementById("mdsif").value=d.sifra||"";
   const vj=vJ();const sel=document.getElementById("mdj");
   sel.innerHTML=DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${j.name}</option>`).join("");
-  sel.value=d.jid;document.getElementById("mda").innerHTML="";openM("mo-djel");
+  sel.value=d.jid;document.getElementById("mda").innerHTML="";renderBodSekcija(id,'md-bod-sec');openM("mo-djel");
 }
 async function saveDjel(){
   const prez=document.getElementById("mdp").value.trim().toUpperCase(),ime=document.getElementById("mdi").value.trim();
@@ -1787,7 +1804,13 @@ async function saveDjel(){
       radno_mjesto:obj.rm||null,poc_rada:obj.poc,kraj_rada:obj.kraj,napomena:obj.nap||null};
     const res=eDj?await SB.from('djelatnici').update(row).eq('id',eDj).select():await SB.from('djelatnici').insert({...row,aktivan:true}).select();
     if(res.error||!res.data?.length){document.getElementById("mda").innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Nije spremljeno: ${hEsc(res.error?.message||'nemate ovlast (djelatnike uređuju administrator i Obračun plaće)')}</div>`;return;}
-    if(!eDj) obj.id=res.data[0].id;
+    if(!eDj){ obj.id=res.data[0].id;
+      const nb=parseInt(document.getElementById('bodnew-v')?.value), nod=document.getElementById('bodnew-od')?.value;
+      if(!isNaN(nb)&&nb>=0&&nod&&smijeObracun()){
+        const rb=await SB.from('stimulacije_bodovi').insert({djelatnik_id:obj.id,bodovi:nb,vrijedi_od:nod,upisao_ime:CU?.name||null}).select();
+        if(!rb.error&&rb.data?.length) window._bodRows.push(rb.data[0]);
+      }
+    }
     addAuditLog({userName:CU?.name, action:eDj?'djelatnik_izmjena':'djelatnik_unos', target:`${obj.prez} ${obj.ime}`, jedinica:jN(obj.jid), details:`Šifra: ${obj.sifra||'–'}`});
   }
   if(eDj)Object.assign(DB.djelatnici.find(x=>x.id===eDj),obj);
@@ -3720,9 +3743,8 @@ async function loadStimUnos(){
   el.innerHTML = '<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
 
   // Dohvati bodove svih djelatnika
-  const {data:bodData} = await SB.from('stimulacije_bodovi').select('djelatnik_id, bodovi');
-  const bodMap = {};
-  (bodData||[]).forEach(b=>bodMap[b.djelatnik_id]=b.bodovi);
+  const {data:bodData} = await SB.from('stimulacije_bodovi').select('djelatnik_id, bodovi, vrijedi_od');
+  const bodMap = bodMapZaMjesec(bodData||[], god, mj);
 
   // Dohvati vrijednost boda za ovaj period
   const {data:vbData} = await SB.from('stimulacije_parametri')
@@ -4134,51 +4156,52 @@ async function delStimRow(id){
   loadStimPregled();
 }
 
-// ── Bodovi modal ───────────────────────────────────────────────
+// ── Bodovi modal (Stimulacije > Bodovi) ───────────────────────
 async function openBodovi(){
-  const {data,error}=await SB.from('stimulacije_bodovi')
-    .select('id, djelatnik_id, bodovi, djelatnici(prezime,ime,jedinica_id)');
-  if(error){showToast('Greška: '+error.message,'error');return;}
+  await ucitajBodoveDjelatnika();
   const vj=vJ();
   const jeds=DB.jedinice.filter(j=>vj.includes(j.id));
   document.getElementById('bod-fj').innerHTML='<option value="0">Sve jedinice</option>'+
     jeds.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
-  window._bodovi_data=data;
+  const t=new Date(); const od=document.getElementById('bod-od');
+  if(od&&!od.value) od.value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+  const w=document.getElementById('bod-od-wrap'); if(w) w.style.display=smijeObracun()?'':'none';
   filterBodovi();
   openM('mo-bodovi');
 }
-
 function filterBodovi(){
   const jid=parseInt(document.getElementById('bod-fj')?.value)||0;
   const srch=(document.getElementById('bod-search')?.value||'').toLowerCase();
-  const data=(window._bodovi_data||[]).filter(r=>{
-    const d=r.djelatnici;
-    if(!d) return false;
-    if(jid&&d.jedinica_id!==jid) return false;
-    if(srch&&!`${d.prezime} ${d.ime}`.toLowerCase().includes(srch)) return false;
-    return true;
-  });
-  const html=data.map(r=>{
-    const d=r.djelatnici;
-    const jName=DB.jedinice.find(j=>j.id===d.jedinica_id)?.name||'–';
+  const ured=smijeObracun(), danas=isoDanas();
+  const djs=DB.djelatnici.filter(d=>d.aktivan!==false&&vJ().includes(d.jid)&&(!jid||d.jid===jid)&&(!srch||dF(d).toLowerCase().includes(srch)))
+    .sort((a,b)=>a.prez.localeCompare(b.prez));
+  const html=djs.map(d=>{
+    const cur=window._bodMap[d.id];
+    const buduci=window._bodRows.filter(r=>r.djelatnik_id===d.id&&r.vrijedi_od>danas).sort((a,b)=>a.vrijedi_od<b.vrijedi_od?-1:1)[0];
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-weight:600;font-size:13px">${d.prezime} ${d.ime}</div>
-      <div style="font-size:11px;color:var(--text2)">${jName}</div></div>
+      <div><div style="font-weight:600;font-size:13px">${dF(d)}</div>
+      <div style="font-size:11px;color:var(--text2)">${jN(d.jid)}${cur&&cur.vrijedi_od>'2000-01-01'?' · od '+fmtDatHr(cur.vrijedi_od):''}${buduci?` · <span style="color:var(--blue)">${buduci.bodovi} od ${fmtDatHr(buduci.vrijedi_od)}</span>`:''}</div></div>
       <div style="display:flex;align-items:center;gap:6px">
-        <input type="number" value="${r.bodovi}" min="0" step="100"
+        ${ured?`<input type="number" value="${cur?.bodovi??''}" min="0" step="100"
           style="width:80px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;text-align:right"
-          onchange="saveBodovi(${r.id},this.value)">
+          onchange="saveBodovi(${d.id},this.value,this)">`:`<b>${cur?.bodovi??'–'}</b>`}
         <span style="font-size:11px;color:var(--text2)">bod.</span>
       </div></div>`;
   }).join('');
   document.getElementById('bodovi-list').innerHTML=html||'<div class="empty"><p>Nema rezultata</p></div>';
 }
-
-async function saveBodovi(id,val){
-  const bodovi=parseInt(val)||0;
-  const {error}=await SB.from('stimulacije_bodovi').update({bodovi,updated_at:new Date().toISOString()}).eq('id',id);
-  if(error) showToast('Greška: '+error.message,'error');
-  else showToast('✅ Bodovi ažurirani','success');
+async function saveBodovi(did,val,inp){
+  const bodovi=parseInt(val), od=document.getElementById('bod-od')?.value;
+  if(isNaN(bodovi)||bodovi<0){showToast('Upišite ispravan broj bodova','error');return;}
+  if(!od){showToast('Odaberite datum od kada vrijede promjene','error');return;}
+  const res=await SB.from('stimulacije_bodovi').upsert({djelatnik_id:did,bodovi,vrijedi_od:od,upisao_ime:CU?.name||null},{onConflict:'djelatnik_id,vrijedi_od'}).select();
+  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error');return;}
+  const staro=bodoviNa(did,od);
+  window._bodRows=window._bodRows.filter(r=>!(r.djelatnik_id===did&&r.vrijedi_od===od)); window._bodRows.push(res.data[0]); osvjeziBodMap();
+  const d=DB.djelatnici.find(x=>x.id===did);
+  addAuditLog({userName:CU?.name, action:'bodovi_izmjena', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Bodovi: ${staro?.bodovi??'–'} → ${bodovi}, vrijede od ${fmtDatHr(od)}`});
+  if(inp){inp.style.background='#e6f6ec'; setTimeout(()=>inp.style.background='',1200);}
+  showToast(`✅ ${bodovi} bodova od ${fmtDatHr(od)}`,'success');
 }
 
 // ── Vrijednost boda ────────────────────────────────────────────
@@ -5083,26 +5106,101 @@ async function spremiEvidenciju(did,god,mj,podaci){
   return true;
 }
 
-// ── Djelatnici: bodovi ────────────────────────────────────────
-window._bodMap={};
-async function ucitajBodoveDjelatnika(){
-  if(!canStim()||!isLive()){window._bodMap={};return;}
-  const {data,error}=await SB.from('stimulacije_bodovi').select('id,djelatnik_id,bodovi');
-  window._bodMap={}; if(!error)(data||[]).forEach(b=>window._bodMap[b.djelatnik_id]=b);
+// ── Djelatnici: bodovi s datumom važenja ──────────────────────
+// stimulacije_bodovi: više redaka po djelatniku (djelatnik_id, bodovi, vrijedi_od). Za obračun mjeseca vrijedi
+// zadnji unos s datumom "vrijedi od" do kraja tog mjeseca (promjena od 15.11. vrijedi već za studeni).
+window._bodMap={}; window._bodRows=[]; window._vbNow=null;
+function isoDanas(){const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;}
+function isoKrajMj(god,mj){return `${god}-${String(mj).padStart(2,'0')}-${String(dim(god,mj)).padStart(2,'0')}`;}
+function bodoviNa(did,iso,rows){
+  let best=null;(rows||window._bodRows).forEach(r=>{if(r.djelatnik_id===did&&r.vrijedi_od<=iso&&(!best||r.vrijedi_od>best.vrijedi_od))best=r;});
+  return best;
 }
-async function spremiBodoveDjelatnika(did,inp){
-  const bodovi=parseInt(inp.value);
-  if(isNaN(bodovi)||bodovi<0){showToast('Upišite ispravan broj bodova','error');return;}
-  const st=window._bodMap[did]; const staro=st?.bodovi;
-  let res;
-  if(st) res=await SB.from('stimulacije_bodovi').update({bodovi,updated_at:new Date().toISOString()}).eq('id',st.id).select();
-  else res=await SB.from('stimulacije_bodovi').insert({djelatnik_id:did,bodovi}).select();
-  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error'); inp.value=staro??''; return;}
-  window._bodMap[did]=res.data[0];
+function bodMapZaMjesec(rows,god,mj){
+  const iso=isoKrajMj(god,mj),m={};
+  rows.forEach(r=>{if(r.vrijedi_od<=iso&&(!m[r.djelatnik_id]||r.vrijedi_od>m[r.djelatnik_id].vrijedi_od))m[r.djelatnik_id]=r;});
+  const out={};Object.entries(m).forEach(([k,r])=>out[k]=r.bodovi);return out;
+}
+function fmtOd(iso){return iso&&iso>'2000-01-01'?fmtDatHr(iso):'od početka';}
+function fmtEur(v){return (Math.round(v*100)/100).toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+async function ucitajBodoveDjelatnika(){
+  if(!canStim()||!isLive()){window._bodMap={};window._bodRows=[];return;}
+  const now=new Date();
+  const [b,v]=await Promise.all([
+    SB.from('stimulacije_bodovi').select('id,djelatnik_id,bodovi,vrijedi_od,upisao_ime,created_at'),
+    SB.from('stimulacije_parametri').select('vrijednost_boda').eq('godina',now.getFullYear()).eq('mjesec',now.getMonth()+1)
+  ]);
+  window._bodRows=b.error?[]:(b.data||[]);
+  window._vbNow=v.data?.[0]?parseFloat(v.data[0].vrijednost_boda):null;
+  osvjeziBodMap();
+}
+function osvjeziBodMap(){
+  const d=isoDanas();window._bodMap={};
+  [...new Set(window._bodRows.map(r=>r.djelatnik_id))].forEach(did=>{const r=bodoviNa(did,d);if(r)window._bodMap[did]=r;});
+  const el=document.getElementById('dj-vb');
+  if(el) el.innerHTML=canStim()&&window._vbNow?` · vrijednost boda: <b>${window._vbNow.toLocaleString('hr-HR',{minimumFractionDigits:4})} €</b>`:'';
+}
+function bodCelija(did){
+  const cur=window._bodMap[did], danas=isoDanas();
+  const buduci=window._bodRows.filter(r=>r.djelatnik_id===did&&r.vrijedi_od>danas).sort((a,b)=>a.vrijedi_od<b.vrijedi_od?-1:1)[0];
+  return `<a href="javascript:void(0)" onclick="otvoriBodove(${did})" title="Povijest bodova" style="font-weight:600;color:var(--text);text-decoration:none;border-bottom:1px dashed var(--border2)">${cur?cur.bodovi:'–'}</a>`
+    +(buduci?`<div style="font-size:10px;color:var(--blue)">${buduci.bodovi} od ${fmtDatHr(buduci.vrijedi_od)}</div>`:'');
+}
+function otvoriBodove(did){
+  if(smijeUredjivatiDjelatnike()){openEditDjel(did);setTimeout(()=>document.getElementById('md-bod-sec')?.scrollIntoView({behavior:'smooth'}),80);return;}
   const d=DB.djelatnici.find(x=>x.id===did);
-  addAuditLog({userName:CU?.name, action:'bodovi_izmjena', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Bodovi: ${staro??'–'} → ${bodovi}`});
-  inp.style.background='#e6f6ec'; setTimeout(()=>inp.style.background='',1200);
-  showToast('✅ Bodovi spremljeni','success');
+  document.getElementById('bodpov-t').textContent='Bodovi – '+(d?dF(d):'');
+  renderBodSekcija(did,'bodpov-body');openM('mo-bodpov');
+}
+function renderBodSekcija(did,elId){
+  const el=document.getElementById(elId); if(!el) return;
+  if(!canStim()){el.innerHTML='';return;}
+  const ured=smijeObracun(), vb=window._vbNow;
+  const t=new Date(), prvi=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+  const unos=ured?`<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:.6rem">
+      <div class="fg" style="margin:0"><label class="fl">${did?'Novi bodovi':'Bodovi'}</label><input type="number" id="bodnew-v" min="0" step="100" style="width:120px"></div>
+      <div class="fg" style="margin:0"><label class="fl">Vrijede od</label><input type="date" id="bodnew-od" value="${prvi}"></div>
+      ${did?`<button class="btn bp" onclick="dodajBodove(${did},'${elId}')"><i class="ti ti-plus"></i> Spremi promjenu</button>`:''}
+    </div>
+    <div class="fh">${did?'Promjena se sprema odmah.':'Spremit će se zajedno s djelatnikom.'} Vrijedi za obračun stimulacije od mjeseca u kojem je datum nadalje; raniji mjeseci ostaju sa starim bodovima.</div>`:'';
+  if(!did){el.innerHTML=ured?`<div class="bod-sec"><div class="bod-sec-t"><i class="ti ti-chart-dots"></i> Bodovi za stimulaciju</div>${unos}</div>`:'';return;}
+  const rows=window._bodRows.filter(r=>r.djelatnik_id===did).sort((a,b)=>a.vrijedi_od<b.vrijedi_od?1:-1);
+  const cur=bodoviNa(did,isoDanas()), danas=isoDanas();
+  el.innerHTML=`<div class="bod-sec"><div class="bod-sec-t"><i class="ti ti-chart-dots"></i> Bodovi za stimulaciju</div>
+    <div class="bod-kpi">
+      <div><span>Trenutno</span><b>${cur?cur.bodovi:'–'}</b></div>
+      <div><span>Vrijednost boda</span><b>${vb?vb.toLocaleString('hr-HR',{minimumFractionDigits:4})+' €':'–'}</b></div>
+      <div><span>Stimulacija 100 %</span><b>${cur&&vb?fmtEur(cur.bodovi*vb):'–'}</b></div>
+      <div><span>Stimulacija 10 %</span><b>${cur&&vb?fmtEur(cur.bodovi*vb*0.1):'–'}</b></div>
+    </div>
+    ${rows.length?`<table class="bod-tbl"><thead><tr><th>Vrijedi od</th><th style="text-align:right">Bodovi</th><th>Upisao</th>${ured?'<th></th>':''}</tr></thead><tbody>
+      ${rows.map(r=>`<tr${r===cur?' class="bod-cur"':''}><td>${fmtOd(r.vrijedi_od)}${r.vrijedi_od>danas?' <span class="bdg bbl" style="font-size:10px">buduće</span>':r===cur?' <span class="bdg bgr" style="font-size:10px">vrijedi</span>':''}</td>
+        <td style="text-align:right;font-weight:700">${r.bodovi}</td><td style="font-size:11px;color:var(--text2)">${hEsc(r.upisao_ime||'')}${r.created_at&&r.vrijedi_od>'2000-01-01'?' · '+new Date(r.created_at).toLocaleDateString('hr-HR'):''}</td>
+        ${ured?`<td style="text-align:right">${rows.length>1?`<button class="btn bxs bd" title="Obriši ovaj unos" onclick="obrisiBodove(${r.id},${did},'${elId}')"><i class="ti ti-trash"></i></button>`:''}</td>`:''}</tr>`).join('')}
+    </tbody></table>`:'<div class="fh">Još nema upisanih bodova.</div>'}
+    ${unos}</div>`;
+}
+async function dodajBodove(did,elId){
+  const v=parseInt(document.getElementById('bodnew-v').value), od=document.getElementById('bodnew-od').value;
+  if(isNaN(v)||v<0){showToast('Upišite ispravan broj bodova','error');return;}
+  if(!od){showToast('Upišite datum od kada vrijede','error');return;}
+  const res=await SB.from('stimulacije_bodovi').upsert({djelatnik_id:did,bodovi:v,vrijedi_od:od,upisao_ime:CU?.name||null},{onConflict:'djelatnik_id,vrijedi_od'}).select();
+  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error');return;}
+  window._bodRows=window._bodRows.filter(r=>!(r.djelatnik_id===did&&r.vrijedi_od===od)); window._bodRows.push(res.data[0]);
+  const d=DB.djelatnici.find(x=>x.id===did), staro=bodoviNa(did,od,window._bodRows.filter(r=>r.id!==res.data[0].id));
+  addAuditLog({userName:CU?.name, action:'bodovi_izmjena', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Bodovi: ${staro?.bodovi??'–'} → ${v}, vrijede od ${fmtDatHr(od)}`});
+  osvjeziBodMap(); renderBodSekcija(did,elId); if(document.getElementById('page-djelatnici')?.classList.contains('active')) rDjel();
+  showToast(`✅ Bodovi ${v} vrijede od ${fmtDatHr(od)}`,'success');
+}
+async function obrisiBodove(id,did,elId){
+  const r=window._bodRows.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`Obrisati unos ${r.bodovi} bodova (${fmtOd(r.vrijedi_od)})?`)) return;
+  const res=await SB.from('stimulacije_bodovi').delete().eq('id',id).select();
+  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error');return;}
+  window._bodRows=window._bodRows.filter(x=>x.id!==id);
+  const d=DB.djelatnici.find(x=>x.id===did);
+  addAuditLog({userName:CU?.name, action:'bodovi_brisanje', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Obrisan unos ${r.bodovi} bodova (${fmtOd(r.vrijedi_od)})`});
+  osvjeziBodMap(); renderBodSekcija(did,elId); if(document.getElementById('page-djelatnici')?.classList.contains('active')) rDjel();
 }
 
 function openM(id){document.getElementById(id).classList.add("open");}
