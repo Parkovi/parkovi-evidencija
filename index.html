@@ -347,7 +347,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
         <div class="ni" onclick="sP('obracun')" id="nav-obracun" style="display:none"><i class="ti ti-calculator"></i> Obračun plaća</div>
       </div>
-      <div class="sg">
+      <div class="sg" id="sg-djelatnici">
         <div class="sgl">Djelatnici</div>
         <div class="ni" onclick="sP('djelatnici')" id="nav-djelatnici"><i class="ti ti-users"></i> Djelatnici</div>
         <div class="ni" onclick="sP('raspored')" id="nav-raspored"><i class="ti ti-arrows-transfer-up"></i> Rasporedi</div>
@@ -401,7 +401,7 @@ select{cursor:pointer}
         <div class="phr">
           <select id="djfj" onchange="rDjel()" style="width:auto;min-width:160px"><option value="0">Sve jedinice</option></select>
           <label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer"><input type="checkbox" id="djneak" onchange="rDjel()" style="width:auto"> Neaktivni<span id="djneak-n"></span></label>
-          <button class="btn bp" onclick="openAddDjel()"><i class="ti ti-user-plus"></i> Dodaj djelatnika</button>
+          <button class="btn bp" id="btn-dodaj-djel" onclick="openAddDjel()"><i class="ti ti-user-plus"></i> Dodaj djelatnika</button>
         </div></div>
         <div id="djw"></div>
       </div>
@@ -1750,9 +1750,9 @@ function rDjel(){
           ?`<input type="number" min="0" step="100" value="${window._bodMap[d.id]?.bodovi??''}" placeholder="–" title="Bodovi za stimulaciju" onchange="spremiBodoveDjelatnika(${d.id},this)" style="width:78px;text-align:right;padding:3px 6px">`
           :`<span style="font-weight:600">${window._bodMap[d.id]?.bodovi??'–'}</span>`}</td>`:''}
         <td><div style="display:flex;gap:4px">
-          <button class="btn bsm bp" onclick="openEditDjel(${d.id})" title="Uredi" style="gap:4px;padding:4px 10px"><i class="ti ti-edit" style="font-size:15px"></i> Uredi</button>
-          <button class="btn bsm bs" onclick="openAddRasp(${d.id})" title="Premjesti" style="padding:4px 8px"><i class="ti ti-arrows-transfer-up" style="font-size:15px"></i></button>
-          ${CU.role==="admin"?(ne
+          ${smijeUredjivatiDjelatnike()?`<button class="btn bsm bp" onclick="openEditDjel(${d.id})" title="Uredi" style="gap:4px;padding:4px 10px"><i class="ti ti-edit" style="font-size:15px"></i> Uredi</button>
+          ${ne?'':`<button class="btn bsm bs" onclick="openAddRasp(${d.id})" title="Premjesti u drugu jedinicu" style="padding:4px 8px"><i class="ti ti-arrows-transfer-up" style="font-size:15px"></i></button>`}`:''}
+          ${smijeUredjivatiDjelatnike()?(ne
             ?`<button class="btn bsm bs" onclick="aktivirajDjel(${d.id})" title="Ponovno aktiviraj" style="gap:4px;padding:4px 10px"><i class="ti ti-user-check" style="font-size:15px"></i> Aktiviraj</button>`
             :`<button class="btn bsm bd" onclick="delDjel(${d.id})" title="Deaktiviraj (odlazak iz tvrtke)" style="padding:4px 8px"><i class="ti ti-user-off"></i></button>`):""}
         </div></td></tr>`;
@@ -1786,7 +1786,7 @@ async function saveDjel(){
     const row={sifra:obj.sifra||null,prezime:obj.prez,ime:obj.ime,oib:obj.oib||null,datum_zap:obj.dat||null,jedinica_id:obj.jid,
       radno_mjesto:obj.rm||null,poc_rada:obj.poc,kraj_rada:obj.kraj,napomena:obj.nap||null};
     const res=eDj?await SB.from('djelatnici').update(row).eq('id',eDj).select():await SB.from('djelatnici').insert({...row,aktivan:true}).select();
-    if(res.error||!res.data?.length){document.getElementById("mda").innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Nije spremljeno: ${hEsc(res.error?.message||'nemate ovlast (djelatnike uređuje administrator)')}</div>`;return;}
+    if(res.error||!res.data?.length){document.getElementById("mda").innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Nije spremljeno: ${hEsc(res.error?.message||'nemate ovlast (djelatnike uređuju administrator i Obračun plaće)')}</div>`;return;}
     if(!eDj) obj.id=res.data[0].id;
     addAuditLog({userName:CU?.name, action:eDj?'djelatnik_izmjena':'djelatnik_unos', target:`${obj.prez} ${obj.ime}`, jedinica:jN(obj.jid), details:`Šifra: ${obj.sifra||'–'}`});
   }
@@ -1869,14 +1869,33 @@ function openAddRasp(djId){
   if(djId)document.getElementById("mrd").value=djId;
   document.getElementById("mra").innerHTML="";openM("mo-rasp");
 }
-function saveRasp(){
+async function saveRasp(){
   const djid=parseInt(document.getElementById("mrd").value),jid=parseInt(document.getElementById("mrj").value);
   const od=document.getElementById("mrod").value.trim(),doo=document.getElementById("mrdo").value.trim(),nap=document.getElementById("mrn").value.trim();
   if(!djid||!jid||!od){document.getElementById("mra").innerHTML='<div class="al ald"><i class="ti ti-alert-circle"></i> Djelatnik, jedinica i datum od su obavezni!</div>';return;}
-  DB.rasporedi.push({id:DB.nid.rasp++,djid,jid,od,do:doo,nap});
+  const fmt=/^(0[1-9]|1[0-2])\/\d{4}$/;
+  if(!fmt.test(od)||(doo&&!fmt.test(doo))){document.getElementById("mra").innerHTML='<div class="al ald"><i class="ti ti-alert-circle"></i> Datum upiši kao mm/gggg, npr. 11/2026.</div>';return;}
+  let id=DB.nid.rasp++;
+  if(isLive()){
+    const res=await SB.from('rasporedi').insert({djelatnik_id:djid,jedinica_id:jid,od,do_:doo||null,napomena:nap||null}).select();
+    if(res.error||!res.data?.length){document.getElementById("mra").innerHTML=`<div class="al ald"><i class="ti ti-alert-circle"></i> Nije spremljeno: ${hEsc(res.error?.message||'nemate ovlast')}</div>`;return;}
+    id=res.data[0].id;
+    const d=DB.djelatnici.find(x=>x.id===djid);
+    addAuditLog({userName:CU?.name, action:'raspored_unos', target:d?dF(d):'#'+djid, jedinica:jN(jid), details:`Od ${od}${doo?' do '+doo:''}`});
+  }
+  DB.rasporedi.push({id,djid,jid,od,do:doo,nap});
   closeM("mo-rasp");rRasp();
 }
-function delRasp(id){if(confirm("Obrisati raspored?")){DB.rasporedi=DB.rasporedi.filter(r=>r.id!==id);rRasp();}}
+async function delRasp(id){
+  if(!confirm("Obrisati raspored?"))return;
+  if(isLive()){
+    const res=await SB.from('rasporedi').delete().eq('id',id).select();
+    if(res.error||!res.data?.length){alert('Nije obrisano: '+(res.error?.message||'nemate ovlast'));return;}
+    const r=DB.rasporedi.find(x=>x.id===id),d=r&&DB.djelatnici.find(x=>x.id===r.djid);
+    addAuditLog({userName:CU?.name, action:'raspored_brisanje', target:d?dF(d):'', jedinica:r?jN(r.jid):'', details:r?`Od ${r.od}${r.do?' do '+r.do:''}`:''});
+  }
+  DB.rasporedi=DB.rasporedi.filter(r=>r.id!==id);rRasp();
+}
 
 // ORG STRUKTURA
 function rOrg(){
@@ -4277,9 +4296,16 @@ function prijBroj(p){return `STIM-${p.godina}-${String(p.id).padStart(4,'0')}`;}
 function fmtDT(s){if(!s)return '–';const d=new Date(s);return d.toLocaleDateString('hr-HR')+' '+d.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});}
 
 // Skrivanje stranica prema ovlastima
+function smijeUredjivatiDjelatnike(){return CU?.role==='admin'||CU?.role==='obracun';}  // Dodaj, Uredi, Premjesti, Rasporedi
 function primijeniOvlastiStim(){
   ['nav-stimulacije','nav-bolovanje'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display=canStim()?'':'none';});
   { const e=document.getElementById('nav-obracun'); if(e) e.style.display=vidiObracun()?'':'none'; }
+  // Djelatnici: vide admin, direktor, Obračun plaće i oni koji vide stimulacije (šifre, bodovi); Rasporedi samo admin
+  const adm=CU?.role==='admin', ured=smijeUredjivatiDjelatnike();
+  { const e=document.getElementById('nav-djelatnici'); if(e) e.style.display=canStim()?'':'none'; }
+  { const e=document.getElementById('nav-raspored'); if(e) e.style.display=ured?'':'none'; }
+  { const e=document.getElementById('sg-djelatnici'); if(e) e.style.display=(canStim()||ured)?'':'none'; }
+  { const e=document.getElementById('btn-dodaj-djel'); if(e) e.style.display=ured?'':'none'; }
   const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
 }
 
