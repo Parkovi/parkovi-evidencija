@@ -5223,8 +5223,8 @@ async function izracunaj233(god,mj,djels){
   const ids=djels.map(d=>d.id); let ev=[];
   for(const g of [...new Set(per.map(x=>x[0]))]){
     const mjs=per.filter(x=>x[0]===g).map(x=>x[1]);
-    const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,godina,mjesec,sums,rows').eq('godina',g).in('mjesec',mjs).in('djelatnik_id',ids):{data:[]};
-    ev=ev.concat(data||[]);
+    const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,godina,mjesec,sums,rows_data').eq('godina',g).in('mjesec',mjs).in('djelatnik_id',ids):{data:[]};
+    ev=ev.concat((data||[]).map(e=>({...e,rows:e.rows_data||[]})));
   }
   const by={}; ev.forEach(e=>(by[e.djelatnik_id]||=[]).push(e));
   djels.forEach(d=>{
@@ -5247,8 +5247,8 @@ async function izracunaj233(god,mj,djels){
 // 200/100 €: obračun u mjesecu mj za rad u prethodnom mjesecu
 async function izracunajDodMj(god,mj,djels){
   const gR=mj===1?god-1:god, mR=mj===1?12:mj-1, ids=djels.map(d=>d.id), rez={};
-  const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,rows').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',ids):{data:[]};
-  const evM={}; (data||[]).forEach(e=>evM[e.djelatnik_id]=e.rows||[]);
+  const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,rows_data').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',ids):{data:[]};
+  const evM={}; (data||[]).forEach(e=>evM[e.djelatnik_id]=e.rows_data||[]);
   djels.forEach(d=>{
     const [ph,pm]=(d.poc||'07:00').split(':').map(Number), [kh,km]=(d.kraj||'15:00').split(':').map(Number);
     const sati7=jeSubotaRadna(gAJ(d.id,gR,mR))||((kh*60+km)-(ph*60+pm))/60<=7;
