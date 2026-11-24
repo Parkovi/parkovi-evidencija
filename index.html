@@ -281,6 +281,20 @@ select{cursor:pointer}
 .bod-tbl th{font-size:10px;text-transform:uppercase;color:var(--text3);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl td{padding:5px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl tr.bod-cur td{background:var(--blue-lt)}
+.bp-top{display:grid;grid-template-columns:minmax(320px,1fr) 1.3fr;gap:1rem}
+@media(max-width:900px){.bp-top{grid-template-columns:1fr}}
+.bp-vb,.bp-info{padding:1rem 1.1rem}
+.bp-vb-now{display:flex;align-items:baseline;gap:10px;margin:.2rem 0 .7rem}
+.bp-vb-now span{font-size:26px;font-weight:800;color:var(--blue-dk)}
+.bp-vb-now small{color:var(--text3);font-size:11.5px}
+.bp-info ul{margin:0 0 .6rem 1.1rem;font-size:12px;color:var(--text2);line-height:1.7}
+.bp-novo{width:90px;text-align:right;padding:3px 6px}
+.dod-top{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.dod-top{grid-template-columns:1fr}}
+.dod-box{padding:1rem 1.1rem}
+.dod-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:.8rem}
+.dod-sum div{background:var(--bg3);border-radius:var(--r);padding:6px 12px;font-size:12px}
+.dod-sum b{font-size:15px;margin-left:4px}
 /* Zaključani dani (Obračun plaće) – samo na ekranu */
 .evh-tbl td.zk{box-shadow:inset 0 0 0 100px rgba(96,128,58,.15)}
 .evh-tbl th.zk{box-shadow:inset 0 -4px 0 #9dbb74}
@@ -355,6 +369,8 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('ispis')" id="nav-ispis"><i class="ti ti-printer"></i> Ispis evidencije</div>
         <div class="ni" onclick="sP('bolovanje')" id="nav-bolovanje"><i class="ti ti-stethoscope"></i> Pretraga bolovanja</div>
         <div class="ni" onclick="sP('stimulacije')" id="nav-stimulacije"><i class="ti ti-coin-euro"></i> Stimulacije</div>
+        <div class="ni" onclick="sP('dodaci')" id="nav-dodaci" style="display:none"><i class="ti ti-gift"></i> Dodaci</div>
+        <div class="ni" onclick="sP('rekapitulacija')" id="nav-rekapitulacija" style="display:none"><i class="ti ti-report-money"></i> Rekapitulacija dodataka i stimulacija</div>
         <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
         <div class="ni" onclick="sP('obracun')" id="nav-obracun" style="display:none"><i class="ti ti-calculator"></i> Obračun plaća</div>
       </div>
@@ -362,6 +378,7 @@ select{cursor:pointer}
         <div class="sgl">Djelatnici</div>
         <div class="ni" onclick="sP('djelatnici')" id="nav-djelatnici"><i class="ti ti-users"></i> Djelatnici</div>
         <div class="ni" onclick="sP('raspored')" id="nav-raspored"><i class="ti ti-arrows-transfer-up"></i> Rasporedi</div>
+        <div class="ni" onclick="sP('bodovi')" id="nav-bodovi"><i class="ti ti-chart-dots"></i> Bodovi</div>
       </div>
       <div class="sg" id="anav" style="display:none">
         <div class="sgl">Administracija</div>
@@ -415,6 +432,38 @@ select{cursor:pointer}
           <button class="btn bp" id="btn-dodaj-djel" onclick="openAddDjel()"><i class="ti ti-user-plus"></i> Dodaj djelatnika</button>
         </div></div>
         <div id="djw"></div>
+      </div>
+
+      <div class="page" id="page-bodovi">
+        <div class="ph"><div><div class="pt">Bodovi</div><div class="ps">Bodovi djelatnika i vrijednost boda za stimulaciju</div></div>
+        <div class="phr"><button class="btn bs" onclick="izvozBodova()"><i class="ti ti-file-spreadsheet"></i> Izvoz (CSV)</button></div></div>
+        <div class="bp-top">
+          <div class="card bp-vb">
+            <div class="bod-sec-t"><i class="ti ti-coin-euro"></i> Vrijednost boda (cijela tvrtka)</div>
+            <div class="bp-vb-now"><span id="bp-vb-now">–</span><small id="bp-vb-od"></small></div>
+            <div id="bp-vb-form"></div>
+            <div id="bp-vb-pov"></div>
+          </div>
+          <div class="card bp-info">
+            <div class="bod-sec-t"><i class="ti ti-info-circle"></i> Kako se računa</div>
+            <ul>
+              <li><b>Stimulacija</b> = bodovi × vrijednost boda × postotak.</li>
+              <li>Nova vrijednost boda ili novi bodovi vrijede <b>od mjeseca u kojem je datum</b> i za sve iduće mjesece; raniji mjeseci ostaju sa starim vrijednostima.</li>
+              <li>Unaprijed upisana promjena prikazuje se kao <span style="color:var(--blue);font-weight:600">najava</span> dok ne počne vrijediti.</li>
+              <li id="bp-ovlast"></li>
+            </ul>
+            <div id="bp-zadnje"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="fb" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:.8rem">
+            <div class="fg" style="margin:0;min-width:200px"><label class="fl">Jedinica</label><select id="bp-jed" onchange="rBodoviStr()"></select></div>
+            <div class="fg" style="margin:0;min-width:200px"><label class="fl">Traži</label><input type="text" id="bp-trazi" placeholder="ime, prezime ili šifra" oninput="rBodoviStr()"></div>
+            <div class="fg" id="bp-od-wrap" style="margin:0"><label class="fl">Novi bodovi vrijede od</label><input type="date" id="bp-od"></div>
+            <div class="fh" id="bp-od-hint" style="margin:0 0 6px">Upiši nove bodove u stupac „Novi bodovi” – sprema se odmah.</div>
+          </div>
+          <div class="tw" id="bp-tbl"></div>
+        </div>
       </div>
 
       <div class="page" id="page-raspored">
@@ -619,6 +668,32 @@ select{cursor:pointer}
         <div id="obr-body"></div>
       </div>
 
+      <div class="page" id="page-dodaci">
+        <div class="ph"><div><div class="pt">Dodaci</div><div class="ps">Dodatak 233 € (za 4 mjeseca bez odsutnosti) i mjesečni dodatak 200/100 €</div></div></div>
+        <div class="dod-top">
+          <div class="card dod-box">
+            <div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Dodatak 233 € – po razdoblju</div>
+            <div class="fh" style="margin-bottom:.6rem">Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i nije imao ni dan bolovanja, plaćenog/neplaćenog dopusta, očinskog i sl.</div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="fg" style="margin:0"><label class="fl">Obračun na dan</label><select id="dod-k-mj" style="width:auto">
+                <option value="4">01.04. (prosinac – ožujak)</option><option value="8">01.08. (travanj – srpanj)</option><option value="12">01.12. (kolovoz – studeni)</option></select></div>
+              <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="dod-k-god" style="width:auto"></select></div>
+              <button class="btn bp" onclick="obracunajDodatak('233')"><i class="ti ti-calculator"></i> Obračunaj kvartal</button>
+            </div>
+          </div>
+          <div class="card dod-box">
+            <div class="bod-sec-t"><i class="ti ti-calendar-month"></i> Mjesečni dodatak 200 / 100 €</div>
+            <div class="fh" style="margin-bottom:.6rem">Unosi se 1. u mjesecu za prethodni mjesec. 8 h: do 5 dana odsutnosti 200 €, 6–10 dana 100 €. Tržnica 7/5: do 6 dana 200 €, 7–12 dana 100 €.</div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="fg" style="margin:0"><label class="fl">Obračun na dan</label><select id="dod-m-mj" style="width:auto"></select></div>
+              <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="dod-m-god" style="width:auto"></select></div>
+              <button class="btn bp" onclick="obracunajDodatak('mj')"><i class="ti ti-calculator"></i> Obračunaj mjesec</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem"><div id="dod-rez"><div class="empty"><i class="ti ti-gift"></i><p>Odaberite razdoblje i kliknite „Obračunaj”.</p></div></div></div>
+      </div>
+
       <div class="page" id="page-prijedlozi">
         <div class="ph">
           <div><div class="pt">Prijedlozi stimulacija</div><div class="ps">Voditelj predlaže · direktor odobrava · obračun plaće isplaćuje</div></div>
@@ -651,8 +726,6 @@ select{cursor:pointer}
           <button id="stim-tab-unos" onclick="stimTab('unos')" style="padding:8px 20px;border:none;background:none;font-weight:600;font-size:13px;cursor:pointer;border-bottom:2px solid var(--blue);color:var(--blue);margin-bottom:-2px"><i class="ti ti-edit"></i> Unos po mjesecu</button>
           <button id="stim-tab-pregled" onclick="stimTab('pregled')" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-table"></i> Pregled i ispis</button>
           <button id="stim-tab-kumulativ" onclick="stimTab('kumulativ')" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-chart-histogram"></i> Preglednik (kumulativ)</button>
-          <button id="stim-tab-bodovi" onclick="openBodovi()" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-chart-dots"></i> Bodovi</button>
-          <button id="stim-tab-vb" onclick="openVrijednostBoda()" style="padding:8px 20px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--text2);margin-bottom:-2px"><i class="ti ti-settings"></i> Vrijednost boda</button>
         </div>
 
         <!-- TAB: Unos po mjesecu -->
@@ -1426,13 +1499,14 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementB
 function doLogout(){if(isLive()){doLogoutSB();return;}CU=null;DB.evidencija={};document.getElementById("app").style.display="none";document.getElementById("ls").style.display="flex";document.getElementById("lal").innerHTML="";}
 
 function sP(n){
-  if((n==='stimulacije'||n==='bolovanje')&&!canStim()) n='dashboard';
+  if((n==='stimulacije'||n==='bolovanje'||n==='bodovi'||n==='rekapitulacija')&&!canStim()) n='dashboard';
+  if(n==='dodaci'&&!smijeObracun()) n='dashboard';
   if(n==='obracun'&&!vidiObracun()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
-  document.getElementById("page-"+n)?.classList.add("active");
+  document.getElementById("page-"+(n==='rekapitulacija'?'stimulacije':n))?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:setupStimulacije,prijedlozi:setupPrijedlozi,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -3709,7 +3783,20 @@ function stimTab(tab){
   });
 }
 
-async function setupStimulacije(){
+// Stimulacije (samo unos stimulacija) i Rekapitulacija (pregled, ispis, kumulativ) dijele istu stranicu
+async function otvoriStimMod(mod){
+  const pg=document.getElementById('page-stimulacije');
+  pg.querySelector('.pt').textContent = mod==='rekap' ? 'Rekapitulacija dodataka i stimulacija' : 'Stimulacije';
+  pg.querySelector('.ps').textContent = mod==='rekap' ? 'Stimulacije, dodatak 233 € i mjesečni dodatak 200/100 € po djelatniku – pregled, ispis i kumulativ' : 'Unos postotka stimulacije po mjesecu';
+  const tu=document.getElementById('stim-tab-unos'), tp=document.getElementById('stim-tab-pregled'), tk=document.getElementById('stim-tab-kumulativ');
+  if(tu) tu.style.display = mod==='rekap'?'none':'';
+  if(tp) tp.style.display = mod==='rekap'?'':'none';
+  if(tk) tk.style.display = mod==='rekap'?'':'none';
+  if(tu) tu.parentElement.style.display = mod==='rekap'?'flex':'none';
+  stimTab(mod==='rekap'?'pregled':'unos');
+  await setupStimulacije(mod==='rekap');
+}
+async function setupStimulacije(bezUnosa){
   // Postavi trenutni mjesec
   const now = new Date();
   if(document.getElementById('stim-umj'))
@@ -3726,7 +3813,7 @@ async function setupStimulacije(){
     if(el) el.innerHTML=jOpts;
   });
   stimFilterPregledDjel();
-  await loadStimUnos();
+  if(!bezUnosa) await loadStimUnos();
 }
 
 function stimFilterPregledDjel(){
@@ -3755,9 +3842,10 @@ async function loadStimUnos(){
   const bodMap = bodMapZaMjesec(bodData||[], god, mj);
 
   // Dohvati vrijednost boda za ovaj period
-  const {data:vbData} = await SB.from('stimulacije_parametri')
-    .select('vrijednost_boda').eq('godina',god).eq('mjesec',mj).single();
-  const vrijBoda = vbData ? parseFloat(vbData.vrijednost_boda) : 0.352;
+  const {data:vbRows} = await SB.from('stimulacije_parametri').select('godina,mjesec,vrijednost_boda');
+  const vbRed = vbZa(vbRows||[], god, mj);
+  const vrijBoda = vbRed ? parseFloat(vbRed.vrijednost_boda) : 0.352;
+  if(!vbRed) showToast('Upozorenje: za ovaj mjesec nije upisana vrijednost boda – koristi se 0,352 €','error');
 
   // Dohvati postojeće unose za ovaj mjesec
   const {data:existing} = await SB.from('stimulacije_obracun')
@@ -3781,75 +3869,7 @@ async function loadStimUnos(){
   if(jid>0) djels = djels.filter(d=>d.jid===jid);
   djels = djels.sort((a,b)=>a.prez.localeCompare(b.prez));
 
-  // Dodatak 233 € (nije bio odsutan ni jedan dan u 4 mjeseca):
-  //  prosinac (prethodne god.) – ožujak → unosi se u travnju
-  //  travanj – srpanj               → unosi se u kolovozu
-  //  kolovoz – studeni              → unosi se u prosincu
-  const periodMap = {
-    4:  [[god-1,12],[god,1],[god,2],[god,3]],
-    8:  [[god,4],[god,5],[god,6],[god,7]],
-    12: [[god,8],[god,9],[god,10],[god,11]]
-  };
-  const isDodatakMj = mj in periodMap;
-  const periodMjeseci = periodMap[mj] || [];
-
-  // Odsutnosti koje isključuju pravo na 233 € i ulaze u dane za mjesečni dodatak
-  const ISKLJUCENE_KOLONE = ['BO','PD','OC','NS','NI','NZR','NR','VJO'];
-
-  let pravoNa233 = {}; // {djelatnik_id: true/false}
-  if(isDodatakMj){
-    const djIds = djels.map(d=>d.id);
-    const godine = [...new Set(periodMjeseci.map(x=>x[0]))];
-    let evData = [];
-    for(const g of godine){
-      const mjs = periodMjeseci.filter(x=>x[0]===g).map(x=>x[1]);
-      const {data} = djIds.length ? await SB.from('evidencija').select('djelatnik_id, godina, mjesec, sums, rows')
-        .eq('godina', g).in('mjesec', mjs).in('djelatnik_id', djIds) : {data:[]};
-      evData = evData.concat(data||[]);
-    }
-    const evByDjel = {};
-    evData.forEach(ev=>{ (evByDjel[ev.djelatnik_id] ||= []).push(ev); });
-    djIds.forEach(did=>{
-      const evs = evByDjel[did] || [];
-      // mora imati evidenciju za SVA 4 mjeseca
-      const imaKontinuitet = periodMjeseci.every(([g,m])=>evs.some(e=>e.godina===g&&e.mjesec===m));
-      if(!imaKontinuitet){ pravoNa233[did] = false; return; }
-      // rad počinje od prvog unosa: ako u prvom mjesecu razdoblja nema ništa upisano od prvog radnog dana, tada je tek počeo → nema pravo
-      { const [pg,pm]=periodMjeseci[0]; const ev0=evs.find(e=>e.godina===pg&&e.mjesec===pm);
-        window._subotaRadna=jeSubotaRadna(gAJ(did,pg,pm));
-        let prviRadni=1; while(prviRadni<dim(pg,pm)&&isFreeDay(pg,pm,prviRadni)) prviRadni++;
-        window._subotaRadna=false;
-        const dani=(ev0?.rows||[]).filter(r=>Object.values(r.sati||{}).some(v=>parseFloat(v)>0)).map(r=>r.dan);
-        if(!dani.length||Math.min(...dani)>prviRadni){ pravoNa233[did] = false; return; } }
-      // zaposlen nakon početka razdoblja (npr. usred prvog mjeseca) → nema pravo
-      const dj=DB.djelatnici.find(x=>x.id===did), mz=/^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec((dj?.dat||'').trim());
-      if(mz){ const [pg,pm]=periodMjeseci[0]; if(new Date(+mz[3],+mz[2]-1,+mz[1]) > new Date(pg,pm-1,1)){ pravoNa233[did] = false; return; } }
-      const imaIsklj = evs.some(ev=>ISKLJUCENE_KOLONE.some(k=>parseFloat((ev.sums||{})[k])>0));
-      pravoNa233[did] = !imaIsklj;
-    });
-  }
-
-  // Mjesečni dodatak 200/100 €: broji DANE odsutnosti (bolovanje, plaćeni/neplaćeni dopust, očinski i sl.) u ovom mjesecu.
-  //  8-satno radno vrijeme: do 5 radnih dana → 200 €, 6–10 → 100 €, više od 10 → 0
-  //  7-satno radno vrijeme (tržnica 7/5, 6 dana tjedno): do 6 radnih dana → 200 €, 7–12 → 100 €, više od 12 → 0
-  const dodMjInfo = {}; // {did:{dani, sati7, iznos, imaEv}}
-  {
-    const djIdsMj = djels.map(d=>d.id);
-    // dodatak se isplaćuje mjesec kasnije: u obračunu za prosinac (01.12.) gleda se rad u studenom
-    const gR = mj===1 ? god-1 : god, mR = mj===1 ? 12 : mj-1;
-    const {data:evMj} = djIdsMj.length ? await SB.from('evidencija').select('djelatnik_id, rows').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',djIdsMj) : {data:[]};
-    const evM = {}; (evMj||[]).forEach(e=>evM[e.djelatnik_id]=e.rows||[]);
-    djels.forEach(d=>{
-      const [ph,pm]=(d.poc||'07:00').split(':').map(Number), [kh,km]=(d.kraj||'15:00').split(':').map(Number);
-      // 7-satno radno vrijeme: jedinica s oznakom (7/…) u nazivu (Odjel tržnica i ribarnica (7/5)) ili djelatnik s rasporedom do 7 sati
-      const sati7 = /\(7\//.test(jN(gAJ(d.id,gR,mR))) || ((kh*60+km)-(ph*60+pm))/60 <= 7;
-      const rows = evM[d.id];
-      if(!rows){ dodMjInfo[d.id]={dani:0,sati7,iznos:0,imaEv:false}; return; }
-      const dani = rows.filter(r=>ISKLJUCENE_KOLONE.some(k=>parseFloat(r.sati?.[k])>0)).length;
-      const [g200,g100] = sati7 ? [6,12] : [5,10];
-      dodMjInfo[d.id] = {dani, sati7, imaEv:true, iznos: dani<=g200 ? 200 : dani<=g100 ? 100 : 0};
-    });
-  }
+  // Dodaci (233 € i 200/100 €) obračunavaju se na stranici Dodaci; ovdje se samo čuvaju spremljeni iznosi.
 
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
     <thead>
@@ -3859,12 +3879,9 @@ async function loadStimUnos(){
         <th style="padding:8px;text-align:right">Bodovi</th>
         <th style="padding:8px;text-align:right;color:var(--text2);font-size:11px">Kumul.prije</th>
         <th style="padding:8px;text-align:center">Stim.%</th>
-        <th style="padding:8px;text-align:center">Dod.bol.<br><small style="font-weight:400">(233€ auto)</small></th>
-        <th style="padding:8px;text-align:center">Dod.mj.<br><small style="font-weight:400">(200/100€ auto)</small></th>
         <th style="padding:8px;text-align:right;color:#22863a">Neopor.</th>
         <th style="padding:8px;text-align:right;color:#c0392b">Opor.</th>
-        <th style="padding:8px;text-align:right;color:#e67e22">Neto bol.</th>
-        <th style="padding:8px;text-align:right">Ukupno</th>
+        <th style="padding:8px;text-align:right">Stimulacija</th>
       </tr>
     </thead>
     <tbody id="stim-tbody">`;
@@ -3874,11 +3891,9 @@ async function loadStimUnos(){
     const kum = kumMap[d.id]||0;
     const ex  = existMap[d.id];
     const posto = ex ? (parseFloat(ex.stimulacija_posto)||0) : (prijMap[d.id]?.posto||0);
-    // Automatski dodaj 233€ ako ima pravo, inače 0
-    const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
-    const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
-    const dmi = dodMjInfo[d.id]||{};
-    const bolMj  = ex ? parseFloat(ex.dodatak_mjesecni)||0 : (dmi.iznos||0);
+    // dodaci se ne mijenjaju ovdje (stranica Dodaci) – samo se zadržavaju u obračunu
+    const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : 0;
+    const bolMj  = ex ? parseFloat(ex.dodatak_mjesecni)||0 : 0;
 
     // Izračunaj preview
     const r = calcStim(bod, posto, vrijBoda, kum, bolDod, bolMj);
@@ -3897,23 +3912,9 @@ async function loadStimUnos(){
           id="stim-posto-${d.id}">
         ${prijMap[d.id]?`<div title="${hEsc(prijMap[d.id].opisi.join('\n'))}" style="font-size:10px;color:${ex&&Math.abs((parseFloat(ex.stimulacija_posto)||0)-prijMap[d.id].posto)>0.001?'var(--amber)':'var(--blue)'};margin-top:2px;cursor:help"><i class="ti ti-rosette-discount-check"></i> prijedlog ${prijMap[d.id].posto}%${ex&&Math.abs((parseFloat(ex.stimulacija_posto)||0)-prijMap[d.id].posto)>0.001?' (razlikuje se)':''}</div>`:''}
       </td>
-      <td style="padding:6px 8px;text-align:center">
-        <input type="number" value="${bolDod}" min="0" step="1"
-          style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center"
-          onchange="recalcRow(${d.id},${bod},${kum},${vrijBoda})"
-          id="stim-bol-${d.id}">
-      </td>
-      <td style="padding:6px 8px;text-align:center">
-        <input type="number" value="${bolMj}" min="0" step="1"
-          style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center"
-          onchange="recalcRow(${d.id},${bod},${kum},${vrijBoda})"
-          id="stim-bolmj-${d.id}">
-        <div style="font-size:10px;color:${dmi.imaEv?(dmi.iznos===200?'#22863a':dmi.iznos===100?'var(--amber)':'#c0392b'):'var(--text3)'};margin-top:2px" title="${dmi.sati7?'7':'8'}-satno radno vrijeme · dana odsutnosti (bolovanje, dopusti, očinski i sl.) u prethodnom mjesecu">${dmi.imaEv?`${dmi.dani} d. odsut. · ${dmi.sati7?'7':'8'}h`:'nema evidencije'}</div>
-      </td>
-      <td style="padding:6px 8px;text-align:right;color:#22863a;font-weight:600" id="stim-neopor-${d.id}">${(r.stimNeopor+r.bolNeopor).toFixed(2)} €</td>
-      <td style="padding:6px 8px;text-align:right;color:#c0392b" id="stim-opor-${d.id}">${(r.stimOpor+r.bolOpor+r.dodatakMj).toFixed(2)||'–'} €</td>
-      <td style="padding:6px 8px;text-align:right;color:#e67e22;font-weight:600" id="stim-bruto2-${d.id}" title="Neto = oporezivi dio / 1.165">${r.bolNeto>0?r.bolNeto.toFixed(2)+' €':'–'}</td>
-      <td style="padding:6px 8px;text-align:right;font-weight:600" id="stim-ukupno-${d.id}">${(r.iznos+r.bolNeopor+r.bolOpor+r.dodatakMj).toFixed(2)} €</td>
+      <td style="padding:6px 8px;text-align:right;color:#22863a;font-weight:600" id="stim-neopor-${d.id}">${r.stimNeopor.toFixed(2)} €</td>
+      <td style="padding:6px 8px;text-align:right;color:#c0392b" id="stim-opor-${d.id}">${r.stimOpor>0?r.stimOpor.toFixed(2)+' €':'–'}</td>
+      <td style="padding:6px 8px;text-align:right;font-weight:600" id="stim-ukupno-${d.id}">${r.iznos.toFixed(2)} €<input type="hidden" id="stim-bol-${d.id}" value="${bolDod}"><input type="hidden" id="stim-bolmj-${d.id}" value="${bolMj}"></td>
     </tr>`;
   });
 
@@ -3930,17 +3931,8 @@ async function loadStimUnos(){
   // Store data for save
   window._stimBatch = {god, mj, vrijBoda, djels, bodMap, kumMap, existMap, prijMap};
   
-  // Show info about automatic 233€ check
   const infoEl = document.getElementById('stim-auto-info');
-  const dm=Object.values(dodMjInfo), n200=dm.filter(x=>x.iznos===200).length, n100=dm.filter(x=>x.iznos===100).length, n0=dm.filter(x=>x.imaEv&&x.iznos===0).length, nEv=dm.filter(x=>!x.imaEv).length;
-  const txtMj = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Mjesečni dodatak (za rad u ${['siječnju','veljači','ožujku','travnju','svibnju','lipnju','srpnju','kolovozu','rujnu','listopadu','studenom','prosincu'][(mj+10)%12]}): <strong style="color:#22863a">${n200}× 200 €</strong>, <strong style="color:var(--amber)">${n100}× 100 €</strong>, <strong style="color:#c0392b">${n0} bez</strong>${nEv?`, ${nEv} bez evidencije`:''}`;
-  if(infoEl && isDodatakMj){
-    const brPrava = Object.values(pravoNa233).filter(v=>v===true).length;
-    const brBezPrava = Object.values(pravoNa233).filter(v=>v===false).length;
-    infoEl.innerHTML = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Auto provjera 233€: <strong style="color:#22863a">${brPrava} imaju pravo</strong>, <strong style="color:#c0392b">${brBezPrava} nemaju</strong> (bolovanje/kontinuitet)` + txtMj;
-  } else if(infoEl){
-    infoEl.innerHTML = txtMj;
-  }
+  if(infoEl) infoEl.innerHTML = '';
 }
 
 // Recalc single row on input change
@@ -3953,11 +3945,9 @@ function recalcRow(did, bod, kum, vrijBoda){
   const opor   = document.getElementById(`stim-opor-${did}`);
   const bruto2 = document.getElementById(`stim-bruto2-${did}`);
   const ukupno = document.getElementById(`stim-ukupno-${did}`);
-  if(neopor) neopor.textContent = (r.stimNeopor+r.bolNeopor).toFixed(2)+' €';
-  const oporVal = r.stimOpor+r.bolOpor+r.dodatakMj;
-  if(opor) opor.textContent = oporVal>0 ? oporVal.toFixed(2)+' €' : '–';
-  if(bruto2) bruto2.textContent = r.bolNeto>0 ? r.bolNeto.toFixed(2)+' €' : '–';
-  if(ukupno) ukupno.textContent = (r.iznos+r.bolNeopor+r.bolOpor+r.dodatakMj).toFixed(2)+' €';
+  if(neopor) neopor.textContent = r.stimNeopor.toFixed(2)+' €';
+  if(opor) opor.textContent = r.stimOpor>0 ? r.stimOpor.toFixed(2)+' €' : '–';
+  if(ukupno) ukupno.firstChild.textContent = r.iznos.toFixed(2)+' €';
 }
 
 // ── Batch save ─────────────────────────────────────────────────
@@ -4339,6 +4329,9 @@ function primijeniOvlastiStim(){
   const adm=CU?.role==='admin', ured=smijeUredjivatiDjelatnike();
   { const e=document.getElementById('nav-djelatnici'); if(e) e.style.display=canStim()?'':'none'; }
   { const e=document.getElementById('nav-raspored'); if(e) e.style.display=ured?'':'none'; }
+  { const e=document.getElementById('nav-bodovi'); if(e) e.style.display=canStim()?'':'none'; }
+  { const e=document.getElementById('nav-dodaci'); if(e) e.style.display=smijeObracun()?'':'none'; }
+  { const e=document.getElementById('nav-rekapitulacija'); if(e) e.style.display=canStim()?'':'none'; }
   { const e=document.getElementById('sg-djelatnici'); if(e) e.style.display=(canStim()||ured)?'':'none'; }
   { const e=document.getElementById('btn-dodaj-djel'); if(e) e.style.display=ured?'':'none'; }
   const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
@@ -5140,10 +5133,12 @@ async function ucitajBodoveDjelatnika(){
   const now=new Date();
   const [b,v]=await Promise.all([
     SB.from('stimulacije_bodovi').select('id,djelatnik_id,bodovi,vrijedi_od,upisao_ime,created_at'),
-    SB.from('stimulacije_parametri').select('vrijednost_boda').eq('godina',now.getFullYear()).eq('mjesec',now.getMonth()+1)
+    SB.from('stimulacije_parametri').select('id,godina,mjesec,vrijednost_boda,created_at')
   ]);
   window._bodRows=b.error?[]:(b.data||[]);
-  window._vbNow=v.data?.[0]?parseFloat(v.data[0].vrijednost_boda):null;
+  window._vbRows=v.error?[]:(v.data||[]);
+  const vr=vbZa(window._vbRows,now.getFullYear(),now.getMonth()+1);
+  window._vbNow=vr?parseFloat(vr.vrijednost_boda):null;
   osvjeziBodMap();
 }
 function osvjeziBodMap(){
@@ -5166,6 +5161,7 @@ function otvoriBodove(did){
 }
 function renderBodSekcija(did,elId){
   const el=document.getElementById(elId); if(!el) return;
+  ['md-bod-sec','bodpov-body'].forEach(x=>{if(x!==elId){const o=document.getElementById(x); if(o) o.innerHTML='';}}); // jedinstveni id-evi polja
   if(!canStim()){el.innerHTML='';return;}
   const ured=smijeObracun(), vb=window._vbNow;
   const t=new Date(), prvi=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
@@ -5213,6 +5209,249 @@ async function obrisiBodove(id,did,elId){
   const d=DB.djelatnici.find(x=>x.id===did);
   addAuditLog({userName:CU?.name, action:'bodovi_brisanje', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Obrisan unos ${r.bodovi} bodova (${fmtOd(r.vrijedi_od)})`});
   osvjeziBodMap(); renderBodSekcija(did,elId); if(document.getElementById('page-djelatnici')?.classList.contains('active')) rDjel();
+}
+
+// ── Dodaci: izračun ───────────────────────────────────────────
+const ODSUTNOSTI_DODACI=['BO','PD','OC','NS','NI','NZR','NR','VJO']; // bolovanje, plaćeni/neplaćeni dopust, očinski i sl.
+const NAZIV_ODS={BO:'bolovanje',PD:'plaćeni dopust',OC:'očinski',NS:'neplaćeni (skrb)',NI:'neplaćeni (izbori)',NZR:'nenazočnost (zahtjev)',NR:'nenazočnost (raspored)',VJO:'odsutnost'};
+const MJ_LOK=['siječnju','veljači','ožujku','travnju','svibnju','lipnju','srpnju','kolovozu','rujnu','listopadu','studenom','prosincu'];
+function razdoblje233(god,mj){return ({4:[[god-1,12],[god,1],[god,2],[god,3]],8:[[god,4],[god,5],[god,6],[god,7]],12:[[god,8],[god,9],[god,10],[god,11]]})[mj]||null;}
+// 233 €: obračun u mjesecu mj (4, 8 ili 12) za prethodna 4 mjeseca
+async function izracunaj233(god,mj,djels){
+  const per=razdoblje233(god,mj), rez={};
+  if(!per) return {per:null,rez};
+  const ids=djels.map(d=>d.id); let ev=[];
+  for(const g of [...new Set(per.map(x=>x[0]))]){
+    const mjs=per.filter(x=>x[0]===g).map(x=>x[1]);
+    const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,godina,mjesec,sums,rows').eq('godina',g).in('mjesec',mjs).in('djelatnik_id',ids):{data:[]};
+    ev=ev.concat(data||[]);
+  }
+  const by={}; ev.forEach(e=>(by[e.djelatnik_id]||=[]).push(e));
+  djels.forEach(d=>{
+    const evs=by[d.id]||[];
+    const fali=per.filter(([g,m])=>!evs.some(e=>e.godina===g&&e.mjesec===m));
+    if(fali.length){rez[d.id]={iznos:0,razlog:'nema evidencije: '+fali.map(([g,m])=>MJ_NOM[m-1]).join(', ')};return;}
+    const [pg,pm]=per[0], ev0=evs.find(e=>e.godina===pg&&e.mjesec===pm);
+    window._subotaRadna=jeSubotaRadna(gAJ(d.id,pg,pm));
+    let prvi=1; while(prvi<dim(pg,pm)&&isFreeDay(pg,pm,prvi)) prvi++;
+    window._subotaRadna=false;
+    const dani=(ev0?.rows||[]).filter(r=>Object.values(r.sati||{}).some(v=>parseFloat(v)>0)).map(r=>r.dan);
+    if(!dani.length||Math.min(...dani)>prvi){rez[d.id]={iznos:0,razlog:`počeo raditi ${dani.length?Math.min(...dani)+'.'+pm+'.':'kasnije'} (nije cijelo razdoblje)`};return;}
+    const mz=/^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec((d.dat||'').trim());
+    if(mz&&new Date(+mz[3],+mz[2]-1,+mz[1])>new Date(pg,pm-1,1)){rez[d.id]={iznos:0,razlog:'zaposlen '+d.dat};return;}
+    const ods=[]; evs.sort((a,b)=>(a.godina*12+a.mjesec)-(b.godina*12+b.mjesec)).forEach(e=>ODSUTNOSTI_DODACI.forEach(k=>{const v=parseFloat((e.sums||{})[k]);if(v>0)ods.push(`${NAZIV_ODS[k]} ${v}h (${MJ_NOM[e.mjesec-1].slice(0,3)})`);}));
+    rez[d.id]=ods.length?{iznos:0,razlog:ods.join(', ')}:{iznos:233,razlog:'bez odsutnosti sva 4 mjeseca'};
+  });
+  return {per,rez};
+}
+// 200/100 €: obračun u mjesecu mj za rad u prethodnom mjesecu
+async function izracunajDodMj(god,mj,djels){
+  const gR=mj===1?god-1:god, mR=mj===1?12:mj-1, ids=djels.map(d=>d.id), rez={};
+  const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,rows').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',ids):{data:[]};
+  const evM={}; (data||[]).forEach(e=>evM[e.djelatnik_id]=e.rows||[]);
+  djels.forEach(d=>{
+    const [ph,pm]=(d.poc||'07:00').split(':').map(Number), [kh,km]=(d.kraj||'15:00').split(':').map(Number);
+    const sati7=jeSubotaRadna(gAJ(d.id,gR,mR))||((kh*60+km)-(ph*60+pm))/60<=7;
+    const rows=evM[d.id];
+    if(!rows){rez[d.id]={iznos:0,dani:0,sati7,razlog:'nema evidencije za '+MJ_NOM[mR-1]};return;}
+    const dani=rows.filter(r=>ODSUTNOSTI_DODACI.some(k=>parseFloat(r.sati?.[k])>0)).length;
+    const [g200,g100]=sati7?[6,12]:[5,10];
+    rez[d.id]={dani,sati7,iznos:dani<=g200?200:dani<=g100?100:0,razlog:`${dani} ${dani===1?'dan':'dana'} odsutnosti · ${sati7?'7 h (6 dana tjedno)':'8 h'}`};
+  });
+  return {gR,mR,rez};
+}
+
+// ── Stranica Dodaci ──────────────────────────────────────────
+function setupDodaci(){
+  const t=new Date(), gs=YEARS.map(y=>`<option value="${y}">${y}</option>`).join('');
+  ['dod-k-god','dod-m-god'].forEach(id=>{const e=document.getElementById(id); if(!e.options.length){e.innerHTML=gs; e.value=String(t.getFullYear());}});
+  const mm=document.getElementById('dod-m-mj');
+  if(!mm.options.length){ mm.innerHTML=MJ_NOM.map((m,i)=>`<option value="${i+1}">01.${String(i+1).padStart(2,'0')}. (za ${MJ_NOM[(i+11)%12]})</option>`).join(''); mm.value=String(t.getMonth()+1); }
+  const km=document.getElementById('dod-k-mj'); const sl=[4,8,12].find(x=>x>=t.getMonth()+1)||4; if(!km.dataset.init){km.value=String(sl);km.dataset.init='1';}
+}
+async function obracunajDodatak(vrsta){
+  const el=document.getElementById('dod-rez');
+  const god=parseInt(document.getElementById(vrsta==='233'?'dod-k-god':'dod-m-god').value), mj=parseInt(document.getElementById(vrsta==='233'?'dod-k-mj':'dod-m-mj').value);
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Računam…</p></div>';
+  // djelatnici: oni koji su radili u (zadnjem) mjesecu koji se gleda
+  const gR=vrsta==='233'?god:(mj===1?god-1:god), mR=vrsta==='233'?mj-1:(mj===1?12:mj-1);
+  const djels=DB.djelatnici.filter(d=>gAJ(d.id,gR,mR)!=null).sort((a,b)=>a.prez.localeCompare(b.prez));
+  const r=vrsta==='233'?await izracunaj233(god,mj,djels):await izracunajDodMj(god,mj,djels);
+  const {data:post}=await SB.from('stimulacije_obracun').select('djelatnik_id,dodatak_bolovanje,dodatak_mjesecni').eq('godina',god).eq('mjesec',mj);
+  const pm={}; (post||[]).forEach(x=>pm[x.djelatnik_id]=parseFloat(vrsta==='233'?x.dodatak_bolovanje:x.dodatak_mjesecni)||0);
+  window._dodRez={vrsta,god,mj,djels,rez:r.rez};
+  const naslov=vrsta==='233'?`Dodatak 233 € – obračun 01.${String(mj).padStart(2,'0')}.${god}. (${r.per.map(([g,m])=>MJ_NOM[m-1]+' '+g).join(', ')})`
+    :`Mjesečni dodatak – obračun 01.${String(mj).padStart(2,'0')}.${god}. za rad u ${MJ_LOK[r.mR-1]} ${r.gR}.`;
+  const vals=Object.values(r.rez), uk=vals.reduce((a,x)=>a+x.iznos,0);
+  const sum=vrsta==='233'?`<div>Imaju pravo<b>${vals.filter(x=>x.iznos).length}</b></div><div>Nemaju<b>${vals.filter(x=>!x.iznos).length}</b></div>`
+    :`<div>200 €<b>${vals.filter(x=>x.iznos===200).length}</b></div><div>100 €<b>${vals.filter(x=>x.iznos===100).length}</b></div><div>Bez dodatka<b>${vals.filter(x=>!x.iznos).length}</b></div>`;
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <div style="font-weight:700;font-size:14px">${naslov}</div>
+      <button class="btn bp" onclick="spremiDodatke()"><i class="ti ti-device-floppy"></i> Spremi u obračun</button></div>
+    <div class="dod-sum">${sum}<div>Ukupno<b>${fmtEur(uk)}</b></div></div>
+    <div class="fh" style="margin-bottom:.5rem">Iznos možete ručno promijeniti prije spremanja. Spremanjem se iznos upisuje u obračun za 01.${String(mj).padStart(2,'0')}.${god}. i preračunava neoporezivi/oporezivi dio.</div>
+    <div class="tw"><table><thead><tr><th>#</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th>Osnova</th><th style="text-align:right">Već u obračunu</th><th style="text-align:right">Iznos (€)</th></tr></thead><tbody>
+    ${djels.map((d,i)=>{const x=r.rez[d.id]||{iznos:0,razlog:''};const ranije=pm[d.id];
+      return `<tr><td style="color:var(--text3)">${i+1}.</td><td style="font-family:monospace">${hEsc(d.sifra||'–')}</td><td style="font-weight:600">${hEsc(dF(d))}</td><td style="font-size:12px">${hEsc(jN(gAJ(d.id,gR,mR)))}</td>
+        <td style="font-size:11.5px;color:${x.iznos?'var(--text2)':'#a33'}">${hEsc(x.razlog)}</td>
+        <td style="text-align:right;color:var(--text3)">${ranije!=null?fmtEur(ranije):'–'}</td>
+        <td style="text-align:right"><input type="number" id="dod-iz-${d.id}" value="${x.iznos}" min="0" step="1" style="width:80px;text-align:right;padding:3px 6px;${x.iznos?'font-weight:700':''}"></td></tr>`;}).join('')}
+    </tbody></table></div>`;
+}
+async function spremiDodatke(){
+  const R=window._dodRez; if(!R) return;
+  const polje=R.vrsta==='233'?'dodatak_bolovanje':'dodatak_mjesecni', drugo=R.vrsta==='233'?'dodatak_mjesecni':'dodatak_bolovanje';
+  const iznosi={}; R.djels.forEach(d=>{iznosi[d.id]=parseFloat(document.getElementById('dod-iz-'+d.id)?.value)||0;});
+  if(!confirm(`Spremiti ${R.vrsta==='233'?'dodatak 233 €':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
+  const ids=R.djels.map(d=>d.id);
+  const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',R.god).in('djelatnik_id',ids);
+  if(e1){showToast('Greška: '+e1.message,'error');return;}
+  const {data:bodR}=await SB.from('stimulacije_bodovi').select('djelatnik_id,bodovi,vrijedi_od');
+  const bodMap=bodMapZaMjesec(bodR||[],R.god,R.mj);
+  const {data:vbR}=await SB.from('stimulacije_parametri').select('godina,mjesec,vrijednost_boda');
+  const vb=parseFloat(vbZa(vbR||[],R.god,R.mj)?.vrijednost_boda)||0.352;
+  const n=x=>parseFloat(x)||0, upserti=[], brisi=[]; let promj=0;
+  for(const d of R.djels){
+    const rows=(sviRed||[]).filter(x=>x.djelatnik_id===d.id).sort((a,b)=>a.mjesec-b.mjesec);
+    let ovaj=rows.find(x=>x.mjesec===R.mj); const novi=iznosi[d.id];
+    if(!ovaj&&!novi) continue;
+    if(ovaj&&Math.abs(n(ovaj[polje])-novi)<0.005) continue;
+    promj++;
+    if(!ovaj){ ovaj={djelatnik_id:d.id,godina:R.god,mjesec:R.mj,bodovi:bodMap[d.id]||0,stimulacija_posto:0,vrijednost_boda:vb,dodatak_bolovanje:0,dodatak_mjesecni:0,napomena:''}; rows.push(ovaj); rows.sort((a,b)=>a.mjesec-b.mjesec); }
+    ovaj[polje]=novi;
+    let kum=0; const pr=rows.filter(x=>x.mjesec<R.mj); if(pr.length) kum=n(pr[pr.length-1].kumulativ_neoporezivo);
+    for(const x of rows.filter(x=>x.mjesec>=R.mj)){
+      if(x===ovaj&&n(x.stimulacija_posto)===0&&n(x.dodatak_bolovanje)===0&&n(x.dodatak_mjesecni)===0){ if(x.id) brisi.push(x.id); continue; }
+      const c=calcStim(n(x.bodovi),n(x.stimulacija_posto),n(x.vrijednost_boda),kum,n(x.dodatak_bolovanje),n(x.dodatak_mjesecni));
+      Object.assign(x,{iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,dodatak_bol_neoporezivo:c.bolNeopor,
+        dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon});
+      const {created_at,updated_at,...bez}=x; upserti.push(bez); kum=c.kumNakon;
+    }
+  }
+  if(!promj){showToast('Nema promjena – iznosi su već spremljeni','info');return;}
+  const nova=upserti.filter(x=>!x.id), stara=upserti.filter(x=>x.id);
+  if(stara.length){const {error}=await SB.from('stimulacije_obracun').upsert(stara,{onConflict:'id'}); if(error){showToast('Greška: '+error.message,'error');return;}}
+  if(nova.length){const {error}=await SB.from('stimulacije_obracun').insert(nova); if(error){showToast('Greška: '+error.message,'error');return;}}
+  if(brisi.length){const {error}=await SB.from('stimulacije_obracun').delete().in('id',brisi); if(error){showToast('Greška: '+error.message,'error');return;}}
+  const uk=Object.values(iznosi).reduce((a,v)=>a+v,0);
+  addAuditLog({userName:CU?.name, action:R.vrsta==='233'?'dodatak_233':'dodatak_mjesecni', target:`01.${String(R.mj).padStart(2,'0')}.${R.god}.`, jedinica:'',
+    details:`Promijenjeno ${promj} djelatnika, ukupno ${uk.toFixed(2)} €`});
+  showToast(`✅ Spremljeno u obračun (${promj} djelatnika)`,'success');
+  obracunajDodatak(R.vrsta);
+}
+
+// ── Stranica Bodovi ──────────────────────────────────────────
+// Vrijednost boda: redak (godina, mjesec) vrijedi od tog mjeseca dok ga ne zamijeni kasniji redak.
+function vbZa(rows,god,mj){let best=null;const t=god*12+mj;(rows||[]).forEach(r=>{const k=r.godina*12+r.mjesec;if(k<=t&&(!best||k>best.godina*12+best.mjesec))best=r;});return best;}
+const MJ_NOM=['siječanj','veljača','ožujak','travanj','svibanj','lipanj','srpanj','kolovoz','rujan','listopad','studeni','prosinac'];
+async function setupBodoviStr(){
+  await ucitajBodoveDjelatnika();
+  const vj=vJ(), sel=document.getElementById('bp-jed'), cur=sel.value;
+  sel.innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
+  if(cur) sel.value=cur;
+  const t=new Date(), od=document.getElementById('bp-od');
+  if(!od.value) od.value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+  const ured=smijeObracun();
+  document.getElementById('bp-od-wrap').style.display=ured?'':'none';
+  document.getElementById('bp-od-hint').style.display=ured?'':'none';
+  document.getElementById('bp-ovlast').innerHTML=ured?'Bodove i vrijednost boda mijenjaju <b>admin i Obračun plaće</b>; svaka promjena upisuje se u Dnevnik promjena.':'Imate pravo samo pregleda – bodove mijenjaju admin i Obračun plaće.';
+  rVbStr(); rBodoviStr(); rZadnjePromjene();
+}
+function rVbStr(){
+  const t=new Date(), rows=[...(window._vbRows||[])].sort((a,b)=>(b.godina*12+b.mjesec)-(a.godina*12+a.mjesec));
+  const cur=vbZa(rows,t.getFullYear(),t.getMonth()+1);
+  document.getElementById('bp-vb-now').textContent=cur?parseFloat(cur.vrijednost_boda).toLocaleString('hr-HR',{minimumFractionDigits:4})+' €':'nije upisana';
+  { const asc0=[...rows].reverse(), pocetci=asc0.filter((r,i)=>i===0||parseFloat(r.vrijednost_boda)!==parseFloat(asc0[i-1].vrijednost_boda)), od=vbZa(pocetci,t.getFullYear(),t.getMonth()+1);
+    document.getElementById('bp-vb-od').textContent=od?`vrijedi od: ${MJ_NOM[od.mjesec-1]} ${od.godina}.`:''; }
+  const ured=smijeObracun();
+  document.getElementById('bp-vb-form').innerHTML=ured?`<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div class="fg" style="margin:0"><label class="fl">Nova vrijednost (€)</label><input type="number" id="bp-vb-val" step="0.0001" min="0" style="width:110px"></div>
+      <div class="fg" style="margin:0"><label class="fl">Vrijedi od</label><div style="display:flex;gap:4px">
+        <select id="bp-vb-mj" style="width:auto">${MJ_NOM.map((m,i)=>`<option value="${i+1}"${i===(t.getMonth()+1)%12?' selected':''}>${m}</option>`).join('')}</select>
+        <select id="bp-vb-god" style="width:auto">${YEARS.map(y=>`<option${y===(t.getMonth()===11?t.getFullYear()+1:t.getFullYear())?' selected':''}>${y}</option>`).join('')}</select></div></div>
+      <button class="btn bp" onclick="spremiVrijednostBoda()"><i class="ti ti-check"></i> Spremi</button>
+    </div>`:'';
+  // povijest: samo stvarne promjene (vrijednost različita od prethodne)
+  const asc=[...rows].reverse(), prom=asc.filter((r,i)=>i===0||parseFloat(r.vrijednost_boda)!==parseFloat(asc[i-1].vrijednost_boda)).reverse();
+  const tk=t.getFullYear()*12+t.getMonth()+1;
+  document.getElementById('bp-vb-pov').innerHTML=prom.length?`<table class="bod-tbl" style="margin-top:.8rem"><thead><tr><th>Vrijedi od</th><th style="text-align:right">Vrijednost</th><th></th></tr></thead><tbody>
+    ${prom.map(r=>{const k=r.godina*12+r.mjesec;return `<tr${r===vbZa(prom,t.getFullYear(),t.getMonth()+1)?' class="bod-cur"':''}><td>${MJ_NOM[r.mjesec-1]} ${r.godina}.</td><td style="text-align:right;font-weight:700">${parseFloat(r.vrijednost_boda).toLocaleString('hr-HR',{minimumFractionDigits:4})} €</td>
+      <td>${k>tk?'<span class="bdg bbl" style="font-size:10px">najava</span>':r===vbZa(prom,t.getFullYear(),t.getMonth()+1)?'<span class="bdg bgr" style="font-size:10px">vrijedi</span>':''}</td></tr>`;}).join('')}
+  </tbody></table>`:'';
+}
+async function spremiVrijednostBoda(){
+  const val=parseFloat(String(document.getElementById('bp-vb-val').value).replace(',','.'));
+  const mj=parseInt(document.getElementById('bp-vb-mj').value), god=parseInt(document.getElementById('bp-vb-god').value);
+  if(isNaN(val)||val<=0){showToast('Upišite ispravnu vrijednost boda','error');return;}
+  const rows=window._vbRows||[], k=god*12+mj;
+  const prije=vbZa(rows.filter(r=>r.godina*12+r.mjesec<k),god,mj);
+  if(!confirm(`Vrijednost boda ${val.toLocaleString('hr-HR',{minimumFractionDigits:4})} € od ${MJ_NOM[mj-1]} ${god}.?`))return;
+  const res=await SB.from('stimulacije_parametri').upsert({godina:god,mjesec:mj,vrijednost_boda:val},{onConflict:'godina,mjesec'}).select();
+  if(res.error){showToast('Greška: '+res.error.message,'error');return;}
+  // kasniji mjeseci koji su samo ponavljali staru vrijednost dobivaju novu (do prve stvarne najavljene promjene)
+  const stara=prije?parseFloat(prije.vrijednost_boda):null;
+  const kasniji=rows.filter(r=>r.godina*12+r.mjesec>k).sort((a,b)=>(a.godina*12+a.mjesec)-(b.godina*12+b.mjesec));
+  for(const r of kasniji){ if(stara===null||parseFloat(r.vrijednost_boda)!==stara) break;
+    await SB.from('stimulacije_parametri').update({vrijednost_boda:val}).eq('godina',r.godina).eq('mjesec',r.mjesec); }
+  addAuditLog({userName:CU?.name, action:'vrijednost_boda', target:'Vrijednost boda', jedinica:'', details:`${stara??'–'} → ${val} od ${MJ_NOM[mj-1]} ${god}.`});
+  showToast('✅ Vrijednost boda spremljena','success');
+  await ucitajBodoveDjelatnika(); rVbStr(); rBodoviStr(); rZadnjePromjene();
+}
+function bpDjelatnici(){
+  const jid=parseInt(document.getElementById('bp-jed')?.value)||0, q=(document.getElementById('bp-trazi')?.value||'').toLowerCase().trim(), vj=vJ();
+  return DB.djelatnici.filter(d=>d.aktivan!==false&&vj.includes(gAJ(d.id))&&(!jid||gAJ(d.id)===jid)&&(!q||dF(d).toLowerCase().includes(q)||(d.sifra||'').toLowerCase().includes(q)))
+    .sort((a,b)=>a.prez.localeCompare(b.prez));
+}
+function rBodoviStr(){
+  const el=document.getElementById('bp-tbl'); if(!el) return;
+  const ured=smijeObracun(), vb=window._vbNow, danas=isoDanas(), djs=bpDjelatnici();
+  if(!djs.length){el.innerHTML='<div class="empty"><i class="ti ti-users"></i><p>Nema djelatnika</p></div>';return;}
+  let uk=0;
+  el.innerHTML=`<table><thead><tr><th>#</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th style="text-align:right">Bodovi</th><th>Vrijede od</th><th style="text-align:right">Stimulacija 100 %</th><th>Najava</th>${ured?'<th>Novi bodovi</th>':''}<th></th></tr></thead><tbody>
+    ${djs.map((d,i)=>{const c=window._bodMap[d.id];
+      const naj=window._bodRows.filter(r=>r.djelatnik_id===d.id&&r.vrijedi_od>danas).sort((a,b)=>a.vrijedi_od<b.vrijedi_od?-1:1)[0];
+      if(c) uk+=c.bodovi;
+      return `<tr><td style="color:var(--text3)">${i+1}.</td><td style="font-family:monospace;font-weight:600">${hEsc(d.sifra||'–')}</td><td style="font-weight:600">${hEsc(dF(d))}</td><td style="font-size:12px">${hEsc(jN(gAJ(d.id)))}</td>
+        <td style="text-align:right;font-weight:700">${c?c.bodovi:'–'}</td><td style="font-size:12px;color:var(--text2)">${c?fmtOd(c.vrijedi_od):''}</td>
+        <td style="text-align:right">${c&&vb?fmtEur(c.bodovi*vb):'–'}</td>
+        <td style="font-size:12px;color:var(--blue)">${naj?`${naj.bodovi} od ${fmtDatHr(naj.vrijedi_od)}`:''}</td>
+        ${ured?`<td><input type="number" class="bp-novo" min="0" step="100" placeholder="–" onchange="spremiBodStr(${d.id},this)"></td>`:''}
+        <td><button class="btn bxs bs" title="Povijest bodova" onclick="openBodPov(${d.id})"><i class="ti ti-history"></i></button></td></tr>`;}).join('')}
+  </tbody><tfoot><tr><td colspan="4" style="text-align:right;font-weight:700">Ukupno (${djs.length} djelatnika):</td><td style="text-align:right;font-weight:800">${uk}</td><td></td><td style="text-align:right;font-weight:700">${vb?fmtEur(uk*vb):''}</td><td colspan="${ured?3:2}"></td></tr></tfoot></table>`;
+}
+async function spremiBodStr(did,inp){
+  const v=parseInt(inp.value), od=document.getElementById('bp-od').value;
+  if(inp.value===''){return;}
+  if(isNaN(v)||v<0){showToast('Upišite ispravan broj bodova','error');return;}
+  if(!od){showToast('Odaberite datum od kada vrijede','error');return;}
+  const res=await SB.from('stimulacije_bodovi').upsert({djelatnik_id:did,bodovi:v,vrijedi_od:od,upisao_ime:CU?.name||null},{onConflict:'djelatnik_id,vrijedi_od'}).select();
+  if(res.error||!res.data?.length){showToast('Greška: '+(res.error?.message||'nemate ovlast'),'error');return;}
+  const staro=bodoviNa(did,od);
+  window._bodRows=window._bodRows.filter(r=>!(r.djelatnik_id===did&&r.vrijedi_od===od)); window._bodRows.push(res.data[0]); osvjeziBodMap();
+  const d=DB.djelatnici.find(x=>x.id===did);
+  addAuditLog({userName:CU?.name, action:'bodovi_izmjena', target:d?dF(d):String(did), jedinica:d?jN(d.jid):'', details:`Bodovi: ${staro?.bodovi??'–'} → ${v}, vrijede od ${fmtDatHr(od)}`});
+  showToast(`✅ ${d?dF(d):''}: ${v} bodova od ${fmtDatHr(od)}`,'success');
+  rBodoviStr(); rZadnjePromjene();
+}
+function openBodPov(did){
+  const d=DB.djelatnici.find(x=>x.id===did);
+  document.getElementById('bodpov-t').textContent='Bodovi – '+(d?dF(d):'');
+  renderBodSekcija(did,'bodpov-body');openM('mo-bodpov');
+}
+function rZadnjePromjene(){
+  const el=document.getElementById('bp-zadnje'); if(!el) return;
+  const vj=vJ();
+  const z=window._bodRows.filter(r=>r.vrijedi_od>'2000-01-01').sort((a,b)=>(b.created_at||'')<(a.created_at||'')?-1:1).slice(0,8)
+    .map(r=>({r,d:DB.djelatnici.find(x=>x.id===r.djelatnik_id)})).filter(x=>x.d&&vj.includes(x.d.jid));
+  el.innerHTML=z.length?`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Zadnje promjene bodova</div>
+    <table class="bod-tbl"><tbody>${z.map(({r,d})=>`<tr><td>${hEsc(dF(d))}</td><td style="text-align:right;font-weight:700">${r.bodovi}</td><td>od ${fmtDatHr(r.vrijedi_od)}</td><td style="font-size:11px;color:var(--text3)">${hEsc(r.upisao_ime||'')}</td></tr>`).join('')}</tbody></table>`
+    :'<div class="fh">Još nema promjena bodova s datumom.</div>';
+}
+function izvozBodova(){
+  const vb=window._vbNow, djs=bpDjelatnici();
+  const lines=[['Šifra','Prezime','Ime','Jedinica','Bodovi','Vrijede od','Vrijednost boda','Stimulacija 100%'].join(';'),
+    ...djs.map(d=>{const c=window._bodMap[d.id];return [d.sifra||'',d.prez,d.ime,jN(gAJ(d.id)),c?c.bodovi:'',c?fmtOd(c.vrijedi_od):'',vb?String(vb).replace('.',','):'',c&&vb?(Math.round(c.bodovi*vb*100)/100).toFixed(2).replace('.',','):''].join(';');})];
+  dlC(lines.join('\n'),'bodovi_'+isoDanas()+'.csv');
 }
 
 function openM(id){document.getElementById(id).classList.add("open");}
