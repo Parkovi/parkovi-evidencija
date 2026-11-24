@@ -5279,29 +5279,104 @@ async function obracunajDodatak(vrsta){
   const r=vrsta==='233'?await izracunaj233(god,mj,djels):await izracunajDodMj(god,mj,djels);
   const {data:post}=await SB.from('stimulacije_obracun').select('djelatnik_id,dodatak_bolovanje,dodatak_mjesecni').eq('godina',god).eq('mjesec',mj);
   const pm={}; (post||[]).forEach(x=>pm[x.djelatnik_id]=parseFloat(vrsta==='233'?x.dodatak_bolovanje:x.dodatak_mjesecni)||0);
-  window._dodRez={vrsta,god,mj,djels,rez:r.rez};
+  const iznosi={}; djels.forEach(d=>iznosi[d.id]=(r.rez[d.id]||{iznos:0}).iznos);
   const naslov=vrsta==='233'?`Dodatak 233 € – obračun 01.${String(mj).padStart(2,'0')}.${god}. (${r.per.map(([g,m])=>MJ_NOM[m-1]+' '+g).join(', ')})`
     :`Mjesečni dodatak – obračun 01.${String(mj).padStart(2,'0')}.${god}. za rad u ${MJ_LOK[r.mR-1]} ${r.gR}.`;
-  const vals=Object.values(r.rez), uk=vals.reduce((a,x)=>a+x.iznos,0);
-  const sum=vrsta==='233'?`<div>Imaju pravo<b>${vals.filter(x=>x.iznos).length}</b></div><div>Nemaju<b>${vals.filter(x=>!x.iznos).length}</b></div>`
-    :`<div>200 €<b>${vals.filter(x=>x.iznos===200).length}</b></div><div>100 €<b>${vals.filter(x=>x.iznos===100).length}</b></div><div>Bez dodatka<b>${vals.filter(x=>!x.iznos).length}</b></div>`;
+  const stariF=window._dodRez&&window._dodRez.vrsta===vrsta?{st:document.getElementById('dod-f-st')?.value,j:document.getElementById('dod-f-jed')?.value,q:document.getElementById('dod-f-q')?.value}:null;
+  window._dodRez={vrsta,god,mj,gR,mR,djels,rez:r.rez,iznosi,ranije:pm,naslov};
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.6rem">
       <div style="font-weight:700;font-size:14px">${naslov}</div>
-      <button class="btn bp" onclick="spremiDodatke()"><i class="ti ti-device-floppy"></i> Spremi u obračun</button></div>
-    <div class="dod-sum">${sum}<div>Ukupno<b>${fmtEur(uk)}</b></div></div>
-    <div class="fh" style="margin-bottom:.5rem">Iznos možete ručno promijeniti prije spremanja. Spremanjem se iznos upisuje u obračun za 01.${String(mj).padStart(2,'0')}.${god}. i preračunava neoporezivi/oporezivi dio.</div>
-    <div class="tw"><table><thead><tr><th>#</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th>Osnova</th><th style="text-align:right">Već u obračunu</th><th style="text-align:right">Iznos (€)</th></tr></thead><tbody>
-    ${djels.map((d,i)=>{const x=r.rez[d.id]||{iznos:0,razlog:''};const ranije=pm[d.id];
-      return `<tr><td style="color:var(--text3)">${i+1}.</td><td style="font-family:monospace">${hEsc(d.sifra||'–')}</td><td style="font-weight:600">${hEsc(dF(d))}</td><td style="font-size:12px">${hEsc(jN(gAJ(d.id,gR,mR)))}</td>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn bs" onclick="ispisDodataka()"><i class="ti ti-printer"></i> Ispis / PDF</button>
+        <button class="btn btn-excel" onclick="excelDodataka()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="btn bp" onclick="spremiDodatke()"><i class="ti ti-device-floppy"></i> Spremi u obračun</button></div></div>
+    <div id="dod-sum" class="dod-sum"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:.6rem">
+      <div class="fg" style="margin:0"><label class="fl">Prikaži</label><select id="dod-f-st" onchange="rDodRez()" style="width:auto">
+        <option value="svi">Svi</option><option value="dobili">Dobili dodatak</option><option value="nisu">Nisu dobili</option>
+        ${vrsta==='mj'?'<option value="200">Samo 200 €</option><option value="100">Samo 100 €</option>':''}
+        <option value="nemaev">Nemaju evidenciju</option></select></div>
+      <div class="fg" style="margin:0;min-width:200px"><label class="fl">Jedinica</label><select id="dod-f-jed" onchange="rDodRez()">
+        <option value="0">Sve jedinice</option>${DB.jedinice.filter(j=>djels.some(d=>gAJ(d.id,gR,mR)===j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0;min-width:180px"><label class="fl">Traži</label><input type="text" id="dod-f-q" placeholder="ime ili šifra" oninput="rDodRez()"></div>
+    </div>
+    <div class="fh" style="margin-bottom:.5rem">Iznos možete ručno promijeniti prije spremanja. Spremanjem se iznos upisuje u obračun za 01.${String(mj).padStart(2,'0')}.${god}. i preračunava neoporezivi/oporezivi dio. Ispis i Excel sadrže samo filtrirane redove.</div>
+    <div class="tw" id="dod-tbl"></div>`;
+  if(stariF){ const set=(id,v)=>{const e=document.getElementById(id); if(e&&v!=null&&[...(e.options||[{value:v}])].some(o=>o.value===v)) e.value=v;}; set('dod-f-st',stariF.st); set('dod-f-jed',stariF.j); const q=document.getElementById('dod-f-q'); if(q) q.value=stariF.q||''; }
+  rDodRez();
+}
+function dodFiltrirani(){
+  const R=window._dodRez; if(!R) return [];
+  const st=document.getElementById('dod-f-st')?.value||'svi', jid=parseInt(document.getElementById('dod-f-jed')?.value)||0, q=(document.getElementById('dod-f-q')?.value||'').toLowerCase().trim();
+  return R.djels.filter(d=>{
+    const iz=R.iznosi[d.id]||0, x=R.rez[d.id]||{};
+    if(st==='dobili'&&!iz) return false; if(st==='nisu'&&iz) return false;
+    if(st==='200'&&iz!==200) return false; if(st==='100'&&iz!==100) return false;
+    if(st==='nemaev'&&!/nema evidencije/.test(x.razlog||'')) return false;
+    if(jid&&gAJ(d.id,R.gR,R.mR)!==jid) return false;
+    if(q&&!dF(d).toLowerCase().includes(q)&&!(d.sifra||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function dodSazetak(){
+  const R=window._dodRez, el=document.getElementById('dod-sum'); if(!R||!el) return;
+  const f=dodFiltrirani(), v=f.map(d=>R.iznosi[d.id]||0), uk=v.reduce((a,x)=>a+x,0);
+  el.innerHTML=(R.vrsta==='233'?`<div>Dobili<b>${v.filter(x=>x>0).length}</b></div><div>Nisu dobili<b>${v.filter(x=>!x).length}</b></div>`
+    :`<div>200 €<b>${v.filter(x=>x===200).length}</b></div><div>100 €<b>${v.filter(x=>x===100).length}</b></div><div>Ostalo &gt; 0<b>${v.filter(x=>x>0&&x!==200&&x!==100).length}</b></div><div>Bez dodatka<b>${v.filter(x=>!x).length}</b></div>`)
+    +`<div>Prikazano<b>${f.length}</b> / ${R.djels.length}</div><div>Ukupno<b>${fmtEur(uk)}</b></div>`;
+}
+function rDodRez(){
+  const R=window._dodRez, el=document.getElementById('dod-tbl'); if(!R||!el) return;
+  const f=dodFiltrirani();
+  el.innerHTML=f.length?`<table><thead><tr><th>#</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th>Osnova</th><th style="text-align:right">Već u obračunu</th><th style="text-align:right">Iznos (€)</th></tr></thead><tbody>
+    ${f.map((d,i)=>{const x=R.rez[d.id]||{razlog:''}, iz=R.iznosi[d.id]||0, ranije=R.ranije[d.id];
+      return `<tr><td style="color:var(--text3)">${i+1}.</td><td style="font-family:monospace">${hEsc(d.sifra||'–')}</td><td style="font-weight:600">${hEsc(dF(d))}</td><td style="font-size:12px">${hEsc(jN(gAJ(d.id,R.gR,R.mR)))}</td>
         <td style="font-size:11.5px;color:${x.iznos?'var(--text2)':'#a33'}">${hEsc(x.razlog)}</td>
         <td style="text-align:right;color:var(--text3)">${ranije!=null?fmtEur(ranije):'–'}</td>
-        <td style="text-align:right"><input type="number" id="dod-iz-${d.id}" value="${x.iznos}" min="0" step="1" style="width:80px;text-align:right;padding:3px 6px;${x.iznos?'font-weight:700':''}"></td></tr>`;}).join('')}
-    </tbody></table></div>`;
+        <td style="text-align:right"><input type="number" id="dod-iz-${d.id}" value="${iz}" min="0" step="1" onchange="window._dodRez.iznosi[${d.id}]=parseFloat(this.value)||0;dodSazetak();this.style.fontWeight=(parseFloat(this.value)>0?'700':'400')" style="width:80px;text-align:right;padding:3px 6px;${iz?'font-weight:700':''}"></td></tr>`;}).join('')}
+    </tbody></table>`:'<div class="empty"><i class="ti ti-filter-off"></i><p>Nema djelatnika za odabrani filter</p></div>';
+  dodSazetak();
+}
+function dodFilterOpis(){
+  const st=document.getElementById('dod-f-st'), j=document.getElementById('dod-f-jed'), q=document.getElementById('dod-f-q')?.value?.trim();
+  return `Prikaz: ${st?.selectedOptions[0]?.text||'Svi'} · Jedinica: ${j?.selectedOptions[0]?.text||'Sve jedinice'}${q?` · Traži: „${q}”`:''}`;
+}
+async function ispisDodataka(){
+  const R=window._dodRez; if(!R) return;
+  const f=dodFiltrirani(); if(!f.length){showToast('Nema redova za ispis','info');return;}
+  let tv=window.POSTAVKE_TVRTKE; try{ if(!tv) tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
+  const e2=v=>(v||0).toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const uk=f.reduce((a,d)=>a+(R.iznosi[d.id]||0),0), dob=f.filter(d=>R.iznosi[d.id]>0).length;
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>${hEsc(R.naslov)}</title>
+  <style>@page{size:A4 portrait;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#111;margin:0}
+  h1{font-size:14px;margin:8px 0 2px}.sub{color:#444;margin-bottom:10px}table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #999;padding:3px 5px}th{background:#eee;font-size:9.5px;text-align:left}td.r,th.r{text-align:right}
+  tfoot td{font-weight:bold;background:#f3f3f3}.foot{margin-top:14px;font-size:9px;color:#666}.potpis{display:flex;justify-content:space-between;margin-top:36px;font-size:10px}.potpis div{width:40%;border-top:1px solid #333;padding-top:3px;text-align:center}</style></head><body>
+  <div style="font-weight:bold">${hEsc(tv?.naziv||'Parkovi i nasadi d.o.o.')}</div>
+  <h1>${hEsc(R.naslov)}</h1>
+  <div class="sub">${hEsc(dodFilterOpis())} · Djelatnika: ${f.length} · s dodatkom: ${dob}</div>
+  <table><thead><tr><th>R.br.</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th>Osnova</th><th class="r">Iznos €</th></tr></thead>
+  <tbody>${f.map((d,i)=>`<tr><td>${i+1}.</td><td>${hEsc(d.sifra||'')}</td><td>${hEsc(dF(d))}</td><td>${hEsc(jN(gAJ(d.id,R.gR,R.mR)))}</td><td>${hEsc((R.rez[d.id]||{}).razlog||'')}</td><td class="r"><strong>${e2(R.iznosi[d.id])}</strong></td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="5">UKUPNO</td><td class="r">${e2(uk)}</td></tr></tfoot></table>
+  <div class="potpis"><div>Izradio</div><div>Odobrio</div></div>
+  <div class="foot">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div>
+</body></html>`);
+}
+function excelDodataka(){
+  const R=window._dodRez; if(!R) return;
+  const f=dodFiltrirani(); if(!f.length){showToast('Nema redova za izvoz','info');return;}
+  if(typeof XLSX==='undefined'){showToast('Excel modul nije učitan','error');return;}
+  const aoa=[[R.naslov],[dodFilterOpis()],[],['R.br.','Šifra','Prezime','Ime','Jedinica','Osnova','Iznos €'],
+    ...f.map((d,i)=>[i+1,d.sifra||'',d.prez,d.ime,jN(gAJ(d.id,R.gR,R.mR)),(R.rez[d.id]||{}).razlog||'',R.iznosi[d.id]||0]),
+    [],['','','','','','UKUPNO',f.reduce((a,d)=>a+(R.iznosi[d.id]||0),0)]];
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:6},{wch:8},{wch:18},{wch:14},{wch:30},{wch:45},{wch:10}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Dodaci');
+  XLSX.writeFile(wb,`Dodaci_${R.vrsta==='233'?'233':'mjesecni'}_${R.god}_${String(R.mj).padStart(2,'0')}.xlsx`);
 }
 async function spremiDodatke(){
   const R=window._dodRez; if(!R) return;
   const polje=R.vrsta==='233'?'dodatak_bolovanje':'dodatak_mjesecni', drugo=R.vrsta==='233'?'dodatak_mjesecni':'dodatak_bolovanje';
-  const iznosi={}; R.djels.forEach(d=>{iznosi[d.id]=parseFloat(document.getElementById('dod-iz-'+d.id)?.value)||0;});
+  const iznosi={...R.iznosi};
   if(!confirm(`Spremiti ${R.vrsta==='233'?'dodatak 233 €':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
   const ids=R.djels.map(d=>d.id);
   const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',R.god).in('djelatnik_id',ids);
