@@ -1460,7 +1460,11 @@ function gAJ(djid,god,mj){
 }
 function dim(g,m){return new Date(g,m,0).getDate();}
 function dN(g,m,d){return DN[new Date(g,m-1,d).getDay()];}
-function isWE(g,m,d){const w=new Date(g,m-1,d).getDay();return w===0||w===6;}
+// Subota je radni dan za jedinice s oznakom (7/…) u nazivu (Odjel tržnica i ribarnica (7/5)).
+// window._subotaRadna postavlja prikaz koji je trenutno otvoren (unos, ispis, excel, obračun).
+window._subotaRadna=false;
+function jeSubotaRadna(jid){return /\(7\//.test(jN(jid));}
+function isWE(g,m,d){const w=new Date(g,m-1,d).getDay();return w===0||(w===6&&!window._subotaRadna);}
 function avC(s){const c=[["#dce8f5","#1a5fa8"],["#e8f3df","#2d6b0f"],["#faebd6","#7a4a08"],["#fbeaea","#992222"],["#eeebfa","#4a2d8a"]];return c[(s||"").charCodeAt(0)%c.length];}
 
 // DASHBOARD
@@ -1529,6 +1533,7 @@ function loadUF(){
   const w=document.getElementById("uw");
   if(!did||!mj){w.innerHTML="";return;}
   const d=DB.djelatnici.find(x=>x.id===did);
+  window._subotaRadna=jeSubotaRadna(gAJ(did,god,mj));
   const ev=DB.evidencija[did+"_"+god+"_"+mj]||{};
   const pd=ev.poc||d?.poc||"07:00",kd=ev.kraj||d?.kraj||"15:00";
   const days=dim(god,mj);
@@ -1585,6 +1590,7 @@ function rTots(god,mj){
 }
 function aFill(){
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026;
+  { const did=parseInt(document.getElementById("ud")?.value)||0; window._subotaRadna=jeSubotaRadna(gAJ(did,god,mj)); }
   const poc=document.getElementById("p0")?.value||"07:00",kraj=document.getElementById("k0")?.value||"15:00";
   const[ph,pm]=poc.split(":").map(Number),[kh,km]=kraj.split(":").map(Number);
   const sati=Math.round(((kh*60+km)-(ph*60+pm))/60*10)/10;
@@ -2351,6 +2357,7 @@ async function renderIspis(){
   renderIspisSync();
 }
 function renderIspisSync(){
+  window._subotaRadna=jeSubotaRadna(parseInt(document.getElementById("ip-jed").value)||0);
   if(ispisTab==='horiz'){renderIspisHoriz();return;}
   const jid=parseInt(document.getElementById("ip-jed").value)||0;
   const djId=parseInt(document.getElementById("ip-djel").value)||0;
@@ -2716,6 +2723,7 @@ function renderIspisHoriz(){
 
 function exportExcel(){
   const jid=parseInt(document.getElementById("ip-jed").value)||0;
+  window._subotaRadna=jeSubotaRadna(jid);
   const god=parseInt(document.getElementById("ip-god").value)||2026;
   const mj=parseInt(document.getElementById("ip-mj").value)||1;
   const jed=DB.jedinice.find(j=>j.id===jid);
@@ -3773,73 +3781,73 @@ async function loadStimUnos(){
   if(jid>0) djels = djels.filter(d=>d.jid===jid);
   djels = djels.sort((a,b)=>a.prez.localeCompare(b.prez));
 
-  // Periodi za dodatak 233€:
-  // Period 1: mj 9,10,11,12 → isplata u mj 1 (siječanj)
-  // Period 2: mj 1,2,3,4   → isplata u mj 5 (svibanj)  
-  // Period 3: mj 5,6,7,8   → isplata u mj 9 (rujan)
+  // Dodatak 233 € (nije bio odsutan ni jedan dan u 4 mjeseca):
+  //  prosinac (prethodne god.) – ožujak → unosi se u travnju
+  //  travanj – srpanj               → unosi se u kolovozu
+  //  kolovoz – studeni              → unosi se u prosincu
   const periodMap = {
-    1: [9,10,11,12], // siječanj = period 9-12 prethodne godine
-    5: [1,2,3,4],    // svibanj = period 1-4
-    9: [5,6,7,8]     // rujan = period 5-8
+    4:  [[god-1,12],[god,1],[god,2],[god,3]],
+    8:  [[god,4],[god,5],[god,6],[god,7]],
+    12: [[god,8],[god,9],[god,10],[god,11]]
   };
   const isDodatakMj = mj in periodMap;
   const periodMjeseci = periodMap[mj] || [];
-  
-  // Kolone koje isključuju pravo na 233€
+
+  // Odsutnosti koje isključuju pravo na 233 € i ulaze u dane za mjesečni dodatak
   const ISKLJUCENE_KOLONE = ['BO','PD','OC','NS','NI','NZR','NR','VJO'];
-  
-  // Automatska provjera prava na 233€ iz evidencije
+
   let pravoNa233 = {}; // {djelatnik_id: true/false}
-  
-  if(isDodatakMj && periodMjeseci.length > 0){
-    // Dohvati evidenciju za period
-    // Ako je period 9-12, to je prethodna godina
-    const evidGodina = mj === 1 ? god - 1 : god;
-    const evMjeseci = periodMjeseci;
-    
-    // Dohvati sve djelatnike koji imaju evidenciju u tom periodu
-    const djIds = DB.djelatnici.filter(d=>vJ().includes(d.jid)).map(d=>d.id);
-    
-    const {data:evData} = await SB.from('evidencija')
-      .select('djelatnik_id, mjesec, sums')
-      .eq('godina', evidGodina)
-      .in('mjesec', evMjeseci)
-      .in('djelatnik_id', djIds);
-    
-    // Grupiraj po djelatniku
+  if(isDodatakMj){
+    const djIds = djels.map(d=>d.id);
+    const godine = [...new Set(periodMjeseci.map(x=>x[0]))];
+    let evData = [];
+    for(const g of godine){
+      const mjs = periodMjeseci.filter(x=>x[0]===g).map(x=>x[1]);
+      const {data} = djIds.length ? await SB.from('evidencija').select('djelatnik_id, godina, mjesec, sums, rows')
+        .eq('godina', g).in('mjesec', mjs).in('djelatnik_id', djIds) : {data:[]};
+      evData = evData.concat(data||[]);
+    }
     const evByDjel = {};
-    (evData||[]).forEach(ev=>{
-      if(!evByDjel[ev.djelatnik_id]) evByDjel[ev.djelatnik_id] = [];
-      evByDjel[ev.djelatnik_id].push(ev);
-    });
-    
-    // Provjeri svakoga
+    evData.forEach(ev=>{ (evByDjel[ev.djelatnik_id] ||= []).push(ev); });
     djIds.forEach(did=>{
       const evs = evByDjel[did] || [];
-      
-      // Mora imati evidenciju za SVE mjesece perioda
-      const mjeseciSEvidencijom = evs.map(e=>e.mjesec);
-      const imaKontinuitet = evMjeseci.every(m=>mjeseciSEvidencijom.includes(m));
-      
-      if(!imaKontinuitet){
-        pravoNa233[did] = false;
-        return;
-      }
-      
-      // Provjeri ima li isključenih kolona u bilo kojem mjesecu
-      let imaIsklj = false;
-      for(const ev of evs){
-        const sums = ev.sums || {};
-        for(const kod of ISKLJUCENE_KOLONE){
-          if(sums[kod] && parseFloat(sums[kod]) > 0){
-            imaIsklj = true;
-            break;
-          }
-        }
-        if(imaIsklj) break;
-      }
-      
+      // mora imati evidenciju za SVA 4 mjeseca
+      const imaKontinuitet = periodMjeseci.every(([g,m])=>evs.some(e=>e.godina===g&&e.mjesec===m));
+      if(!imaKontinuitet){ pravoNa233[did] = false; return; }
+      // rad počinje od prvog unosa: ako u prvom mjesecu razdoblja nema ništa upisano od prvog radnog dana, tada je tek počeo → nema pravo
+      { const [pg,pm]=periodMjeseci[0]; const ev0=evs.find(e=>e.godina===pg&&e.mjesec===pm);
+        window._subotaRadna=jeSubotaRadna(gAJ(did,pg,pm));
+        let prviRadni=1; while(prviRadni<dim(pg,pm)&&isFreeDay(pg,pm,prviRadni)) prviRadni++;
+        window._subotaRadna=false;
+        const dani=(ev0?.rows||[]).filter(r=>Object.values(r.sati||{}).some(v=>parseFloat(v)>0)).map(r=>r.dan);
+        if(!dani.length||Math.min(...dani)>prviRadni){ pravoNa233[did] = false; return; } }
+      // zaposlen nakon početka razdoblja (npr. usred prvog mjeseca) → nema pravo
+      const dj=DB.djelatnici.find(x=>x.id===did), mz=/^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec((dj?.dat||'').trim());
+      if(mz){ const [pg,pm]=periodMjeseci[0]; if(new Date(+mz[3],+mz[2]-1,+mz[1]) > new Date(pg,pm-1,1)){ pravoNa233[did] = false; return; } }
+      const imaIsklj = evs.some(ev=>ISKLJUCENE_KOLONE.some(k=>parseFloat((ev.sums||{})[k])>0));
       pravoNa233[did] = !imaIsklj;
+    });
+  }
+
+  // Mjesečni dodatak 200/100 €: broji DANE odsutnosti (bolovanje, plaćeni/neplaćeni dopust, očinski i sl.) u ovom mjesecu.
+  //  8-satno radno vrijeme: do 5 radnih dana → 200 €, 6–10 → 100 €, više od 10 → 0
+  //  7-satno radno vrijeme (tržnica 7/5, 6 dana tjedno): do 6 radnih dana → 200 €, 7–12 → 100 €, više od 12 → 0
+  const dodMjInfo = {}; // {did:{dani, sati7, iznos, imaEv}}
+  {
+    const djIdsMj = djels.map(d=>d.id);
+    // dodatak se isplaćuje mjesec kasnije: u obračunu za prosinac (01.12.) gleda se rad u studenom
+    const gR = mj===1 ? god-1 : god, mR = mj===1 ? 12 : mj-1;
+    const {data:evMj} = djIdsMj.length ? await SB.from('evidencija').select('djelatnik_id, rows').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',djIdsMj) : {data:[]};
+    const evM = {}; (evMj||[]).forEach(e=>evM[e.djelatnik_id]=e.rows||[]);
+    djels.forEach(d=>{
+      const [ph,pm]=(d.poc||'07:00').split(':').map(Number), [kh,km]=(d.kraj||'15:00').split(':').map(Number);
+      // 7-satno radno vrijeme: jedinica s oznakom (7/…) u nazivu (Odjel tržnica i ribarnica (7/5)) ili djelatnik s rasporedom do 7 sati
+      const sati7 = /\(7\//.test(jN(gAJ(d.id,gR,mR))) || ((kh*60+km)-(ph*60+pm))/60 <= 7;
+      const rows = evM[d.id];
+      if(!rows){ dodMjInfo[d.id]={dani:0,sati7,iznos:0,imaEv:false}; return; }
+      const dani = rows.filter(r=>ISKLJUCENE_KOLONE.some(k=>parseFloat(r.sati?.[k])>0)).length;
+      const [g200,g100] = sati7 ? [6,12] : [5,10];
+      dodMjInfo[d.id] = {dani, sati7, imaEv:true, iznos: dani<=g200 ? 200 : dani<=g100 ? 100 : 0};
     });
   }
 
@@ -3852,7 +3860,7 @@ async function loadStimUnos(){
         <th style="padding:8px;text-align:right;color:var(--text2);font-size:11px">Kumul.prije</th>
         <th style="padding:8px;text-align:center">Stim.%</th>
         <th style="padding:8px;text-align:center">Dod.bol.<br><small style="font-weight:400">(233€ auto)</small></th>
-        <th style="padding:8px;text-align:center">Dod.mj.<br><small style="font-weight:400">(200/100€)</small></th>
+        <th style="padding:8px;text-align:center">Dod.mj.<br><small style="font-weight:400">(200/100€ auto)</small></th>
         <th style="padding:8px;text-align:right;color:#22863a">Neopor.</th>
         <th style="padding:8px;text-align:right;color:#c0392b">Opor.</th>
         <th style="padding:8px;text-align:right;color:#e67e22">Neto bol.</th>
@@ -3869,7 +3877,8 @@ async function loadStimUnos(){
     // Automatski dodaj 233€ ako ima pravo, inače 0
     const autoBol = isDodatakMj && pravoNa233[d.id] === true ? 233 : 0;
     const bolDod = ex ? parseFloat(ex.dodatak_bolovanje)||0 : autoBol;
-    const bolMj  = ex ? parseFloat(ex.dodatak_mjesecni)||0 : 0;
+    const dmi = dodMjInfo[d.id]||{};
+    const bolMj  = ex ? parseFloat(ex.dodatak_mjesecni)||0 : (dmi.iznos||0);
 
     // Izračunaj preview
     const r = calcStim(bod, posto, vrijBoda, kum, bolDod, bolMj);
@@ -3899,6 +3908,7 @@ async function loadStimUnos(){
           style="width:65px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;text-align:center"
           onchange="recalcRow(${d.id},${bod},${kum},${vrijBoda})"
           id="stim-bolmj-${d.id}">
+        <div style="font-size:10px;color:${dmi.imaEv?(dmi.iznos===200?'#22863a':dmi.iznos===100?'var(--amber)':'#c0392b'):'var(--text3)'};margin-top:2px" title="${dmi.sati7?'7':'8'}-satno radno vrijeme · dana odsutnosti (bolovanje, dopusti, očinski i sl.) u prethodnom mjesecu">${dmi.imaEv?`${dmi.dani} d. odsut. · ${dmi.sati7?'7':'8'}h`:'nema evidencije'}</div>
       </td>
       <td style="padding:6px 8px;text-align:right;color:#22863a;font-weight:600" id="stim-neopor-${d.id}">${(r.stimNeopor+r.bolNeopor).toFixed(2)} €</td>
       <td style="padding:6px 8px;text-align:right;color:#c0392b" id="stim-opor-${d.id}">${(r.stimOpor+r.bolOpor+r.dodatakMj).toFixed(2)||'–'} €</td>
@@ -3922,12 +3932,14 @@ async function loadStimUnos(){
   
   // Show info about automatic 233€ check
   const infoEl = document.getElementById('stim-auto-info');
+  const dm=Object.values(dodMjInfo), n200=dm.filter(x=>x.iznos===200).length, n100=dm.filter(x=>x.iznos===100).length, n0=dm.filter(x=>x.imaEv&&x.iznos===0).length, nEv=dm.filter(x=>!x.imaEv).length;
+  const txtMj = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Mjesečni dodatak (za rad u ${['siječnju','veljači','ožujku','travnju','svibnju','lipnju','srpnju','kolovozu','rujnu','listopadu','studenom','prosincu'][(mj+10)%12]}): <strong style="color:#22863a">${n200}× 200 €</strong>, <strong style="color:var(--amber)">${n100}× 100 €</strong>, <strong style="color:#c0392b">${n0} bez</strong>${nEv?`, ${nEv} bez evidencije`:''}`;
   if(infoEl && isDodatakMj){
     const brPrava = Object.values(pravoNa233).filter(v=>v===true).length;
     const brBezPrava = Object.values(pravoNa233).filter(v=>v===false).length;
-    infoEl.innerHTML = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Auto provjera 233€: <strong style="color:#22863a">${brPrava} imaju pravo</strong>, <strong style="color:#c0392b">${brBezPrava} nemaju</strong> (bolovanje/kontinuitet)`;
+    infoEl.innerHTML = ` &nbsp;|&nbsp; <i class="ti ti-robot"></i> Auto provjera 233€: <strong style="color:#22863a">${brPrava} imaju pravo</strong>, <strong style="color:#c0392b">${brBezPrava} nemaju</strong> (bolovanje/kontinuitet)` + txtMj;
   } else if(infoEl){
-    infoEl.innerHTML = '';
+    infoEl.innerHTML = txtMj;
   }
 }
 
