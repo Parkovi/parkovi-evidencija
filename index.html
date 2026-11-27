@@ -283,7 +283,7 @@ select{cursor:pointer}
 .bod-tbl th{font-size:10px;text-transform:uppercase;color:var(--text3);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl td{padding:5px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl tr.bod-cur td{background:var(--blue-lt)}
-.bp-top{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr) 1.3fr;gap:1rem}
+.bp-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
 @media(max-width:900px){.bp-top{grid-template-columns:1fr}}
 .bp-vb,.bp-info{padding:1rem 1.1rem}
 .bp-vb-now{display:flex;align-items:baseline;gap:10px;margin:.2rem 0 .7rem}
@@ -3630,6 +3630,9 @@ async function loadEvidencijaForUnit(jid, god, mj){
 async function saveEvidencijaToSB(did, god, mj, payload){
   if(!isLive()) return true; // local mode = always ok
   const existing = DB.evidencija[`${did}_${god}_${mj}`];
+  // Prazan mjesec (nijedan sat) se ne sprema; postojeći zapis se briše da ne ostane kvačica „unesen”.
+  const prazno = !(parseFloat(payload?.sums?.ukupno)>0);
+  if(prazno && !existing?._dbId){ delete DB.evidencija[`${did}_${god}_${mj}`]; return true; }
   const sbPayload = {
     djelatnik_id: did,
     godina: god,
@@ -3649,6 +3652,14 @@ async function saveEvidencijaToSB(did, god, mj, payload){
     if(result.data) DB.evidencija[`${did}_${god}_${mj}`]._dbId = result.data.id;
   }
   if(result.error){ showToast('Greška snimanja: '+result.error.message,'error'); return false; }
+  if(prazno && existing?._dbId){
+    const r = await SB.rpc('obrisi_praznu_evidenciju',{p_id: existing._dbId});
+    if(r.error){
+      if(r.error.code==='PGRST202'||/function/i.test(r.error.message||'')) return true; // funkcija još nije u bazi – ostaje prazan zapis
+      showToast('Greška brisanja praznog mjeseca: '+r.error.message,'error'); return false;
+    }
+    delete DB.evidencija[`${did}_${god}_${mj}`];
+  }
   return true;
 }
 
@@ -4982,7 +4993,7 @@ async function spremiPrijevozMax(){
   const {error}=await SB.from('postavke_tvrtke').update({prijevoz_max:v}).eq('id',1);
   if(error){showToast('Greška: '+error.message,'error');return;}
   if(window.POSTAVKE_TVRTKE) window.POSTAVKE_TVRTKE.prijevoz_max=v;
-  showToast('✅ Spremljeno','success'); renderPrijevoz();
+  showToast('✅ Najviši mjesečni iznos prijevoza spremljen','success'); renderPrijevoz();
 }
 
 function prPodaciIzvoz(){
