@@ -455,6 +455,10 @@ select{cursor:pointer}
             <div id="bp-loko-form"></div>
             <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Nova cijena vrijedi za obračune koji se pošalju na odobrenje nakon promjene. Već poslani i odobreni ostaju sa svojom cijenom.</div>
           </div>
+          <div class="card bp-vb">
+            <div class="bod-sec-t"><i class="ti ti-gift"></i> Dodaci – iznosi i kriteriji</div>
+            <div id="bp-dod"><span style="color:var(--text3)">Učitavam…</span></div>
+          </div>
           <div class="card bp-info">
             <div class="bod-sec-t"><i class="ti ti-info-circle"></i> Kako se računa</div>
             <ul>
@@ -689,11 +693,11 @@ select{cursor:pointer}
       </div>
 
       <div class="page" id="page-dodaci">
-        <div class="ph"><div><div class="pt">Dodaci</div><div class="ps">Dodatak 233 € (za 4 mjeseca bez odsutnosti) i mjesečni dodatak 200/100 €</div></div></div>
+        <div class="ph"><div><div class="pt">Dodaci</div><div class="ps">Kvartalni dodatak (za 4 mjeseca bez odsutnosti) i mjesečni dodatak · iznosi i kriteriji mijenjaju se u izborniku Bodovi</div></div></div>
         <div class="dod-top">
           <div class="card dod-box">
-            <div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Dodatak 233 € – po razdoblju</div>
-            <div class="fh" style="margin-bottom:.6rem">Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i nije imao ni dan bolovanja, plaćenog/neplaćenog dopusta, očinskog i sl.</div>
+            <div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Kvartalni dodatak – po razdoblju</div>
+            <div class="fh" id="dod-kv-opis" style="margin-bottom:.6rem">Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i nije imao ni dan bolovanja, plaćenog/neplaćenog dopusta, očinskog i sl.</div>
             <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="fg" style="margin:0"><label class="fl">Obračun na dan</label><select id="dod-k-mj" style="width:auto">
                 <option value="4">01.04. (prosinac – ožujak)</option><option value="8">01.08. (travanj – srpanj)</option><option value="12">01.12. (kolovoz – studeni)</option></select></div>
@@ -702,8 +706,8 @@ select{cursor:pointer}
             </div>
           </div>
           <div class="card dod-box">
-            <div class="bod-sec-t"><i class="ti ti-calendar-month"></i> Mjesečni dodatak 200 / 100 €</div>
-            <div class="fh" style="margin-bottom:.6rem">Unosi se 1. u mjesecu za prethodni mjesec. 8 h: do 5 dana odsutnosti 200 €, 6–10 dana 100 €. Tržnica 7/5: do 6 dana 200 €, 7–12 dana 100 €.</div>
+            <div class="bod-sec-t"><i class="ti ti-calendar-month"></i> Mjesečni dodatak</div>
+            <div class="fh" id="dod-mj-opis" style="margin-bottom:.6rem">Unosi se 1. u mjesecu za prethodni mjesec. 8 h: do 5 dana odsutnosti 200 €, 6–10 dana 100 €. Tržnica 7/5: do 6 dana 200 €, 7–12 dana 100 €.</div>
             <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="fg" style="margin:0"><label class="fl">Obračun na dan</label><select id="dod-m-mj" style="width:auto"></select></div>
               <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="dod-m-god" style="width:auto"></select></div>
@@ -945,7 +949,7 @@ select{cursor:pointer}
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
         <div class="fg">
           <label class="fl">Dodatak bolovanje (€)</label>
-          <input type="number" id="stim-bol" value="0" min="0" step="0.01" placeholder="0 ili 233">
+          <input type="number" id="stim-bol" value="0" min="0" step="0.01" placeholder="0">
         </div>
         <div class="fg">
           <label class="fl">Dod. bolovanje mj. (€)</label>
@@ -1143,6 +1147,12 @@ select{cursor:pointer}
   <div class="mhd"><div class="mtt"><i class="ti ti-car"></i><span id="loko-title">Obračun loko-vožnje</span></div><button class="mcl" onclick="closeM('mo-loko')"><i class="ti ti-x"></i></button></div>
   <div id="loko-body"></div>
   <div class="mft" id="loko-foot" style="flex-wrap:wrap"></div>
+</div></div>
+
+<div class="mo" id="mo-dodpravila"><div class="md mdlg" style="max-width:980px;width:95vw">
+  <div class="mhd"><div class="mtt"><i class="ti ti-gift"></i><span>Dodaci – iznosi i kriteriji</span></div><button class="mcl" onclick="closeM('mo-dodpravila')"><i class="ti ti-x"></i></button></div>
+  <div id="dp-body" style="max-height:72vh;overflow-y:auto"></div>
+  <div class="mft"><button class="btn bs" onclick="closeM('mo-dodpravila')">Zatvori</button><button class="btn bp" id="dp-save" onclick="spremiDodPravila()"><i class="ti ti-device-floppy"></i> Spremi pravila</button></div>
 </div></div>
 
 <div class="mo" id="mo-deakt"><div class="md" style="max-width:440px">
@@ -3973,7 +3983,7 @@ function stimTab(tab){
 async function otvoriStimMod(mod){
   const pg=document.getElementById('page-stimulacije');
   pg.querySelector('.pt').textContent = mod==='rekap' ? 'Rekapitulacija dodataka i stimulacija' : 'Stimulacije';
-  pg.querySelector('.ps').textContent = mod==='rekap' ? 'Stimulacije, dodatak 233 € i mjesečni dodatak 200/100 € po djelatniku – pregled, ispis i kumulativ' : 'Unos postotka stimulacije po mjesecu';
+  pg.querySelector('.ps').textContent = mod==='rekap' ? 'Stimulacije, kvartalni i mjesečni dodatak po djelatniku – pregled, ispis i kumulativ' : 'Unos postotka stimulacije po mjesecu';
   const tu=document.getElementById('stim-tab-unos'), tp=document.getElementById('stim-tab-pregled'), tk=document.getElementById('stim-tab-kumulativ');
   if(tu) tu.style.display = mod==='rekap'?'none':'';
   if(tp) tp.style.display = mod==='rekap'?'':'none';
@@ -6073,6 +6083,8 @@ const MJ_LOK=['siječnju','veljači','ožujku','travnju','svibnju','lipnju','srp
 function razdoblje233(god,mj){return ({4:[[god-1,12],[god,1],[god,2],[god,3]],8:[[god,4],[god,5],[god,6],[god,7]],12:[[god,8],[god,9],[god,10],[god,11]]})[mj]||null;}
 // 233 €: obračun u mjesecu mj (4, 8 ili 12) za prethodna 4 mjeseca
 async function izracunaj233(god,mj,djels){
+  if(!window._dodPravila) await ucitajDodPravila();
+  const P=dodPravilaZa(god,mj).kv;
   const per=razdoblje233(god,mj), rez={};
   if(!per) return {per:null,rez};
   const ids=djels.map(d=>d.id); let ev=[];
@@ -6094,13 +6106,21 @@ async function izracunaj233(god,mj,djels){
     if(!dani.length||Math.min(...dani)>prvi){rez[d.id]={iznos:0,razlog:`počeo raditi ${dani.length?Math.min(...dani)+'.'+pm+'.':'kasnije'} (nije cijelo razdoblje)`};return;}
     const mz=/^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec((d.dat||'').trim());
     if(mz&&new Date(+mz[3],+mz[2]-1,+mz[1])>new Date(pg,pm-1,1)){rez[d.id]={iznos:0,razlog:'zaposlen '+d.dat};return;}
-    const ods=[]; evs.sort((a,b)=>(a.godina*12+a.mjesec)-(b.godina*12+b.mjesec)).forEach(e=>ODSUTNOSTI_DODACI.forEach(k=>{const v=parseFloat((e.sums||{})[k]);if(v>0)ods.push(`${NAZIV_ODS[k]} ${v}h (${MJ_NOM[e.mjesec-1].slice(0,3)})`);}));
-    rez[d.id]=ods.length?{iznos:0,razlog:ods.join(', ')}:{iznos:233,razlog:'bez odsutnosti sva 4 mjeseca'};
+    const ods=[]; let daniOds=0;
+    evs.sort((a,b)=>(a.godina*12+a.mjesec)-(b.godina*12+b.mjesec)).forEach(e=>{
+      P.ods.forEach(k=>{const v=parseFloat((e.sums||{})[k]);if(v>0)ods.push(`${dodOdsNaziv(k)} ${v}h (${MJ_NOM[e.mjesec-1].slice(0,3)})`);});
+      daniOds+=(e.rows||[]).filter(r=>P.ods.some(k=>parseFloat(r.sati?.[k])>0)).length;
+    });
+    const dop=+P.dopusteno||0;
+    rez[d.id]=daniOds>dop?{iznos:0,razlog:`${daniOds} ${daniOds===1?'dan':'dana'} odsutnosti${dop?` (dopušteno ${dop})`:''}: `+ods.join(', ')}
+      :{iznos:+P.iznos||0,razlog:daniOds?`${daniOds} ${daniOds===1?'dan':'dana'} odsutnosti (dopušteno ${dop})`:'bez odsutnosti sva 4 mjeseca'};
   });
   return {per,rez};
 }
 // 200/100 €: obračun u mjesecu mj za rad u prethodnom mjesecu
 async function izracunajDodMj(god,mj,djels){
+  if(!window._dodPravila) await ucitajDodPravila();
+  const P=dodPravilaZa(god,mj).mj;
   const gR=mj===1?god-1:god, mR=mj===1?12:mj-1, ids=djels.map(d=>d.id), rez={};
   const {data}=ids.length?await SB.from('evidencija').select('djelatnik_id,rows_data').eq('godina',gR).eq('mjesec',mR).in('djelatnik_id',ids):{data:[]};
   const evM={}; (data||[]).forEach(e=>evM[e.djelatnik_id]=e.rows_data||[]);
@@ -6109,15 +6129,154 @@ async function izracunajDodMj(god,mj,djels){
     const sati7=jeSubotaRadna(gAJ(d.id,gR,mR))||((kh*60+km)-(ph*60+pm))/60<=7;
     const rows=evM[d.id];
     if(!rows){rez[d.id]={iznos:0,dani:0,sati7,razlog:'nema evidencije za '+MJ_NOM[mR-1]};return;}
-    const dani=rows.filter(r=>ODSUTNOSTI_DODACI.some(k=>parseFloat(r.sati?.[k])>0)).length;
-    const [g200,g100]=sati7?[6,12]:[5,10];
-    rez[d.id]={dani,sati7,iznos:dani<=g200?200:dani<=g100?100:0,razlog:`${dani} ${dani===1?'dan':'dana'} odsutnosti · ${sati7?'7 h (6 dana tjedno)':'8 h'}`};
+    const dani=rows.filter(r=>P.ods.some(k=>parseFloat(r.sati?.[k])>0)).length;
+    const razr=(sati7?P.r7:P.r8).find(x=>dani<=x.do);
+    rez[d.id]={dani,sati7,iznos:razr?razr.iznos:0,razlog:`${dani} ${dani===1?'dan':'dana'} odsutnosti · ${sati7?'7 h (6 dana tjedno)':'8 h'}`};
   });
   return {gR,mR,rez};
 }
 
+
+// ── Dodaci: iznosi i kriteriji (tablica dodaci_pravila, s datumom od kada vrijede) ──
+const DOD_PRAVILA_ZADANO={kv:{iznos:233,dopusteno:0,ods:['BO','PD','OC','NS','NI','NZR','NR','VJO']},
+  mj:{ods:['BO','PD','OC','NS','NI','NZR','NR','VJO'],r8:[{do:5,iznos:200},{do:10,iznos:100}],r7:[{do:6,iznos:200},{do:12,iznos:100}]}};
+const DOD_ODS_IZBOR=['BO','PD','OC','NS','NI','NZR','NR','VJO','STR','LCK','GO','SLP','PRDO'];
+window._dodPravila=null;
+async function ucitajDodPravila(){
+  if(!isLive()){ window._dodPravila=window._dodPravila||[]; return window._dodPravila; }
+  const {data,error}=await SB.from('dodaci_pravila').select('*').order('vrijedi_od',{ascending:true});
+  if(!error) window._dodPravila=data||[];
+  return window._dodPravila||[];
+}
+// pravila koja vrijede za obračun na dan 1. u mjesecu mj/god
+function dodPravilaZa(god,mj){
+  const iso=`${god}-${String(mj).padStart(2,'0')}-01`;
+  let best=null; (window._dodPravila||[]).forEach(r=>{ if(r.vrijedi_od<=iso&&(!best||r.vrijedi_od>best.vrijedi_od)) best=r; });
+  const p=JSON.parse(JSON.stringify(best?.pravila||DOD_PRAVILA_ZADANO));
+  p.kv={...DOD_PRAVILA_ZADANO.kv,...(p.kv||{})}; p.mj={...DOD_PRAVILA_ZADANO.mj,...(p.mj||{})};
+  ['r8','r7'].forEach(k=>{p.mj[k]=(p.mj[k]||[]).filter(x=>x&&x.do!=null&&x.do!==''&&x.iznos!=null).map(x=>({do:+x.do,iznos:+x.iznos})).sort((a,b)=>a.do-b.do);});
+  return p;
+}
+function dodRazrediTxt(r){ let od=0; return r.map(x=>{const t=`${od===0?'do '+x.do:od+'–'+x.do} dana ${fmtEur0(x.iznos)} €`; od=x.do+1; return t;}).join(', ')||'nema'; }
+function fmtEur0(v){return (+v||0).toLocaleString('hr-HR',{minimumFractionDigits:Number.isInteger(+v)?0:2,maximumFractionDigits:2});}
+const DOD_ODS_NAZIV={BO:'bolovanje',PD:'plaćeni dopust',OC:'očinski dopust',NS:'neplaćeni dopust (skrb)',NI:'neplaćeni dopust (izbori)',NZR:'nenazočnost na zahtjev radnika',NR:'nenazočnost po rasporedu',VJO:'vojna obveza',STR:'štrajk',LCK:'isključenje s rada',GO:'godišnji odmor',SLP:'službeni put',PRDO:'porodiljni dopust'};
+function dodOdsNaziv(k){return DOD_ODS_NAZIV[k]||(DB.vrste.find(v=>v.code===k)?.name||k);}
+function dodOdsTxt(ods){return ods.map(dodOdsNaziv).join(', ');}
+function dodPravilaSazetak(p){
+  return {kv:`${fmtEur0(p.kv.iznos)} € za razdoblje od 4 mjeseca${p.kv.dopusteno>0?`, dopušteno do ${p.kv.dopusteno} dana odsutnosti`:' bez ijednog dana odsutnosti'}`,
+          m8:dodRazrediTxt(p.mj.r8), m7:dodRazrediTxt(p.mj.r7)};
+}
+
+// kartica na stranici Bodovi
+async function rDodPravilaKartica(){
+  const el=document.getElementById('bp-dod'); if(!el) return;
+  await ucitajDodPravila();
+  const t=new Date(), p=dodPravilaZa(t.getFullYear(),t.getMonth()+1), s=dodPravilaSazetak(p);
+  const zad=(window._dodPravila||[]).filter(r=>r.vrijedi_od>'2000-01-01').slice(-1)[0];
+  const buduca=(window._dodPravila||[]).filter(r=>r.vrijedi_od>`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`);
+  el.innerHTML=`<div style="font-size:12.5px;line-height:1.55">
+      <div><b>Kvartalni:</b> ${s.kv}</div>
+      <div><b>Mjesečni (8 h):</b> ${s.m8}</div>
+      <div><b>Mjesečni (tržnica 7/5):</b> ${s.m7}</div>
+      <div style="color:var(--text3);font-size:11.5px;margin-top:3px">Odsutnosti koje se broje: ${dodOdsTxt(p.mj.ods)}</div>
+      ${zad?`<div style="color:var(--text3);font-size:11.5px">Zadnja promjena: vrijedi od ${fmtDatHr(zad.vrijedi_od)} · ${hEsc(zad.upisao_ime||'')}</div>`:''}
+      ${buduca.length?`<div style="color:#b7791f;font-size:11.5px">Najava: nova pravila od ${buduca.map(r=>fmtDatHr(r.vrijedi_od)).join(', ')}</div>`:''}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">${smijeObracun()?`<button class="btn bp" onclick="otvoriDodPravila()"><i class="ti ti-pencil"></i> Promijeni</button>`:''}
+    <button class="btn bs" onclick="otvoriDodPravila(true)"><i class="ti ti-history"></i> Povijest</button></div>`;
+}
+
+function otvoriDodPravila(samoPovijest){
+  const t=new Date(); const nm=new Date(t.getFullYear(),t.getMonth()+1,1);
+  const p=dodPravilaZa(nm.getFullYear(),nm.getMonth()+1);
+  window._dpEdit=JSON.parse(JSON.stringify(p));
+  const ured=smijeObracun()&&!samoPovijest;
+  const ods=(sel,id)=>`<div style="display:flex;flex-wrap:wrap;gap:4px 12px">${DOD_ODS_IZBOR.filter(k=>DB.vrste.some(v=>v.code===k)).map(k=>`<label style="font-size:12px;display:inline-flex;gap:4px;align-items:center;white-space:nowrap"><input type="checkbox" class="${id}" value="${k}" ${sel.includes(k)?'checked':''} ${ured?'':'disabled'}> ${hEsc(dodOdsNaziv(k))}</label>`).join('')}</div>`;
+  const pov=(window._dodPravila||[]).slice().reverse();
+  document.getElementById('dp-body').innerHTML=`
+   ${ured?`<div class="fg" style="max-width:320px"><label class="fl">Vrijedi od (obračun na dan)</label><div style="display:flex;gap:6px">
+      <select id="dp-mj">${MJ_NOM.map((m,i)=>`<option value="${i+1}"${i===nm.getMonth()?' selected':''}>01.${String(i+1).padStart(2,'0')}.</option>`).join('')}</select>
+      <select id="dp-god">${YEARS.map(y=>`<option value="${y}"${y===nm.getFullYear()?' selected':''}>${y}</option>`).join('')}</select></div>
+      <div class="fh">Nova pravila vrijede za obračune od tog dana. Već spremljeni obračuni se ne mijenjaju.</div></div>
+    <div class="card" style="padding:.8rem;margin-bottom:.8rem"><div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Kvartalni dodatak (01.04., 01.08., 01.12.)</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="fg" style="margin:0"><label class="fl">Iznos (€)</label><input type="number" step="0.01" min="0" id="dp-kv-iznos" value="${p.kv.iznos}" style="width:110px"></div>
+        <div class="fg" style="margin:0"><label class="fl">Dopušteno dana odsutnosti u 4 mjeseca</label><input type="number" step="1" min="0" id="dp-kv-dop" value="${p.kv.dopusteno||0}" style="width:110px"></div>
+      </div>
+      <div class="fl" style="margin-top:8px">Odsutnosti koje se broje</div>${ods(p.kv.ods,'dp-kv-ods')}</div>
+    <div class="card" style="padding:.8rem"><div class="bod-sec-t"><i class="ti ti-calendar-month"></i> Mjesečni dodatak (1. u mjesecu za prethodni mjesec)</div>
+      <div class="fl">Odsutnosti koje se broje (radni dani)</div>${ods(p.mj.ods,'dp-mj-ods')}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px">
+        <div><div class="fl">8-satno radno vrijeme</div><div id="dp-r8"></div></div>
+        <div><div class="fl">Tržnica 7/5 (7 h, 6 dana tjedno)</div><div id="dp-r7"></div></div>
+      </div>
+      <div class="fh">Razred = „do koliko dana odsutnosti” → iznos. Tko ima više dana od zadnjeg razreda ne dobiva ništa. Razrede možete dodavati i brisati.</div></div>
+    <div class="fg" style="margin-top:8px"><label class="fl">Napomena (npr. odluka, broj)</label><input id="dp-nap" placeholder="neobavezno"></div>`:''}
+   <div style="margin-top:10px"><div class="bod-sec-t"><i class="ti ti-history"></i> Povijest promjena</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg3)"><th style="padding:5px;text-align:left">Vrijedi od</th><th style="padding:5px;text-align:left">Kvartalni</th><th style="padding:5px;text-align:left">Mjesečni 8 h</th><th style="padding:5px;text-align:left">Tržnica 7/5</th><th style="padding:5px;text-align:left">Upisao</th><th></th></tr></thead>
+    <tbody>${pov.map(r=>{const pr=dodPravilaZa(+r.vrijedi_od.slice(0,4),+r.vrijedi_od.slice(5,7)); const s=dodPravilaSazetak(pr); return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px;white-space:nowrap">${r.vrijedi_od==='2000-01-01'?'od početka':fmtDatHr(r.vrijedi_od)}</td><td style="padding:5px">${s.kv}</td><td style="padding:5px">${s.m8}</td><td style="padding:5px">${s.m7}</td>
+      <td style="padding:5px;white-space:nowrap">${hEsc(r.upisao_ime||'')}${r.napomena?`<div style="color:var(--text3)">${hEsc(r.napomena)}</div>`:''}</td>
+      <td>${ured&&r.vrijedi_od!=='2000-01-01'?`<button class="btn bxs bd" title="Obriši ovu promjenu" onclick="obrisiDodPravila(${r.id})"><i class="ti ti-trash"></i></button>`:''}</td></tr>`;}).join('')}</tbody></table></div>`;
+  document.getElementById('dp-save').style.display=ured?'':'none';
+  if(ured){ dpRazredi('r8'); dpRazredi('r7'); }
+  openM('mo-dodpravila');
+}
+function dpCitajRazrede(k){
+  return [...document.querySelectorAll(`#dp-${k} .dp-raz`)].map(r=>({do:r.querySelector('.dp-do').value,iznos:r.querySelector('.dp-iz').value}));
+}
+function dpRazredi(k,dodaj,ukloni){
+  let R=document.getElementById(`dp-${k}`).children.length?dpCitajRazrede(k):window._dpEdit.mj[k].map(x=>({...x}));
+  if(dodaj){ const z=R[R.length-1]; R.push({do:z?(+z.do||0)+5:5,iznos:''}); }
+  if(ukloni!=null) R.splice(ukloni,1);
+  let od=0;
+  document.getElementById(`dp-${k}`).innerHTML=R.map((x,i)=>{const lbl=i===0?'0 –':`${od} –`; od=(+x.do||0)+1; return `<div class="dp-raz" style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+      <span style="font-size:12px;width:34px;text-align:right">${lbl}</span><input type="number" class="dp-do" min="0" step="1" value="${x.do}" style="width:64px" onchange="dpRazredi('${k}')"><span style="font-size:12px">dana →</span>
+      <input type="number" class="dp-iz" min="0" step="0.01" value="${x.iznos}" style="width:84px"><span style="font-size:12px">€</span>
+      <button class="btn bxs bd" title="Ukloni razred" onclick="dpRazredi('${k}',false,${i})"><i class="ti ti-x"></i></button></div>`;}).join('')
+    +`<button class="btn bxs bs" onclick="dpRazredi('${k}',true)"><i class="ti ti-plus"></i> Dodaj razred</button>`;
+}
+async function spremiDodPravila(){
+  const num=v=>parseFloat(String(v).replace(',','.'));
+  const ods=c=>[...document.querySelectorAll('.'+c+':checked')].map(x=>x.value);
+  const raz=k=>dpCitajRazrede(k).map(x=>({do:parseInt(x.do),iznos:num(x.iznos)}));
+  const P={kv:{iznos:num(document.getElementById('dp-kv-iznos').value),dopusteno:parseInt(document.getElementById('dp-kv-dop').value)||0,ods:ods('dp-kv-ods')},
+           mj:{ods:ods('dp-mj-ods'),r8:raz('r8'),r7:raz('r7')}};
+  if(!(P.kv.iznos>=0)){showToast('Upišite iznos kvartalnog dodatka','error');return;}
+  for(const k of ['r8','r7']){
+    const r=P.mj[k];
+    if(r.some(x=>isNaN(x.do)||x.do<0||isNaN(x.iznos)||x.iznos<0)){showToast('Provjerite razrede mjesečnog dodatka (dani i iznos)','error');return;}
+    for(let i=1;i<r.length;i++) if(r[i].do<=r[i-1].do){showToast('Razredi moraju ići od manjeg prema većem broju dana','error');return;}
+  }
+  if(!P.kv.ods.length||!P.mj.ods.length){showToast('Odaberite barem jednu vrstu odsutnosti','error');return;}
+  const god=+document.getElementById('dp-god').value, mj=+document.getElementById('dp-mj').value;
+  const vod=`${god}-${String(mj).padStart(2,'0')}-01`;
+  const s=dodPravilaSazetak(P);
+  if(!confirm(`Spremiti nova pravila dodataka koja vrijede od 01.${String(mj).padStart(2,'0')}.${god}.?\n\nKvartalni: ${s.kv}\nMjesečni 8 h: ${s.m8}\nTržnica 7/5: ${s.m7}`)) return;
+  const {error}=await SB.from('dodaci_pravila').upsert({vrijedi_od:vod,pravila:P,napomena:document.getElementById('dp-nap').value.trim()||null},{onConflict:'vrijedi_od'});
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  addAuditLog({userName:CU?.name,action:'dodaci_pravila',target:`vrijedi od ${fmtDatHr(vod)}`,jedinica:'',details:`Kvartalni: ${s.kv} | 8 h: ${s.m8} | 7/5: ${s.m7}`});
+  showToast('✅ Pravila dodataka spremljena','success');
+  closeM('mo-dodpravila'); await rDodPravilaKartica(); osvjeziDodaciOpis();
+}
+async function obrisiDodPravila(id){
+  const r=(window._dodPravila||[]).find(x=>x.id===id); if(!r) return;
+  if(!confirm(`Obrisati pravila koja vrijede od ${fmtDatHr(r.vrijedi_od)}? Tada vrijede prethodna pravila.`)) return;
+  const {error}=await SB.from('dodaci_pravila').delete().eq('id',id);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  addAuditLog({userName:CU?.name,action:'dodaci_pravila_brisanje',target:`vrijedi od ${fmtDatHr(r.vrijedi_od)}`,jedinica:'',details:''});
+  await ucitajDodPravila(); otvoriDodPravila(); rDodPravilaKartica(); osvjeziDodaciOpis();
+}
+// opisi na stranici Dodaci prema pravilima koja trenutno vrijede
+function osvjeziDodaciOpis(){
+  const t=new Date(), p=dodPravilaZa(t.getFullYear(),t.getMonth()+1), s=dodPravilaSazetak(p);
+  const a=document.getElementById('dod-kv-opis'); if(a) a.textContent=`Iznos ${fmtEur0(p.kv.iznos)} €. Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i ${p.kv.dopusteno>0?`nema više od ${p.kv.dopusteno} dana odsutnosti`:'nije imao ni dan odsutnosti'} (${dodOdsTxt(p.kv.ods)}).`;
+  const b=document.getElementById('dod-mj-opis'); if(b) b.textContent=`Unosi se 1. u mjesecu za prethodni mjesec. 8 h: ${s.m8}. Tržnica 7/5: ${s.m7}. Broje se radni dani: ${dodOdsTxt(p.mj.ods)}.`;
+}
+
 // ── Stranica Dodaci ──────────────────────────────────────────
 function setupDodaci(){
+  ucitajDodPravila().then(osvjeziDodaciOpis);
   const t=new Date(), gs=YEARS.map(y=>`<option value="${y}">${y}</option>`).join('');
   ['dod-k-god','dod-m-god'].forEach(id=>{const e=document.getElementById(id); if(!e.options.length){e.innerHTML=gs; e.value=String(t.getFullYear());}});
   const mm=document.getElementById('dod-m-mj');
@@ -6135,7 +6294,7 @@ async function obracunajDodatak(vrsta){
   const {data:post}=await SB.from('stimulacije_obracun').select('djelatnik_id,dodatak_bolovanje,dodatak_mjesecni').eq('godina',god).eq('mjesec',mj);
   const pm={}; (post||[]).forEach(x=>pm[x.djelatnik_id]=parseFloat(vrsta==='233'?x.dodatak_bolovanje:x.dodatak_mjesecni)||0);
   const iznosi={}; djels.forEach(d=>iznosi[d.id]=(r.rez[d.id]||{iznos:0}).iznos);
-  const naslov=vrsta==='233'?`Dodatak 233 € – obračun 01.${String(mj).padStart(2,'0')}.${god}. (${r.per.map(([g,m])=>MJ_NOM[m-1]+' '+g).join(', ')})`
+  const naslov=vrsta==='233'?`Kvartalni dodatak – obračun 01.${String(mj).padStart(2,'0')}.${god}. (${r.per.map(([g,m])=>MJ_NOM[m-1]+' '+g).join(', ')})`
     :`Mjesečni dodatak – obračun 01.${String(mj).padStart(2,'0')}.${god}. za rad u ${MJ_LOK[r.mR-1]} ${r.gR}.`;
   const stariF=window._dodRez&&window._dodRez.vrsta===vrsta?{st:document.getElementById('dod-f-st')?.value,j:document.getElementById('dod-f-jed')?.value,q:document.getElementById('dod-f-q')?.value}:null;
   window._dodRez={vrsta,god,mj,gR,mR,djels,rez:r.rez,iznosi,ranije:pm,naslov};
@@ -6232,7 +6391,7 @@ async function spremiDodatke(){
   const R=window._dodRez; if(!R) return;
   const polje=R.vrsta==='233'?'dodatak_bolovanje':'dodatak_mjesecni', drugo=R.vrsta==='233'?'dodatak_mjesecni':'dodatak_bolovanje';
   const iznosi={...R.iznosi};
-  if(!confirm(`Spremiti ${R.vrsta==='233'?'dodatak 233 €':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
+  if(!confirm(`Spremiti ${R.vrsta==='233'?'kvartalni dodatak':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
   const ids=R.djels.map(d=>d.id);
   const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',R.god).in('djelatnik_id',ids);
   if(e1){showToast('Greška: '+e1.message,'error');return;}
@@ -6332,7 +6491,7 @@ function vbZa(rows,god,mj){let best=null;const t=god*12+mj;(rows||[]).forEach(r=
 const MJ_NOM=['siječanj','veljača','ožujak','travanj','svibanj','lipanj','srpanj','kolovoz','rujan','listopad','studeni','prosinac'];
 async function setupBodoviStr(){
   await ucitajBodoveDjelatnika();
-  rLokoCijena();
+  rLokoCijena(); rDodPravilaKartica();
   const vj=vJ(), sel=document.getElementById('bp-jed'), cur=sel.value;
   sel.innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
   if(cur) sel.value=cur;
