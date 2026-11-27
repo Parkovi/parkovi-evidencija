@@ -1614,7 +1614,14 @@ function dN(g,m,d){return DN[new Date(g,m-1,d).getDay()];}
 window._subotaRadna=false;
 function jeSubotaRadna(jid){return /\(7\//.test(jN(jid));}
 // Tržnica (7/5): pon 07–12 (5 h); uto–sub 06–13 (7 h) ili dvokratno 06–08 i 12–17 (7 h); ned slobodno
+function rvSati(a,b){if(!a||!b)return 0;const[ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);return Math.max(0,(bh*60+bm)-(ah*60+am))/60;}
 function trzDan(g,m,d,rr){
+  if(rr==='vlastito'){
+    const v=window._rvVlastito||{};
+    if(v.pon&&new Date(g,m-1,d).getDay()===1) return {poc:'07:00',kraj:'12:00',sati:5,dvo:false};
+    const dvo=!!(v.p2&&v.k2);
+    return {poc:v.p1||'06:00',kraj:v.k1||'13:00',poc2:dvo?v.p2:'',kraj2:dvo?v.k2:'',sati:Math.round((rvSati(v.p1,v.k1)+(dvo?rvSati(v.p2,v.k2):0))*10)/10,dvo};
+  }
   if(new Date(g,m-1,d).getDay()===1) return {poc:'07:00',kraj:'12:00',sati:5,dvo:false};
   return rr==='dvo'?{poc:'06:00',kraj:'08:00',poc2:'12:00',kraj2:'17:00',sati:7,dvo:true}:{poc:'06:00',kraj:'13:00',sati:7,dvo:false};
 }
@@ -1673,7 +1680,8 @@ async function onUJ(){
   const jid=parseInt(document.getElementById("uj").value)||0;
   const god=parseInt(document.getElementById("ug").value)||2026;
   const mj=parseInt(document.getElementById("um").value)||1;
-  if(isLive()) await loadEvidencijaForUnit(jid,god,mj);
+  // učitaj i prošli mjesec – iz njega se predlaže radno vrijeme djelatnika
+  if(isLive()) await Promise.all([loadEvidencijaForUnit(jid,god,mj),loadEvidencijaForUnit(jid,mj===1?god-1:god,mj===1?12:mj-1)]);
   const djels=DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===jid);
   djels.sort((a,b)=>a.prez.localeCompare(b.prez)||a.ime.localeCompare(b.ime));
   document.getElementById("ud").innerHTML=djels.map((d,i)=>`<option value="${d.id}">${unosOznaka(d.id,god,mj)} ${i+1}. ${dF(d)}</option>`).join("");
@@ -1689,14 +1697,31 @@ function loadUF(){
   const d=DB.djelatnici.find(x=>x.id===did);
   window._subotaRadna=jeSubotaRadna(gAJ(did,god,mj));
   const ev=DB.evidencija[did+"_"+god+"_"+mj]||{};
-  const pd=ev.poc||d?.poc||"07:00",kd=ev.kraj||d?.kraj||"15:00";
+  const evPrev=DB.evidencija[did+"_"+(mj===1?god-1:god)+"_"+(mj===1?12:mj-1)]||{};
+  const imaEv=!!(ev.rows&&ev.rows.length);
+  // radno vrijeme: ovaj mjesec, inače prošli mjesec (zapamćeno po djelatniku), inače iz podataka djelatnika
+  const pd=(imaEv&&ev.poc)||evPrev.poc||d?.poc||"07:00",kd=(imaEv&&ev.kraj)||evPrev.kraj||d?.kraj||"15:00";
   const days=dim(god,mj);
   const trz=window._subotaRadna;
   // raspored za tržnicu: iz ovog mjeseca, inače iz prethodnog mjeseca, inače jednokratno
   let rr='jedno';
-  if(trz){ const prev=DB.evidencija[did+"_"+(mj===1?god-1:god)+"_"+(mj===1?12:mj-1)];
-    const src=(ev.rows&&ev.rows.length)?ev:prev; if(src&&(src.rows||[]).some(r=>r.dvo||r.poc2)) rr='dvo';
-    const ov=(window._rrIzbor||{})[did+"_"+god+"_"+mj]; if(ov) rr=ov; }
+  if(trz){
+    const src=imaEv?ev:evPrev, rows=(src.rows||[]);
+    const sg=imaEv?god:(mj===1?god-1:god), sm=imaEv?mj:(mj===1?12:mj-1);
+    const jePon=r=>new Date(sg,sm-1,r.dan).getDay()===1;
+    const radni=rows.filter(r=>r.poc&&!jePon(r));
+    const dv=radni.filter(r=>r.poc2&&r.kraj2);
+    let v={p1:pd,k1:kd,p2:'',k2:'',pon:true};
+    if(dv.length){ const t=dv[0]; v={p1:t.poc,k1:t.kraj,p2:t.poc2,k2:t.kraj2,pon:true};
+      rr=(t.poc==='06:00'&&t.kraj==='08:00'&&t.poc2==='12:00'&&t.kraj2==='17:00')?'dvo':'vlastito'; }
+    else if(radni.length){ const t=radni[0]; v={p1:t.poc,k1:t.kraj,p2:'',k2:'',pon:true};
+      if(!(t.poc==='06:00'&&t.kraj==='13:00')) rr='vlastito'; }
+    const mon=rows.find(r=>r.poc&&r.poc!=='07:00'&&jePon(r));
+    if(mon) v.pon=false;
+    const ov=(window._rrIzbor||{})[did+"_"+god+"_"+mj]; if(ov) rr=ov;
+    const ovV=(window._rvIzbor||{})[did+"_"+god+"_"+mj]; if(ovV) v=ovV;
+    window._rvVlastito=v; window._rvKey=did+"_"+god+"_"+mj;
+  }
   let h=`<div class="card"><div class="ch">
     <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <button class="btn bxs bs" onclick="unosPomak(-1)" title="Prethodni djelatnik" ${unosIndeks()<=0?'disabled':''}><i class="ti ti-chevron-left"></i></button>
@@ -1706,14 +1731,20 @@ function loadUF(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       ${trz?`<span style="font-size:11px;color:var(--text2)">Raspored:</span>
-      <select id="rr" style="width:auto" onchange="promijeniRaspored(this.value)" title="Ponedjeljak je uvijek 07–12 (5 h), nedjelja slobodna">
+      <select id="rr" style="width:auto" onchange="promijeniRaspored(this.value)" title="Nedjelja je slobodna">
         <option value="jedno"${rr==='jedno'?' selected':''}>Jednokratno 06–13 (pon 07–12)</option>
-        <option value="dvo"${rr==='dvo'?' selected':''}>Dvokratno 06–08 i 12–17 (pon 07–12)</option></select>
-      <input type="hidden" id="p0" value="${pd}"><input type="hidden" id="k0" value="${kd}">`:`<span style="font-size:11px;color:var(--text2)">Radno vrij.:</span>
-      <input type="time" id="p0" value="${pd}" style="width:78px" title="Vrijeme koje Auto-popuni upisuje">
-      <span style="font-size:11px">-</span>
-      <input type="time" id="k0" value="${kd}" style="width:78px" title="Vrijeme koje Auto-popuni upisuje">`}
-      <button class="btn bxs bs az" onclick="aFillGumb()" title="Upisuje sate za sve radne dane u mjesecu i sprema ih"><i class="ti ti-wand"></i> Auto-popuni</button>
+        <option value="dvo"${rr==='dvo'?' selected':''}>Dvokratno 06–08 i 12–17 (pon 07–12)</option>
+        <option value="vlastito"${rr==='vlastito'?' selected':''}>Drugo radno vrijeme…</option></select>
+      ${rr==='vlastito'?`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--bg3);padding:3px 6px;border-radius:6px">
+        <input type="time" id="rv-p1" value="${window._rvVlastito.p1||''}" style="width:76px" onchange="rvPromjena()" title="Početak">–<input type="time" id="rv-k1" value="${window._rvVlastito.k1||''}" style="width:76px" onchange="rvPromjena()" title="Kraj">
+        <span style="font-size:11px;color:var(--text2)">i</span>
+        <input type="time" id="rv-p2" value="${window._rvVlastito.p2||''}" style="width:76px" onchange="rvPromjena()" title="2. dio (samo za dvokratni rad)">–<input type="time" id="rv-k2" value="${window._rvVlastito.k2||''}" style="width:76px" onchange="rvPromjena()" title="2. dio (samo za dvokratni rad)">
+        <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;margin-left:4px;white-space:nowrap" title="Ponedjeljkom 07–12 (5 h)"><input type="checkbox" id="rv-pon" ${window._rvVlastito.pon?'checked':''} onchange="rvPromjena()"> pon 07–12</label></span>`:''}
+      <input type="hidden" id="p0" value="${rr==='vlastito'?(window._rvVlastito.p1||pd):pd}"><input type="hidden" id="k0" value="${rr==='vlastito'?(window._rvVlastito.k1||kd):kd}">`:`<span style="font-size:11px;color:var(--text2)">Radno vrijeme:</span>
+      <input type="time" id="p0" value="${pd}" style="width:78px" title="Radno vrijeme djelatnika – upisuje se gumbom Postavi">
+      <span style="font-size:11px">–</span>
+      <input type="time" id="k0" value="${kd}" style="width:78px" title="Radno vrijeme djelatnika – upisuje se gumbom Postavi">`}
+      <button class="btn bxs bp az" onclick="aFillGumb()" title="Upisuje odabrano radno vrijeme u sve radne dane ovog mjeseca i sprema"><i class="ti ti-wand"></i> Postavi za mjesec</button>
       <span id="as-status" style="font-size:11.5px;color:var(--text3);min-width:150px"><i class="ti ti-cloud"></i> Sprema se automatski</span>
     </div></div>
   <div id="uai"></div>
@@ -1727,8 +1758,8 @@ function loadUF(){
     const row=(ev.rows||[]).find(r=>r.dan===dan)||{};
     h+=`<tr class="${iswk?"wk":""}" data-dan="${dan}">
       <td class="sc">${dan}. <span style="color:var(--text3)">${dn}</span></td>
-      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
-      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
+      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
+      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
       ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})"></td>`).join("")}
     </tr>`;
   }
@@ -1757,11 +1788,25 @@ function promijeniRaspored(v){
   (window._rrIzbor||={})[did+"_"+god+"_"+mj]=v;
   loadUF();   // samo promjena prikaza; sati se upisuju tek na gumb Auto-popuni
 }
+function rvPromjena(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const v={p1:g('rv-p1'),k1:g('rv-k1'),p2:g('rv-p2'),k2:g('rv-k2'),pon:!!document.getElementById('rv-pon')?.checked};
+  if((v.p2&&!v.k2)||(!v.p2&&v.k2)) { window._rvVlastito=v; return; }   // čeka i drugi dio
+  const imaloDvo=!!document.querySelector('#uw input[id^="pb"]');
+  window._rvVlastito=v; (window._rvIzbor||={})[window._rvKey]=v;
+  { const a=document.getElementById('p0'),b=document.getElementById('k0'); if(a&&v.p1)a.value=v.p1; if(b&&v.k1)b.value=v.k1; }
+  if(imaloDvo!==!!v.p2) loadUF();   // pokaži/sakrij drugi par vremena po danima
+}
 function aFillGumb(){
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
   const d=DB.djelatnici.find(x=>x.id===did);
   const ima=parseFloat(DB.evidencija[did+"_"+god+"_"+mj]?.sums?.ukupno)>0;
-  if(!confirm(`Auto-popuni će upisati sate za SVE radne dane u mjesecu ${MJ_HR[mj-1].toLowerCase()} ${god}. za ${d?dF(d):'djelatnika'} i odmah ih spremiti.${ima?'\n\nPOZOR: već upisani sati u tim danima bit će zamijenjeni.':''}\n\nNastaviti?`)) return;
+  if(document.getElementById('rr')?.value==='vlastito'){
+    const v=window._rvVlastito||{};
+    if(!v.p1||!v.k1||rvSati(v.p1,v.k1)<=0){showToast('Upišite početak i kraj radnog vremena','error');return;}
+    if((v.p2&&!v.k2)||(!v.p2&&v.k2)||(v.p2&&rvSati(v.p2,v.k2)<=0)){showToast('Upišite oba vremena drugog dijela ili ih ostavite prazna','error');return;}
+  }
+  if(!confirm(`Postavi će upisati odabrano radno vrijeme u SVE radne dane u mjesecu ${MJ_HR[mj-1].toLowerCase()} ${god}. za ${d?dF(d):'djelatnika'} i odmah ih spremiti.${ima?'\n\nPOZOR: već upisani sati u tim danima bit će zamijenjeni.':''}\n\nNastaviti?`)) return;
   aFill();
 }
 function aFill(){
