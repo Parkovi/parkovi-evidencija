@@ -372,6 +372,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('bolovanje')" id="nav-bolovanje"><i class="ti ti-stethoscope"></i> Pretraga bolovanja</div>
         <div class="ni" onclick="sP('stimulacije')" id="nav-stimulacije"><i class="ti ti-coin-euro"></i> Stimulacije</div>
         <div class="ni" onclick="sP('dodaci')" id="nav-dodaci" style="display:none"><i class="ti ti-gift"></i> Dodaci</div>
+        <div class="ni" onclick="sP('prijevoz')" id="nav-prijevoz" style="display:none"><i class="ti ti-bus"></i> Prijevoz</div>
         <div class="ni" onclick="sP('rekapitulacija')" id="nav-rekapitulacija" style="display:none"><i class="ti ti-report-money"></i> Rekapitulacija dodataka i stimulacija</div>
         <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
         <div class="ni" onclick="sP('loko')" id="nav-loko" style="display:none"><i class="ti ti-car"></i> Loko vožnja <span id="loko-bdg" class="bdg brd" style="display:none;margin-left:auto;padding:0 6px"></span></div>
@@ -711,6 +712,26 @@ select{cursor:pointer}
           </div>
         </div>
         <div class="card" style="margin-top:1rem"><div id="dod-rez"><div class="empty"><i class="ti ti-gift"></i><p>Odaberite razdoblje i kliknite „Obračunaj”.</p></div></div></div>
+      </div>
+
+      <div class="page" id="page-prijevoz">
+        <div class="ph">
+          <div><div class="pt">Prijevoz</div><div class="ps">Dnevni iznos za prijevoz po djelatniku · broje se dani rada iz evidencije (radni dani, subote, nedjelje i blagdani)</div></div>
+          <div style="display:flex;gap:8px"><button class="btn bs" onclick="ispisPrijevoz()"><i class="ti ti-printer"></i> Ispis</button><button class="btn bs" onclick="excelPrijevoz()"><i class="ti ti-file-spreadsheet"></i> Excel</button></div>
+        </div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="margin:0;min-width:130px"><label class="fl">Mjesec</label><select id="pr-mj" onchange="ucitajPrijevoz()"></select></div>
+            <div class="fg" style="margin:0;min-width:90px"><label class="fl">Godina</label><select id="pr-god" onchange="ucitajPrijevoz()"></select></div>
+            <div class="fg" style="margin:0;min-width:200px"><label class="fl">Jedinica</label><select id="pr-jed" onchange="renderPrijevoz()"></select></div>
+            <div class="fg" style="margin:0;min-width:170px"><label class="fl">Prikaži</label><select id="pr-fil" onchange="renderPrijevoz()">
+              <option value="">Sve djelatnike</option><option value="isp">Samo s iznosom za isplatu</option><option value="s">S upisanim dnevnim iznosom</option><option value="bez">Bez dnevnog iznosa</option><option value="dvo">Dvokratni rad</option><option value="max">Ograničeni na najviši iznos</option></select></div>
+            <div class="fg" style="margin:0;min-width:180px"><label class="fl">Traži</label><input id="pr-trazi" placeholder="ime, šifra, mjesto" oninput="renderPrijevoz()"></div>
+            <div class="fg" style="margin:0 0 0 auto"><label class="fl">Najviše mjesečno (€)</label><div style="display:flex;gap:6px"><input type="number" step="0.01" min="0" id="pr-max" style="width:100px" oninput="renderPrijevoz()"><button class="btn bs" id="pr-max-btn" onclick="spremiPrijevozMax()" title="Spremi za cijelu tvrtku (0 = bez ograničenja)"><i class="ti ti-device-floppy"></i></button></div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:8px">Iznos = dani rada × dnevni iznos × broj karata (dvokratni rad = 2 karte). Dan rada je dan s upisanim radnim, noćnim, prekovremenim, nedjeljnim/blagdanskim ili terenskim satima ili zastojem; godišnji, bolovanje, službeni put i slobodni dani se ne broje. Promjena dnevnog iznosa sprema se odmah.</div>
+        </div>
+        <div class="card"><div id="pr-tab"><div class="empty"><i class="ti ti-bus"></i><p>Učitavam...</p></div></div></div>
       </div>
 
       <div class="page" id="page-loko">
@@ -1472,7 +1493,7 @@ let CU=null,eJ=null,eDj=null,eVr=null,eUs=null;
 function getHRHolidays(god){
   // Fixed holidays
   const fixed=[
-    [1,1],[1,6],[5,1],[6,22],[6,25],[8,5],[8,15],[10,8],[11,1],[11,18],[12,25],[12,26]
+    [1,1],[1,6],[5,1],[5,30],[6,22],[8,5],[8,15],[11,1],[11,18],[12,25],[12,26]  // Zakon o blagdanima (NN 110/19), od 2020.
   ];
   const holidays=new Set();
   fixed.forEach(([m,d])=>holidays.add(`${god}-${m}-${d}`));
@@ -1552,11 +1573,12 @@ function sP(n){
   if(n==='uvoz'&&CU?.role!=='admin') n='dashboard';
   if(n==='obracun'&&!vidiObracun()) n='dashboard';
   if(n==='loko'&&!lokoVidi()) n='dashboard';
+  if(n==='prijevoz'&&!prijevozVidi()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+(n==='rekapitulacija'?'stimulacije':n))?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,loko:setupLoko,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,loko:setupLoko,prijevoz:setupPrijevoz,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -4823,6 +4845,177 @@ function excelLoko(){
   XLSX.writeFile(wb,`Loko_voznja_${god}${mj?'_'+String(mj).padStart(2,'0'):''}.xlsx`);
 }
 
+
+// ══ PRIJEVOZ ══════════════════════════════════════════════════
+// Dnevni iznos po djelatniku (+ dvokratni rad = 2 karte dnevno). Broje se dani stvarnog rada iz evidencije:
+// redovni dani, subote, nedjelje i blagdani. Mjesečni iznos ograničen je najvišim iznosom iz postavki.
+const PRIJ_KODOVI=['RAD','NOC','PREK','NEDB','ZAST','TER'];
+const prEur=v=>(+v||0).toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2});
+function prijevozVidi(){return smijeObracun()||jeDirektor();}
+function prijevozUredi(){return smijeObracun();}
+
+async function setupPrijevoz(){
+  const g=document.getElementById('pr-god');
+  if(g&&!g.options.length){
+    const t=new Date(); const pm=new Date(t.getFullYear(),t.getMonth()-1,1);
+    g.innerHTML=YEARS.map(y=>`<option value="${y}"${y===pm.getFullYear()?' selected':''}>${y}</option>`).join('');
+    document.getElementById('pr-mj').innerHTML=MJ_HR.map((m,i)=>`<option value="${i+1}"${i===pm.getMonth()?' selected':''}>${m}</option>`).join('');
+    document.getElementById('pr-jed').innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
+  }
+  let p=null; try{p=await loadPostavkeTvrtkeGlobal();}catch(e){}
+  const mx=document.getElementById('pr-max'); if(mx){mx.value=p?.prijevoz_max??280; mx.disabled=!prijevozUredi();}
+  const sb=document.getElementById('pr-max-btn'); if(sb) sb.style.display=prijevozUredi()?'':'none';
+  await ucitajPrijevoz();
+}
+
+async function ucitajPrijevoz(){
+  const el=document.getElementById('pr-tab'); if(!el) return;
+  if(!isLive()){el.innerHTML='<div class="empty"><i class="ti ti-bus"></i><p>Prijevoz radi samo uz vezu na bazu.</p></div>';return;}
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam evidenciju...</p></div>';
+  const god=+document.getElementById('pr-god').value, mj=+document.getElementById('pr-mj').value;
+  try{
+    const {data:pp,error:e1}=await SB.from('djelatnici_prijevoz').select('*'); if(e1) throw e1;
+    window._prPost={}; (pp||[]).forEach(r=>window._prPost[r.djelatnik_id]=r);
+    const ev=[]; let od=0;
+    while(true){
+      const {data,error}=await SB.from('evidencija').select('djelatnik_id,rows_data').eq('godina',god).eq('mjesec',mj).range(od,od+999);
+      if(error) throw error; ev.push(...(data||[])); if(!data||data.length<1000) break; od+=1000;
+    }
+    const dani={};
+    ev.forEach(e=>{
+      const z={rad:0,sub:0,ned:0,blag:0,lista:[]};
+      (e.rows_data||[]).forEach(r=>{
+        const s=r.sati||{}; if(!PRIJ_KODOVI.some(k=>parseFloat(s[k])>0)) return;
+        const d=+r.dan, dw=new Date(god,mj-1,d).getDay();
+        if(isHoliday(god,mj,d)) z.blag++; else if(dw===0) z.ned++; else if(dw===6) z.sub++; else z.rad++;
+        z.lista.push(d);
+      });
+      dani[e.djelatnik_id]=z;
+    });
+    window._prDani=dani; window._prGM={god,mj};
+    renderPrijevoz();
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${hEsc(e.message)}</div>`;}
+}
+
+function prIzracun(d){
+  const P=window._prPost[d.id]||{}, z=(window._prDani||{})[d.id]||{rad:0,sub:0,ned:0,blag:0};
+  const max=parseFloat(document.getElementById('pr-max')?.value)||0;
+  const dana=z.rad+z.sub+z.ned+z.blag, karata=P.dvokratno?2:1, dn=parseFloat(P.dnevno)||0;
+  const obr=Math.round(dana*dn*karata*100)/100, isp=max>0?Math.min(obr,max):obr;
+  return {P,z,dana,karata,dn,obr,isp,max:max>0&&obr>max};
+}
+
+function prRedovi(){
+  const {god,mj}=window._prGM||{};
+  const jid=+document.getElementById('pr-jed').value||0;
+  const tr=(document.getElementById('pr-trazi').value||'').trim().toLowerCase();
+  const fil=document.getElementById('pr-fil').value;
+  return DB.djelatnici.filter(d=>{
+    const j=gAJ(d.id,god,mj); const z=(window._prDani||{})[d.id];
+    if(j==null&&!z) return false;
+    if(jid&&j!==jid) return false;
+    if(tr&&!(dF(d)+' '+(d.sifra||'')+' '+(window._prPost[d.id]?.mjesto||'')).toLowerCase().includes(tr)) return false;
+    const P=window._prPost[d.id]||{};
+    if(fil==='s'&&!(parseFloat(P.dnevno)>0)) return false;
+    if(fil==='bez'&&parseFloat(P.dnevno)>0) return false;
+    if(fil==='dvo'&&!P.dvokratno) return false;
+    if(fil==='max'&&!prIzracun(d).max) return false;
+    if(fil==='isp'&&!(prIzracun(d).isp>0)) return false;
+    return true;
+  }).sort((a,b)=>(a.prez+a.ime).localeCompare(b.prez+b.ime,'hr'));
+}
+
+function renderPrijevoz(){
+  const el=document.getElementById('pr-tab'); if(!el||!window._prGM) return;
+  const {god,mj}=window._prGM, ured=prijevozUredi();
+  const L=prRedovi();
+  let T={rad:0,sub:0,ned:0,blag:0,dana:0,isp:0,n:0};
+  const rows=L.map((d,i)=>{
+    const c=prIzracun(d); const P=c.P;
+    T.rad+=c.z.rad;T.sub+=c.z.sub;T.ned+=c.z.ned;T.blag+=c.z.blag;T.dana+=c.dana;T.isp+=c.isp; if(c.isp>0)T.n++;
+    return `<tr data-did="${d.id}" style="border-bottom:1px solid var(--border)${!(c.dn>0)&&c.dana?';background:#fff8e6':''}">
+      <td style="padding:5px 6px;color:var(--text3)">${i+1}.</td>
+      <td style="padding:5px 6px;font-family:monospace">${hEsc(d.sifra||'')}</td>
+      <td style="padding:5px 6px;font-weight:600">${hEsc(dF(d))}</td>
+      <td style="padding:5px 6px;font-size:11.5px">${hEsc(jN(gAJ(d.id,god,mj)))}</td>
+      <td style="padding:5px 6px;font-size:11.5px" title="${hEsc(P.prebivaliste||'')}">${hEsc(P.mjesto||'')}</td>
+      <td style="padding:3px 6px"><input type="number" step="0.01" min="0" value="${P.dnevno??''}" ${ured?'':'disabled'} onchange="prSpremi(${d.id},'dnevno',this.value)" style="width:78px;padding:4px;text-align:right"></td>
+      <td style="padding:3px 6px;text-align:center"><input type="checkbox" ${P.dvokratno?'checked':''} ${ured?'':'disabled'} onchange="prSpremi(${d.id},'dvokratno',this.checked)" title="Dvokratni rad – 2 karte dnevno"></td>
+      <td style="padding:5px 6px;text-align:center">${c.z.rad||''}</td><td style="padding:5px 6px;text-align:center">${c.z.sub||''}</td>
+      <td style="padding:5px 6px;text-align:center">${c.z.ned||''}</td><td style="padding:5px 6px;text-align:center">${c.z.blag||''}</td>
+      <td style="padding:5px 6px;text-align:center;font-weight:600">${c.dana||''}</td>
+      <td style="padding:5px 6px;text-align:center">${c.dana?c.karata:''}</td>
+      <td style="padding:5px 6px;text-align:right;font-weight:600">${c.isp?prEur(c.isp):''}${c.max?`<div style="font-size:10.5px;color:#b7791f;font-weight:400" title="Izračun ${prEur(c.obr)} € – ograničeno na najviši mjesečni iznos">max (${prEur(c.obr)})</div>`:''}</td>
+      <td style="padding:5px 6px;font-size:11px;color:var(--text3);max-width:220px">${hEsc(P.napomena||'')}</td>
+    </tr>`;}).join('');
+  el.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:6px">${MJ_HR[mj-1]} ${god} · djelatnika: <b>${L.length}</b> · s prijevozom: <b>${T.n}</b> · ukupno za isplatu: <b>${prEur(T.isp)} €</b></div>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--bg3);font-size:11px">
+      <th style="padding:7px 6px">#</th><th style="padding:7px 6px;text-align:left">Šifra</th><th style="padding:7px 6px;text-align:left">Djelatnik</th>
+      <th style="padding:7px 6px;text-align:left">Jedinica</th><th style="padding:7px 6px;text-align:left">Prebivalište</th>
+      <th style="padding:7px 6px">Dnevni iznos €</th><th style="padding:7px 6px" title="Dvokratni rad – 2 karte dnevno">Dvokratno</th>
+      <th style="padding:7px 6px">Radni dani</th><th style="padding:7px 6px">Subota</th><th style="padding:7px 6px">Nedjelja</th><th style="padding:7px 6px">Blagdan</th>
+      <th style="padding:7px 6px">Ukupno dana</th><th style="padding:7px 6px">Karata/dan</th><th style="padding:7px 6px;text-align:right">Za isplatu €</th><th style="padding:7px 6px;text-align:left">Napomena</th>
+    </tr></thead><tbody>${rows||'<tr><td colspan="15" style="padding:18px;text-align:center;color:var(--text3)">Nema djelatnika za odabrane filtere</td></tr>'}</tbody>
+    <tfoot><tr style="background:var(--bg3);font-weight:600"><td colspan="7" style="padding:7px 6px">Ukupno</td>
+      <td style="text-align:center">${T.rad}</td><td style="text-align:center">${T.sub}</td><td style="text-align:center">${T.ned}</td><td style="text-align:center">${T.blag}</td>
+      <td style="text-align:center">${T.dana}</td><td></td><td style="padding:7px 6px;text-align:right">${prEur(T.isp)}</td><td></td></tr></tfoot></table></div>`;
+}
+
+async function prSpremi(did,polje,val){
+  if(!prijevozUredi()) return;
+  const P={...(window._prPost[did]||{djelatnik_id:did})};
+  if(polje==='dnevno'){const v=String(val).replace(',','.').trim(); P.dnevno=v===''?null:parseFloat(v); if(P.dnevno!=null&&(isNaN(P.dnevno)||P.dnevno<0||P.dnevno>100)){showToast('Neispravan dnevni iznos','error');renderPrijevoz();return;}}
+  else P.dvokratno=!!val;
+  const {data,error}=await SB.from('djelatnici_prijevoz').upsert({djelatnik_id:did,dnevno:P.dnevno??null,dvokratno:!!P.dvokratno,prebivaliste:P.prebivaliste??null,mjesto:P.mjesto??null,napomena:P.napomena??null},{onConflict:'djelatnik_id'}).select().single();
+  if(error){showToast('Greška: '+error.message,'error');renderPrijevoz();return;}
+  window._prPost[did]=data||P;
+  const d=DB.djelatnici.find(x=>x.id===did);
+  showToast(`✅ ${dF(d)}: ${polje==='dnevno'?'dnevni iznos '+(P.dnevno==null?'obrisan':prEur(P.dnevno)+' €'):(P.dvokratno?'dvokratni rad':'jednokratni rad')}`,'success');
+  renderPrijevoz();
+}
+
+async function spremiPrijevozMax(){
+  const v=parseFloat(String(document.getElementById('pr-max').value).replace(',','.'));
+  if(isNaN(v)||v<0){showToast('Upišite ispravan iznos (0 = bez ograničenja)','error');return;}
+  if(!confirm(v>0?`Najviši mjesečni iznos prijevoza: ${prEur(v)} € za sve djelatnike?`:'Ukinuti ograničenje mjesečnog iznosa prijevoza?')) return;
+  const {error}=await SB.from('postavke_tvrtke').update({prijevoz_max:v}).eq('id',1);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  if(window.POSTAVKE_TVRTKE) window.POSTAVKE_TVRTKE.prijevoz_max=v;
+  showToast('✅ Spremljeno','success'); renderPrijevoz();
+}
+
+function prPodaciIzvoz(){
+  const {god,mj}=window._prGM;
+  return prRedovi().map(d=>{const c=prIzracun(d);return {d,c,jed:jN(gAJ(d.id,god,mj))};});
+}
+function excelPrijevoz(){
+  if(!window._prGM) return; if(typeof XLSX==='undefined'){showToast('Excel modul nije učitan','error');return;}
+  const {god,mj}=window._prGM; const R=prPodaciIzvoz();
+  const aoa=[[`Prijevoz za ${MJ_NOM[mj-1]} ${god}.`],[],['Šifra','Prezime','Ime','Jedinica','Prebivalište','Mjesto','Dnevni iznos €','Dvokratno','Radni dani','Subota','Nedjelja','Blagdan','Ukupno dana','Karata/dan','Izračun €','Za isplatu €','Napomena']];
+  R.forEach(({d,c,jed})=>aoa.push([d.sifra||'',d.prez,d.ime,jed,c.P.prebivaliste||'',c.P.mjesto||'',c.dn||'',c.P.dvokratno?'DA':'',c.z.rad,c.z.sub,c.z.ned,c.z.blag,c.dana,c.dana?c.karata:'',c.obr,c.isp,c.P.napomena||'']));
+  aoa.push([],['','UKUPNO','','','','','','','','','','',R.reduce((a,x)=>a+x.c.dana,0),'',R.reduce((a,x)=>a+x.c.obr,0),R.reduce((a,x)=>a+x.c.isp,0)]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[8,16,12,26,28,16,10,9,9,7,8,8,10,9,10,11,40].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Prijevoz');
+  XLSX.writeFile(wb,`Prijevoz_${god}_${String(mj).padStart(2,'0')}.xlsx`);
+}
+async function ispisPrijevoz(){
+  if(!window._prGM) return; const {god,mj}=window._prGM; const R=prPodaciIzvoz().filter(x=>x.c.isp>0||x.c.dana);
+  let tv=window.POSTAVKE_TVRTKE; try{ if(!tv) tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
+  const uk=R.reduce((a,x)=>a+x.c.isp,0);
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Prijevoz ${MJ_NOM[mj-1]} ${god}</title>
+  <style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#111;margin:0}h1{font-size:14px;margin:6px 0}
+  table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:2px 4px}th{background:#eee;font-size:8.5px}td.r{text-align:right}td.c{text-align:center}tfoot td{font-weight:bold;background:#f3f3f3}
+  .potpis{display:flex;justify-content:space-between;margin-top:30px;font-size:10px}.potpis div{width:30%;border-top:1px solid #333;padding-top:3px;text-align:center}</style></head><body>
+  <b>${hEsc(tv?.naziv||'Parkovi i nasadi d.o.o.')}</b><h1>Prijevoz na posao – ${MJ_NOM[mj-1]} ${god}.</h1>
+  <table><thead><tr><th>R.br.</th><th>Šifra</th><th>Djelatnik</th><th>Jedinica</th><th>Prebivalište</th><th>Dnevno €</th><th>Karata</th><th>Radni</th><th>Sub</th><th>Ned</th><th>Blag</th><th>Dana</th><th>Za isplatu €</th></tr></thead>
+  <tbody>${R.map(({d,c,jed},i)=>`<tr><td class="c">${i+1}.</td><td>${hEsc(d.sifra||'')}</td><td>${hEsc(dF(d))}</td><td>${hEsc(jed)}</td><td>${hEsc(c.P.mjesto||'')}</td><td class="r">${c.dn?prEur(c.dn):''}</td><td class="c">${c.karata}</td><td class="c">${c.z.rad}</td><td class="c">${c.z.sub||''}</td><td class="c">${c.z.ned||''}</td><td class="c">${c.z.blag||''}</td><td class="c">${c.dana}</td><td class="r">${prEur(c.isp)}${c.max?' *':''}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="12">UKUPNO (${R.length})</td><td class="r">${prEur(uk)}</td></tr></tfoot></table>
+  ${R.some(x=>x.c.max)?`<div style="margin-top:4px">* ograničeno na najviši mjesečni iznos ${prEur(parseFloat(document.getElementById('pr-max').value))} €</div>`:''}
+  <div class="potpis"><div>Izradio</div><div>Kontrolirao</div><div>Odobrio</div></div>
+  <div style="margin-top:10px;font-size:8.5px;color:#666">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div></body></html>`);
+}
+
 // ══ POSTAVKE TVRTKE ════════════════════════════════════════════
 window.POSTAVKE_TVRTKE=null;
 
@@ -4915,6 +5108,7 @@ function primijeniOvlastiStim(){
   { const e=document.getElementById('nav-rekapitulacija'); if(e) e.style.display=canStim()?'':'none'; }
   { const e=document.getElementById('sg-djelatnici'); if(e) e.style.display=(canStim()||ured)?'':'none'; }
   { const e=document.getElementById('btn-dodaj-djel'); if(e) e.style.display=ured?'':'none'; }
+  { const e=document.getElementById('nav-prijevoz'); if(e) e.style.display=prijevozVidi()?'':'none'; }
   { const e=document.getElementById('nav-loko'); if(e) e.style.display=lokoVidi()?'':'none'; if(lokoVidi()) setTimeout(osvjeziLokoBadge,500); }
   const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
 }
