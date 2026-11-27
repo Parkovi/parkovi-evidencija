@@ -270,6 +270,7 @@ select{cursor:pointer}
 .evh-h2-r{flex:1;text-align:right;font-size:12px;font-weight:700;color:#4e3a26;text-transform:capitalize}
 .evh-potpisi{display:flex;justify-content:space-between;gap:40px;padding:10px 16px 6px;font-size:10px;color:#4e3a26}
 .evh-potpisi div{flex:1;display:flex;align-items:flex-end;gap:6px}.evh-potpisi span{flex:1;border-bottom:1px solid #8a7d66;height:14px}
+.mtb input.dvo2{display:block;margin-top:3px;border-style:dashed}
 /* Bodovi u djelatniku */
 .bod-sec{margin-top:.6rem;padding:.8rem 1rem;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg)}
 .bod-sec-t{font-weight:700;font-size:12.5px;margin-bottom:.6rem;display:flex;align-items:center;gap:6px;color:var(--blue-dk)}
@@ -1541,7 +1542,7 @@ function jeSubotaRadna(jid){return /\(7\//.test(jN(jid));}
 // Tržnica (7/5): pon 07–12 (5 h); uto–sub 06–13 (7 h) ili dvokratno 06–08 i 12–17 (7 h); ned slobodno
 function trzDan(g,m,d,rr){
   if(new Date(g,m-1,d).getDay()===1) return {poc:'07:00',kraj:'12:00',sati:5,dvo:false};
-  return rr==='dvo'?{poc:'06:00',kraj:'17:00',sati:7,dvo:true}:{poc:'06:00',kraj:'13:00',sati:7,dvo:false};
+  return rr==='dvo'?{poc:'06:00',kraj:'08:00',poc2:'12:00',kraj2:'17:00',sati:7,dvo:true}:{poc:'06:00',kraj:'13:00',sati:7,dvo:false};
 }
 function isWE(g,m,d){const w=new Date(g,m-1,d).getDay();return w===0||(w===6&&!window._subotaRadna);}
 function avC(s){const c=[["#dce8f5","#1a5fa8"],["#e8f3df","#2d6b0f"],["#faebd6","#7a4a08"],["#fbeaea","#992222"],["#eeebfa","#4a2d8a"]];return c[(s||"").charCodeAt(0)%c.length];}
@@ -1620,7 +1621,8 @@ function loadUF(){
   // raspored za tržnicu: iz ovog mjeseca, inače iz prethodnog mjeseca, inače jednokratno
   let rr='jedno';
   if(trz){ const prev=DB.evidencija[did+"_"+(mj===1?god-1:god)+"_"+(mj===1?12:mj-1)];
-    const src=(ev.rows&&ev.rows.length)?ev:prev; if(src&&(src.rows||[]).some(r=>r.dvo)) rr='dvo'; }
+    const src=(ev.rows&&ev.rows.length)?ev:prev; if(src&&(src.rows||[]).some(r=>r.dvo||r.poc2)) rr='dvo';
+    const ov=(window._rrIzbor||{})[did+"_"+god+"_"+mj]; if(ov) rr=ov; }
   let h=`<div class="card"><div class="ch">
     <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <button class="btn bxs bs" onclick="unosPomak(-1)" title="Prethodni djelatnik" ${unosIndeks()<=0?'disabled':''}><i class="ti ti-chevron-left"></i></button>
@@ -1630,7 +1632,7 @@ function loadUF(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       ${trz?`<span style="font-size:11px;color:var(--text2)">Raspored:</span>
-      <select id="rr" style="width:auto" onchange="aFill()" title="Ponedjeljak je uvijek 07–12 (5 h), nedjelja slobodna">
+      <select id="rr" style="width:auto" onchange="promijeniRaspored(this.value)" title="Ponedjeljak je uvijek 07–12 (5 h), nedjelja slobodna">
         <option value="jedno"${rr==='jedno'?' selected':''}>Jednokratno 06–13 (pon 07–12)</option>
         <option value="dvo"${rr==='dvo'?' selected':''}>Dvokratno 06–08 i 12–17 (pon 07–12)</option></select>
       <input type="hidden" id="p0" value="${pd}"><input type="hidden" id="k0" value="${kd}">`:`<span style="font-size:11px;color:var(--text2)">Radno vrij.:</span>
@@ -1651,8 +1653,8 @@ function loadUF(){
     const row=(ev.rows||[]).find(r=>r.dan===dan)||{};
     h+=`<tr class="${iswk?"wk":""}" data-dan="${dan}">
       <td class="sc">${dan}. <span style="color:var(--text3)">${dn}</span></td>
-      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})"></td>
-      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})"${trz&&rr==='dvo'?' title="Dvokratno: 06–08 i 12–17"':''}></td>
+      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}" ${iswk?"disabled":""} style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
+      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}" ${iswk?"disabled":""} style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
       ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})"></td>`).join("")}
     </tr>`;
   }
@@ -1663,10 +1665,9 @@ function loadUF(){
 }
 function cRow(dan,god,mj){
   const pe=document.getElementById("p"+dan),ke=document.getElementById("k"+dan);
+  const raz=(a,b)=>{if(!a||!b)return 0;const[ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);return Math.max(0,(bh*60+bm)-(ah*60+am))/60;};
   if(pe&&ke&&pe.value&&ke.value){
-    const[ph,pm]=pe.value.split(":").map(Number),[kh,km]=ke.value.split(":").map(Number);
-    let s=Math.round(((kh*60+km)-(ph*60+pm))/60*10)/10;
-    if(document.getElementById("rr")?.value==='dvo'&&pe.value==='06:00'&&ke.value==='17:00') s=7; // stanka 08–12
+    const s=Math.round((raz(pe.value,ke.value)+raz(document.getElementById("pb"+dan)?.value,document.getElementById("kb"+dan)?.value))*10)/10;
     if(s>0){const ri=document.getElementById("s"+dan+"_RAD");if(ri)ri.value=s;}
   }
   rTots(god,mj);
@@ -1676,6 +1677,11 @@ function rTots(god,mj){
   DB.vrste.forEach(v=>tots[v.code]=0);
   for(let d=1;d<=days;d++)DB.vrste.forEach(v=>{const el=document.getElementById("s"+d+"_"+v.code);if(el)tots[v.code]+=parseFloat(el.value)||0;});
   DB.vrste.forEach(v=>{const el=document.getElementById("t_"+v.code);if(el)el.innerHTML="<strong>"+(Math.round(tots[v.code]*10)/10||"")+"</strong>";});
+}
+function promijeniRaspored(v){
+  const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
+  (window._rrIzbor||={})[did+"_"+god+"_"+mj]=v;
+  loadUF(); aFill();
 }
 function aFill(){
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026;
@@ -1688,7 +1694,8 @@ function aFill(){
     if(!isFreeDay(god,mj,d)){
       const pi=document.getElementById("p"+d),ki=document.getElementById("k"+d),si=document.getElementById("s"+d+"_RAD");
       if(si?.disabled) continue;
-      if(rr){ const t=trzDan(god,mj,d,rr); if(pi)pi.value=t.poc; if(ki)ki.value=t.kraj; if(si)si.value=t.sati; continue; }
+      if(rr){ const t=trzDan(god,mj,d,rr); if(pi)pi.value=t.poc; if(ki)ki.value=t.kraj; if(si)si.value=t.sati;
+        const p2=document.getElementById("pb"+d),k2=document.getElementById("kb"+d); if(p2)p2.value=t.poc2||''; if(k2)k2.value=t.kraj2||''; continue; }
       if(pi)pi.value=poc;if(ki)ki.value=kraj;if(si&&sati>0)si.value=sati;
     }
   }
@@ -1703,8 +1710,8 @@ async function saveU(did,god,mj){
     const sati={};let has=false;
     DB.vrste.forEach(v=>{const val=parseFloat(document.getElementById("s"+d+"_"+v.code)?.value)||0;if(val){sati[v.code]=val;sums[v.code]+=val;uk+=val;has=true;}});
     const poc=document.getElementById("p"+d)?.value,kraj=document.getElementById("k"+d)?.value;
-    const dvo=document.getElementById("rr")?.value==='dvo'&&poc==='06:00'&&kraj==='17:00';
-    if(has||poc)rows.push(dvo?{dan:d,poc,kraj,sati,dvo:true}:{dan:d,poc,kraj,sati});
+    const poc2=document.getElementById("pb"+d)?.value||'',kraj2=document.getElementById("kb"+d)?.value||'';
+    if(has||poc)rows.push(poc2&&kraj2?{dan:d,poc,kraj,poc2,kraj2,sati,dvo:true}:{dan:d,poc,kraj,sati});
   }
   DB.vrste.forEach(v=>sums[v.code]=Math.round(sums[v.code]*10)/10);
   sums.ukupno=Math.round(uk*10)/10;
@@ -2509,7 +2516,7 @@ function renderIspisSync(){
         ds+=val;
       });
       grandTot+=ds;
-      dayData.push({dan,dn:dN(god,mj,dan),iswk:isWE(god,mj,dan),poc:row.dvo?'06:00 / 12:00':(row.poc||''),kraj:row.dvo?'08:00 / 17:00':(row.kraj||''),vals,ds});
+      dayData.push({dan,dn:dN(god,mj,dan),iswk:isWE(god,mj,dan),poc:row.poc2?`${row.poc||''} / ${row.poc2}`:(row.poc||''),kraj:row.kraj2?`${row.kraj||''} / ${row.kraj2}`:(row.kraj||''),vals,ds});
     }
 
     if(idx===0) html+=zkInfo(god,mj);
@@ -5084,8 +5091,8 @@ function procitajObrazac(did,god,mj){
     const sati={};let has=false;
     DB.vrste.forEach(v=>{const val=parseFloat(document.getElementById("s"+d+"_"+v.code)?.value)||0;if(val){sati[v.code]=val;sums[v.code]+=val;uk+=val;has=true;}});
     const poc=document.getElementById("p"+d)?.value,kraj=document.getElementById("k"+d)?.value;
-    const dvo=document.getElementById("rr")?.value==='dvo'&&poc==='06:00'&&kraj==='17:00';
-    if(has||poc)rows.push(dvo?{dan:d,poc,kraj,sati,dvo:true}:{dan:d,poc,kraj,sati});
+    const poc2=document.getElementById("pb"+d)?.value||'',kraj2=document.getElementById("kb"+d)?.value||'';
+    if(has||poc)rows.push(poc2&&kraj2?{dan:d,poc,kraj,poc2,kraj2,sati,dvo:true}:{dan:d,poc,kraj,sati});
   }
   DB.vrste.forEach(v=>sums[v.code]=Math.round(sums[v.code]*10)/10);
   sums.ukupno=Math.round(uk*10)/10;
