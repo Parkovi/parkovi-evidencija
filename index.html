@@ -92,6 +92,7 @@ select{cursor:pointer}
 .ald{background:var(--red-lt);color:var(--red);border:1px solid #f0c0c0}
 .als{background:var(--green-lt);color:var(--green);border:1px solid #b8dda0}
 .ali{background:var(--blue-lt);color:var(--blue-dk);border:1px solid #b0cce8}
+.alw{background:#fff6e0;color:#8a5a00;border:1px solid #f0d28a}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:300;align-items:center;justify-content:center;padding:1rem}
 .mo.open{display:flex}
 .md{background:var(--bg2);border-radius:var(--r3);padding:1.5rem;width:540px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2);border:1px solid var(--border)}
@@ -282,7 +283,7 @@ select{cursor:pointer}
 .bod-tbl th{font-size:10px;text-transform:uppercase;color:var(--text3);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl td{padding:5px 6px;border-bottom:1px solid var(--border)}
 .bod-tbl tr.bod-cur td{background:var(--blue-lt)}
-.bp-top{display:grid;grid-template-columns:minmax(320px,1fr) 1.3fr;gap:1rem}
+.bp-top{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr) 1.3fr;gap:1rem}
 @media(max-width:900px){.bp-top{grid-template-columns:1fr}}
 .bp-vb,.bp-info{padding:1rem 1.1rem}
 .bp-vb-now{display:flex;align-items:baseline;gap:10px;margin:.2rem 0 .7rem}
@@ -373,6 +374,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('dodaci')" id="nav-dodaci" style="display:none"><i class="ti ti-gift"></i> Dodaci</div>
         <div class="ni" onclick="sP('rekapitulacija')" id="nav-rekapitulacija" style="display:none"><i class="ti ti-report-money"></i> Rekapitulacija dodataka i stimulacija</div>
         <div class="ni" onclick="sP('prijedlozi')" id="nav-prijedlozi"><i class="ti ti-send"></i> Prijedlozi stimulacija</div>
+        <div class="ni" onclick="sP('loko')" id="nav-loko" style="display:none"><i class="ti ti-car"></i> Loko vožnja <span id="loko-bdg" class="bdg brd" style="display:none;margin-left:auto;padding:0 6px"></span></div>
         <div class="ni" onclick="sP('obracun')" id="nav-obracun" style="display:none"><i class="ti ti-calculator"></i> Obračun plaća</div>
       </div>
       <div class="sg" id="sg-djelatnici">
@@ -445,6 +447,12 @@ select{cursor:pointer}
             <div class="bp-vb-now"><span id="bp-vb-now">–</span><small id="bp-vb-od"></small></div>
             <div id="bp-vb-form"></div>
             <div id="bp-vb-pov"></div>
+          </div>
+          <div class="card bp-vb">
+            <div class="bod-sec-t"><i class="ti ti-car"></i> Loko vožnja – naknada po km (cijela tvrtka)</div>
+            <div class="bp-vb-now"><span id="bp-loko-now">–</span><small id="bp-loko-od"></small></div>
+            <div id="bp-loko-form"></div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Nova cijena vrijedi za obračune koji se pošalju na odobrenje nakon promjene. Već poslani i odobreni ostaju sa svojom cijenom.</div>
           </div>
           <div class="card bp-info">
             <div class="bod-sec-t"><i class="ti ti-info-circle"></i> Kako se računa</div>
@@ -703,6 +711,29 @@ select{cursor:pointer}
           </div>
         </div>
         <div class="card" style="margin-top:1rem"><div id="dod-rez"><div class="empty"><i class="ti ti-gift"></i><p>Odaberite razdoblje i kliknite „Obračunaj”.</p></div></div></div>
+      </div>
+
+      <div class="page" id="page-loko">
+        <div class="ph">
+          <div><div class="pt">Loko vožnja</div><div class="ps">Voditelj upisuje vožnje · direktor odobrava · obračun plaće unosi u plaće</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn bs" id="loko-xls" onclick="excelLoko()" style="display:none"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+            <button class="btn bp" id="loko-novi" onclick="noviLoko()"><i class="ti ti-plus"></i> Novi obračun</button>
+          </div>
+        </div>
+        <div class="al ali" id="loko-info" style="margin-bottom:1rem"></div>
+        <div class="card" style="padding:1rem;margin-bottom:1rem">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="margin:0;min-width:100px"><label class="fl">Godina</label><select id="loko-fgod" onchange="loadLoko()"></select></div>
+            <div class="fg" style="margin:0;min-width:130px"><label class="fl">Mjesec</label><select id="loko-fmj" onchange="loadLoko()"></select></div>
+            <div class="fg" style="margin:0;min-width:200px"><label class="fl">Jedinica</label><select id="loko-fjed" onchange="loadLoko()"></select></div>
+            <div class="fg" style="margin:0;min-width:160px"><label class="fl">Status</label><select id="loko-fst" onchange="loadLoko()">
+              <option value="">Svi</option><option value="nacrt">Nacrt</option><option value="poslano">Čeka odobrenje</option><option value="vraceno">Vraćeno na doradu</option><option value="odobreno">Odobreno</option><option value="isplaceno">Uneseno u plaće</option><option value="odbijeno">Odbijeno</option></select></div>
+            <div class="fg" style="margin:0;min-width:180px"><label class="fl">Traži</label><input id="loko-ftr" placeholder="ime, šifra, registracija" oninput="renderLokoList()"></div>
+            <button class="btn bs" onclick="loadLoko()" style="margin-bottom:1px"><i class="ti ti-refresh"></i> Osvježi</button>
+          </div>
+        </div>
+        <div class="card"><div id="loko-list"><div class="empty"><i class="ti ti-car"></i><p>Učitavam...</p></div></div></div>
       </div>
 
       <div class="page" id="page-prijedlozi">
@@ -1085,6 +1116,12 @@ select{cursor:pointer}
   <div class="mhd"><div class="mtt"><i class="ti ti-send"></i><span id="prij-title">Prijedlog stimulacije</span></div><button class="mcl" onclick="closeM('mo-prijedlog')"><i class="ti ti-x"></i></button></div>
   <div id="prij-body"></div>
   <div class="mft" id="prij-foot"></div>
+</div></div>
+
+<div class="mo" id="mo-loko"><div class="md mdlg" style="max-width:1200px;width:96vw">
+  <div class="mhd"><div class="mtt"><i class="ti ti-car"></i><span id="loko-title">Obračun loko-vožnje</span></div><button class="mcl" onclick="closeM('mo-loko')"><i class="ti ti-x"></i></button></div>
+  <div id="loko-body"></div>
+  <div class="mft" id="loko-foot" style="flex-wrap:wrap"></div>
 </div></div>
 
 <div class="mo" id="mo-deakt"><div class="md" style="max-width:440px">
@@ -1514,11 +1551,12 @@ function sP(n){
   if(n==='dodaci'&&!smijeObracun()) n='dashboard';
   if(n==='uvoz'&&CU?.role!=='admin') n='dashboard';
   if(n==='obracun'&&!vidiObracun()) n='dashboard';
+  if(n==='loko'&&!lokoVidi()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+(n==='rekapitulacija'?'stimulacije':n))?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,loko:setupLoko,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -4290,6 +4328,501 @@ async function saveVrijednostBoda(){
 
 
 
+
+// ══ LOKO VOŽNJA ═══════════════════════════════════════════════
+// Voditelj (ili obračun) unosi obračun loko-vožnje za djelatnika i šalje direktoru.
+// Direktor: odobri / vrati na doradu / odbij (uz komentar). Obračun plaće unosi odobrene u plaće.
+const LOKO_ST={
+  nacrt:{lbl:'Nacrt',cls:'bdg bgy',ic:'ti-pencil'},
+  poslano:{lbl:'Čeka odobrenje',cls:'bdg bam',ic:'ti-clock'},
+  vraceno:{lbl:'Vraćeno na doradu',cls:'bdg brd',ic:'ti-arrow-back-up'},
+  odobreno:{lbl:'Odobreno',cls:'bdg bgr',ic:'ti-circle-check'},
+  odbijeno:{lbl:'Odbijeno',cls:'bdg brd',ic:'ti-circle-x'},
+  isplaceno:{lbl:'Uneseno u plaće',cls:'bdg bbl',ic:'ti-cash'}
+};
+const LOKO_ODS=['GO','BO','PD','OC','NS','NI','NZR','NR','VJO','SLP'];
+const lokoEur=v=>(+v||0).toLocaleString('hr-HR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const lokoKm=v=>(+v||0).toLocaleString('hr-HR',{maximumFractionDigits:1});
+function lokoDat(s){if(!s)return '';const [y,m,d]=String(s).split('-');return `${+d}.${+m}.${y}.`;}
+function lokoBroj(L){return `LOKO-${L.godina}-${String(L.id||0).padStart(4,'0')}`;}
+function lokoJeObr(){return CU?.role==='obracun'||CU?.role==='admin';}
+function lokoJeDir(){return CU?.role==='direktor'||CU?.role==='admin';}
+function lokoUnosi(){return !!CU&&(CU.role==='admin'||(!['obracun','direktor'].includes(CU.role)&&vJ().length>0));}
+function lokoMojeJed(){return DB.jedinice.filter(j=>vJ().includes(j.id));}
+function lokoVidi(){return !!CU&&(lokoUnosi()||jeDirektor()||lokoJeObr());}
+function lokoMozeUrediti(L){
+  if(!L||!L.id) return true;
+  if(!['nacrt','vraceno'].includes(L.status)) return false;
+  return lokoUnosi()&&vJ().includes(L.jedinica_id);
+}
+function lokoCijena(){return parseFloat(window.POSTAVKE_TVRTKE?.loko_eur_km)||0.50;}
+
+async function osvjeziLokoBadge(){
+  const b=document.getElementById('loko-bdg'); if(!b) return;
+  b.style.display='none';
+  if(!isLive()||!CU) return;
+  let st=null;
+  if(jeDirektor()) st=['poslano'];
+  else if(CU.role==='obracun') st=['odobreno'];
+  else if(CU.role!=='admin') st=['vraceno'];
+  if(!st) return;
+  try{
+    const {count}=await SB.from('loko_voznje').select('id',{count:'exact',head:true}).in('status',st);
+    if(count>0){b.textContent=count;b.style.display='';b.title=(jeDirektor()?'Čeka vaše odobrenje':CU.role==='obracun'?'Odobreno, treba unijeti u plaće':'Vraćeno na doradu')+': '+count;}
+  }catch(e){}
+}
+
+async function setupLoko(){
+  if(!window.POSTAVKE_TVRTKE) { try{await loadPostavkeTvrtkeGlobal();}catch(e){} }
+  const g=document.getElementById('loko-fgod');
+  if(g&&!g.options.length){
+    const now=new Date();
+    g.innerHTML=YEARS.map(y=>`<option value="${y}"${y===now.getFullYear()?' selected':''}>${y}</option>`).join('');
+    document.getElementById('loko-fmj').innerHTML='<option value="0">Svi mjeseci</option>'+MJ_HR.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+    if(jeDirektor()) document.getElementById('loko-fst').value='poslano';
+  }
+  const fj=document.getElementById('loko-fjed');
+  if(fj){
+    const jeds=(jeDirektor()||lokoJeObr())?DB.jedinice:lokoMojeJed();
+    const cur=fj.value;
+    fj.innerHTML=(jeds.length>1?'<option value="0">Sve jedinice</option>':'')+jeds.map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
+    if(cur) fj.value=cur;
+  }
+  const nb=document.getElementById('loko-novi'); if(nb) nb.style.display=lokoUnosi()?'':'none';
+  const xb=document.getElementById('loko-xls'); if(xb) xb.style.display=(lokoJeObr()||jeDirektor())?'':'none';
+  const info=document.getElementById('loko-info');
+  if(info) info.innerHTML=jeDirektor()
+    ? '<i class="ti ti-info-circle"></i> Obračuni sa statusom <strong>Čeka odobrenje</strong> čekaju vas. Otvorite obračun, pregledajte vožnje i upozorenja pa kliknite <strong>Odobri</strong>, <strong>Vrati na doradu</strong> (uz pitanje ili razlog) ili <strong>Odbij</strong>.'
+    : CU?.role==='obracun'
+      ? '<i class="ti ti-info-circle"></i> <strong>Odobrene</strong> obračune unesite u program za plaće, zatim ih označite kao <strong>Uneseno u plaće</strong>. Gumb <strong>Excel</strong> izvozi popis prema filterima.'
+      : '<i class="ti ti-info-circle"></i> Vidite samo obračune svoje jedinice. Upišite vožnje (za sebe ili djelatnika svoje jedinice) za mjesec i kliknite <strong>Pošalji na odobrenje</strong>. Dok direktor ne odobri, obračun možete povući i mijenjati. Ako ga direktor vrati, vidjet ćete komentar i možete odgovoriti.';
+  await loadLoko();
+  osvjeziLokoBadge();
+}
+
+async function loadLoko(){
+  const el=document.getElementById('loko-list'); if(!el) return;
+  if(!isLive()){el.innerHTML='<div class="empty"><i class="ti ti-car"></i><p>Loko vožnja radi samo uz vezu na bazu.</p></div>';return;}
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Učitavam...</p></div>';
+  const god=parseInt(document.getElementById('loko-fgod')?.value)||new Date().getFullYear();
+  const mj=parseInt(document.getElementById('loko-fmj')?.value)||0;
+  const st=document.getElementById('loko-fst')?.value||'';
+  const jid=parseInt(document.getElementById('loko-fjed')?.value)||0;
+  try{
+    let q=SB.from('loko_voznje').select('id,djelatnik_id,jedinica_id,godina,mjesec,vozilo_marka,vozilo_reg,eur_km,ukupno_km,ukupno_eur,status,izradio_ime,poslano_at,odobrio_ime,odobreno_at,isplatio_ime,isplaceno_at,isplata_razdoblje,povijest,stavke')
+      .eq('godina',god).order('mjesec',{ascending:false}).order('id',{ascending:false});
+    if(mj) q=q.eq('mjesec',mj);
+    if(st) q=q.eq('status',st);
+    if(jid) q=q.eq('jedinica_id',jid);
+    const {data,error}=await q; if(error) throw error;
+    window._lokoList=data||[];
+    renderLokoList();
+  }catch(e){el.innerHTML=`<div class="al ald">Greška: ${hEsc(e.message)}</div>`;}
+}
+
+function renderLokoList(){
+  const el=document.getElementById('loko-list'); const data=window._lokoList||[];
+  const tr=(document.getElementById('loko-ftr')?.value||'').trim().toLowerCase();
+  const f=data.filter(L=>{if(!tr)return true;const d=DB.djelatnici.find(x=>x.id===L.djelatnik_id);return (dF(d)+' '+(d?.sifra||'')+' '+(L.vozilo_reg||'')).toLowerCase().includes(tr);});
+  if(!f.length){el.innerHTML='<div class="empty"><i class="ti ti-car"></i><p>Nema obračuna za odabrane filtere</p></div>';return;}
+  const ukKm=f.reduce((a,L)=>a+(+L.ukupno_km||0),0), ukE=f.reduce((a,L)=>a+(+L.ukupno_eur||0),0);
+  el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--bg3)">
+      <th style="padding:8px;text-align:left">Broj</th><th style="padding:8px;text-align:left">Djelatnik</th><th style="padding:8px;text-align:left">Jedinica</th>
+      <th style="padding:8px;text-align:left">Mjesec</th><th style="padding:8px;text-align:left">Vozilo</th>
+      <th style="padding:8px;text-align:right">Vožnji</th><th style="padding:8px;text-align:right">km</th><th style="padding:8px;text-align:right">Iznos €</th>
+      <th style="padding:8px;text-align:left">Status</th><th style="padding:8px;text-align:left">Izradio</th><th style="padding:8px;text-align:left">Odobrio</th><th></th>
+    </tr></thead><tbody>${f.map(L=>{
+      const s=LOKO_ST[L.status]||{lbl:L.status,cls:'bdg bgy'};
+      const d=DB.djelatnici.find(x=>x.id===L.djelatnik_id);
+      const zk=(L.povijest||[]).filter(p=>p.kom).slice(-1)[0];
+      return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="otvoriLoko(${L.id})">
+        <td style="padding:7px 8px;font-weight:600;white-space:nowrap">${lokoBroj(L)}</td>
+        <td style="padding:7px 8px">${hEsc(dF(d)||'#'+L.djelatnik_id)}</td>
+        <td style="padding:7px 8px">${hEsc(jN(L.jedinica_id))}</td>
+        <td style="padding:7px 8px;white-space:nowrap">${MJ_HR[L.mjesec-1]} ${L.godina}</td>
+        <td style="padding:7px 8px;white-space:nowrap">${hEsc([L.vozilo_marka,L.vozilo_reg].filter(Boolean).join(' · '))}</td>
+        <td style="padding:7px 8px;text-align:right">${(L.stavke||[]).length}</td>
+        <td style="padding:7px 8px;text-align:right">${lokoKm(L.ukupno_km)}</td>
+        <td style="padding:7px 8px;text-align:right;font-weight:600">${lokoEur(L.ukupno_eur)}</td>
+        <td style="padding:7px 8px"><span class="${s.cls}">${s.lbl}</span>${zk?`<div style="font-size:11px;color:var(--text3);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${hEsc(zk.ko+': '+zk.kom)}"><i class="ti ti-message"></i> ${hEsc(zk.kom)}</div>`:''}</td>
+        <td style="padding:7px 8px;font-size:11.5px">${hEsc(L.izradio_ime||'–')}<br><span style="color:var(--text3)">${L.poslano_at?fmtDT(L.poslano_at):''}</span></td>
+        <td style="padding:7px 8px;font-size:11.5px">${L.odobreno_at?hEsc(L.odobrio_ime||'')+'<br><span style="color:var(--text3)">'+fmtDT(L.odobreno_at)+'</span>':'–'}${L.isplaceno_at?`<div style="font-size:11px;color:var(--text3)">u plaće: ${hEsc(L.isplata_razdoblje||'')}</div>`:''}</td>
+        <td style="padding:7px 8px;white-space:nowrap" onclick="event.stopPropagation()">
+          <button class="btn bxs bs" title="Ispis obrasca" onclick="ispisLoko(${L.id})"><i class="ti ti-printer"></i></button>
+          ${(CU?.role==='admin'||(['nacrt','vraceno'].includes(L.status)&&lokoUnosi()&&vJ().includes(L.jedinica_id)))?`<button class="btn bxs bd" title="Obriši" onclick="obrisiLoko(${L.id})"><i class="ti ti-trash"></i></button>`:''}
+        </td></tr>`;}).join('')}</tbody>
+      <tfoot><tr style="background:var(--bg3);font-weight:600"><td colspan="6" style="padding:7px 8px">Ukupno (${f.length})</td><td style="padding:7px 8px;text-align:right">${lokoKm(ukKm)}</td><td style="padding:7px 8px;text-align:right">${lokoEur(ukE)}</td><td colspan="4"></td></tr></tfoot></table></div>`;
+}
+
+async function obrisiLoko(id){
+  const L=(window._lokoList||[]).find(x=>x.id===id);
+  if(!confirm(`Obrisati obračun ${L?lokoBroj(L):''}?`)) return;
+  const {error}=await SB.from('loko_voznje').delete().eq('id',id);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  showToast('Obračun obrisan','success'); loadLoko();
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function lokoDjelatnici(jid,god,mj){
+  const l=djelatniciJedinice(jid,god,mj);
+  const L=window._loko;
+  if(L?.djelatnik_id&&!l.some(d=>d.id===L.djelatnik_id)){const d=DB.djelatnici.find(x=>x.id===L.djelatnik_id); if(d) l.unshift(d);}
+  return l;
+}
+function noviLoko(){
+  if(!lokoUnosi()){showToast('Loko vožnju upisuje voditelj za svoju jedinicu','error');return;}
+  const jeds=lokoMojeJed();
+  if(!jeds.length){showToast('Nemate dodijeljenu jedinicu','error');return;}
+  const now=new Date(); const pm=new Date(now.getFullYear(),now.getMonth()-(now.getDate()<=10?1:0),1);
+  const fj=parseInt(document.getElementById('loko-fjed')?.value)||0;
+  window._loko={id:null,status:'nacrt',jedinica_id:(fj&&jeds.some(j=>j.id===fj))?fj:((CU.pjid&&jeds.some(j=>j.id===CU.pjid))?CU.pjid:jeds[0].id),
+    godina:pm.getFullYear(),mjesec:pm.getMonth()+1,djelatnik_id:null,vozilo_marka:'',vozilo_reg:'',eur_km:lokoCijena(),stavke:[],napomena:'',povijest:[]};
+  window._lokoEv={}; window._lokoPrev=null;
+  renderLokoModal(); openM('mo-loko');
+}
+async function otvoriLoko(id){
+  const {data:L,error}=await SB.from('loko_voznje').select('*').eq('id',id).single();
+  if(error||!L){showToast('Greška: '+(error?.message||'nije pronađen'),'error');return;}
+  L.stavke=(L.stavke||[]).map(s=>({...s}));
+  window._loko=L; window._lokoEv={}; window._lokoPrev=null;
+  renderLokoModal(); openM('mo-loko');
+  lokoUcitajPomocno();
+}
+
+// evidencija (odsutnosti) i prethodni obračun istog djelatnika
+async function lokoUcitajPomocno(){
+  const L=window._loko; if(!L?.djelatnik_id||!isLive()) return;
+  const key=`${L.djelatnik_id}-${L.godina}-${L.mjesec}`;
+  try{
+    const {data}=await SB.from('evidencija').select('rows_data').eq('djelatnik_id',L.djelatnik_id).eq('godina',L.godina).eq('mjesec',L.mjesec).maybeSingle();
+    const ods={};
+    (data?.rows_data||[]).forEach(r=>{const s=r.sati||{};const k=LOKO_ODS.filter(c=>parseFloat(s[c])>0);if(k.length&&!(parseFloat(s.RAD)>0)) ods[r.dan]=k;});
+    window._lokoEv={key,ods,ima:!!data};
+    const pg=L.mjesec===1?L.godina-1:L.godina, pmj=L.mjesec===1?12:L.mjesec-1;
+    const {data:pr}=await SB.from('loko_voznje').select('id,godina,mjesec,vozilo_marka,vozilo_reg,stavke').eq('djelatnik_id',L.djelatnik_id)
+      .or(`godina.lt.${L.godina},and(godina.eq.${L.godina},mjesec.lt.${L.mjesec})`).order('godina',{ascending:false}).order('mjesec',{ascending:false}).limit(1);
+    window._lokoPrev=(pr&&pr[0]&&pr[0].id!==L.id)?pr[0]:null;
+    if(window._lokoPrev&&lokoMozeUrediti(L)&&!L.vozilo_reg&&!L.vozilo_marka){
+      L.vozilo_marka=window._lokoPrev.vozilo_marka||''; L.vozilo_reg=window._lokoPrev.vozilo_reg||'';
+    }
+  }catch(e){}
+  if(window._loko===L&&document.getElementById('mo-loko')?.classList.contains('open')){lokoCitaj();renderLokoModal();}
+}
+
+function lokoCitaj(){
+  const L=window._loko; if(!L||!lokoMozeUrediti(L)) return;
+  const v=id=>document.getElementById(id);
+  if(v('loko-marka')) L.vozilo_marka=v('loko-marka').value.trim();
+  if(v('loko-reg')) L.vozilo_reg=v('loko-reg').value.trim().toUpperCase();
+  if(v('loko-nap')) L.napomena=v('loko-nap').value;
+  document.querySelectorAll('#loko-rows tr[data-i]').forEach(tr=>{
+    const i=+tr.dataset.i, s=L.stavke[i]; if(!s) return;
+    const q=c=>tr.querySelector('.'+c);
+    s.datum=q('l-dat').value; s.relacija=q('l-rel').value; s.opis=q('l-opis').value;
+    s.od=q('l-od').value; s.do=q('l-do').value;
+    const p=q('l-poc').value, k=q('l-kraj').value;
+    s.poc=p===''?null:parseFloat(p); s.kraj=k===''?null:parseFloat(k);
+    if(s.poc!=null&&s.kraj!=null) s.km=Math.round((s.kraj-s.poc)*10)/10;
+    else s.km=parseFloat(q('l-km').value)||0;
+  });
+}
+
+function lokoUpozorenja(){
+  const L=window._loko, ev=window._lokoEv||{}, out=[];
+  const zadnji=new Date(L.godina,L.mjesec,0).getDate();
+  const brojDat={}; L.stavke.forEach(s=>{if(s.datum)brojDat[s.datum]=(brojDat[s.datum]||0)+1;});
+  let prevKraj=null;
+  const prevSt=(window._lokoPrev?.stavke||[]).filter(s=>s.kraj!=null);
+  if(prevSt.length&&(window._lokoPrev.vozilo_reg||'')===(L.vozilo_reg||'')) prevKraj=Math.max(...prevSt.map(s=>+s.kraj));
+  const srt=L.stavke.map((s,i)=>({s,i})).sort((a,b)=>(a.s.datum||'').localeCompare(b.s.datum||'')||((a.s.poc??0)-(b.s.poc??0)));
+  srt.forEach(({s,i})=>{
+    const w=[];
+    if(!s.datum) w.push('nema datuma');
+    else{
+      const [y,m,d]=s.datum.split('-').map(Number);
+      if(y!==L.godina||m!==L.mjesec) w.push('datum nije u mjesecu obračuna');
+      else{
+        const dw=new Date(y,m-1,d).getDay();
+        if(dw===0||(dw===6&&!jeSubotaRadna(L.jedinica_id))) w.push(dw===0?'nedjelja':'subota');
+        if(isHoliday(y,m,d)) w.push('blagdan');
+        const o=ev.ods?.[d]; if(o) w.push('u evidenciji: '+o.map(c=>(DB.vrste.find(v=>v.code===c)?.name||c)).join(', '));
+      }
+      if(brojDat[s.datum]>1) w.push('više vožnji isti dan');
+    }
+    if(s.poc!=null&&s.kraj!=null&&s.kraj<=s.poc) w.push('završno stanje brojila nije veće od početnog');
+    if(s.poc!=null&&prevKraj!=null&&s.poc<prevKraj) w.push(`početno stanje (${lokoKm(s.poc)}) manje od prethodnog završnog (${lokoKm(prevKraj)})`);
+    if(s.kraj!=null) prevKraj=Math.max(prevKraj??-Infinity,s.kraj);
+    if(!(s.km>0)) w.push('nema prijeđenih km');
+    if(s.km>150) w.push('neuobičajeno mnogo km za dan');
+    if(!(s.relacija||'').trim()&&!(s.opis||'').trim()) w.push('nije upisana relacija ni opis posla');
+    if(s.od&&s.do&&s.do<=s.od) w.push('vrijeme povratka prije polaska');
+    out[i]=w;
+  });
+  return out;
+}
+
+function lokoRekalk(){
+  lokoCitaj();
+  const L=window._loko; const w=lokoUpozorenja();
+  let km=0;
+  L.stavke.forEach((s,i)=>{
+    km+=(+s.km||0);
+    const tr=document.querySelector(`#loko-rows tr[data-i="${i}"]`); if(!tr) return;
+    const kmIn=tr.querySelector('.l-km'); const auto=s.poc!=null&&s.kraj!=null;
+    if(kmIn){kmIn.readOnly=auto; if(auto) kmIn.value=s.km;}
+    tr.querySelector('.l-eur').textContent=lokoEur((+s.km||0)*L.eur_km);
+    const wc=tr.querySelector('.l-w'); wc.innerHTML=w[i]?.length?`<i class="ti ti-alert-triangle" style="color:#b7791f" title="${hEsc(w[i].join('\n'))}"></i>`:'';
+    tr.style.background=w[i]?.length?'#fff8e6':'';
+  });
+  const t=document.getElementById('loko-tot'); if(t) t.innerHTML=`<strong>${lokoKm(km)} km</strong> × ${lokoEur(L.eur_km)} € = <strong style="font-size:15px">${lokoEur(km*L.eur_km)} €</strong>`;
+  const ws=document.getElementById('loko-warn');
+  const sve=[];w.forEach((x,i)=>x?.forEach(m=>sve.push(`${lokoDat(L.stavke[i].datum)||'red '+(i+1)}: ${m}`)));
+  if(ws) ws.innerHTML=sve.length?`<div class="al alw" style="margin:8px 0;font-size:12px;display:block"><i class="ti ti-alert-triangle"></i> <strong>Provjerite (${sve.length}):</strong> ${sve.map(hEsc).join(' · ')}</div>`:'';
+}
+
+function lokoZaglavlje(){
+  const L=window._loko; lokoCitaj();
+  const nj=parseInt(document.getElementById('loko-jed').value), ng=parseInt(document.getElementById('loko-god').value), nm=parseInt(document.getElementById('loko-mj').value);
+  const nd=parseInt(document.getElementById('loko-djel').value)||null;
+  const promjenaDj=nd!==L.djelatnik_id||ng!==L.godina||nm!==L.mjesec;
+  L.jedinica_id=nj; L.godina=ng; L.mjesec=nm;
+  if(nd&&!lokoDjelatnici(nj,ng,nm).some(d=>d.id===nd)) L.djelatnik_id=null; else L.djelatnik_id=nd;
+  if(promjenaDj&&!L.id){L.vozilo_marka='';L.vozilo_reg='';}
+  renderLokoModal();
+  if(promjenaDj) lokoUcitajPomocno();
+}
+
+function lokoDodajRed(kopija){
+  const L=window._loko; lokoCitaj();
+  const zad=L.stavke[L.stavke.length-1];
+  let dat='';
+  const zadnji=new Date(L.godina,L.mjesec,0).getDate();
+  if(zad?.datum){
+    let d=new Date(zad.datum+'T12:00:00');
+    for(let k=0;k<7;k++){d.setDate(d.getDate()+1); const dw=d.getDay(); if(d.getMonth()+1!==L.mjesec) break; if(dw!==0&&(dw!==6||jeSubotaRadna(L.jedinica_id))) break;}
+    if(d.getMonth()+1===L.mjesec) dat=d.toISOString().slice(0,10);
+  } else dat=`${L.godina}-${String(L.mjesec).padStart(2,'0')}-01`;
+  let poc=zad?.kraj??null;
+  if(poc==null&&!zad){const pr=(window._lokoPrev?.stavke||[]).filter(s=>s.kraj!=null); if(pr.length) poc=Math.max(...pr.map(s=>+s.kraj));}
+  const n={datum:dat,poc,kraj:null,km:0,relacija:'',od:'',do:'',opis:''};
+  if(kopija&&zad){n.relacija=zad.relacija;n.opis=zad.opis;n.od=zad.od;n.do=zad.do;
+    if(zad.poc!=null&&zad.kraj!=null&&poc!=null){n.kraj=poc+(zad.kraj-zad.poc);n.km=zad.kraj-zad.poc;} else n.km=zad.km;}
+  L.stavke.push(n); renderLokoModal();
+  setTimeout(()=>{const r=document.querySelectorAll('#loko-rows tr[data-i]');const last=r[r.length-1];last?.querySelector(kopija?'.l-kraj':'.l-kraj')?.focus();},30);
+}
+function lokoUkloni(i){const L=window._loko; lokoCitaj(); L.stavke.splice(i,1); renderLokoModal();}
+function lokoSortiraj(){const L=window._loko; lokoCitaj(); L.stavke.sort((a,b)=>(a.datum||'').localeCompare(b.datum||'')||((a.poc??0)-(b.poc??0))); renderLokoModal();}
+
+function renderLokoModal(){
+  const L=window._loko, ured=lokoMozeUrediti(L);
+  const s=LOKO_ST[L.status]||LOKO_ST.nacrt;
+  document.getElementById('loko-title').innerHTML=L.id?`Obračun loko-vožnje ${lokoBroj(L)} <span class="${s.cls}" style="margin-left:6px">${s.lbl}</span>`:'Novi obračun loko-vožnje';
+  const jeds=DB.jedinice.filter(j=>(lokoUnosi()&&vJ().includes(j.id))||j.id===L.jedinica_id);
+  const djs=lokoDjelatnici(L.jedinica_id,L.godina,L.mjesec);
+  const dis=ured?'':'disabled';
+  const mn=`${L.godina}-${String(L.mjesec).padStart(2,'0')}-01`, mx=`${L.godina}-${String(L.mjesec).padStart(2,'0')}-${String(new Date(L.godina,L.mjesec,0).getDate()).padStart(2,'0')}`;
+  const rel=[...new Set([...L.stavke.map(x=>x.relacija),...(window._lokoPrev?.stavke||[]).map(x=>x.relacija)].filter(Boolean))];
+  const ops=[...new Set([...L.stavke.map(x=>x.opis),...(window._lokoPrev?.stavke||[]).map(x=>x.opis)].filter(Boolean))];
+  const ev=window._lokoEv||{};
+  const inp='style="width:100%;padding:4px 5px;font-size:12px"';
+  document.getElementById('loko-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px">
+      <div class="fg" style="margin:0"><label class="fl">Jedinica</label><select id="loko-jed" onchange="lokoZaglavlje()" ${dis}>${jeds.map(j=>`<option value="${j.id}"${j.id===L.jedinica_id?' selected':''}>${hEsc(j.name)}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0"><label class="fl">Mjesec</label><select id="loko-mj" onchange="lokoZaglavlje()" ${dis}>${MJ_HR.map((m,i)=>`<option value="${i+1}"${i+1===L.mjesec?' selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="loko-god" onchange="lokoZaglavlje()" ${dis}>${YEARS.map(y=>`<option value="${y}"${y===L.godina?' selected':''}>${y}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0;grid-column:span 2"><label class="fl">Djelatnik (radnik) <span class="req">*</span></label><select id="loko-djel" onchange="lokoZaglavlje()" ${dis}><option value="">– odaberite –</option>${djs.map(d=>`<option value="${d.id}"${d.id===L.djelatnik_id?' selected':''}>${hEsc(dF(d))}${d.sifra?' ('+hEsc(d.sifra)+')':''}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0"><label class="fl">Marka vozila <span class="req">*</span></label><input id="loko-marka" value="${hEsc(L.vozilo_marka||'')}" placeholder="npr. Renault Clio" oninput="lokoCitaj()" ${dis}></div>
+      <div class="fg" style="margin:0"><label class="fl">Registracija <span class="req">*</span></label><input id="loko-reg" value="${hEsc(L.vozilo_reg||'')}" placeholder="ST 112-HR" oninput="lokoRekalk()" ${dis}></div>
+      <div class="fg" style="margin:0"><label class="fl">Naknada</label><div style="padding:7px 0;font-weight:600">${lokoEur(L.eur_km)} €/km</div></div>
+    </div>
+    ${L.djelatnik_id&&ev.ima===false?'<div class="al ali" style="font-size:12px;margin-bottom:6px"><i class="ti ti-info-circle"></i> Za ovaj mjesec još nema evidencije radnog vremena pa se vožnje ne mogu usporediti s bolovanjem i godišnjim.</div>':''}
+    <datalist id="loko-dl-rel">${rel.map(x=>`<option value="${hEsc(x)}">`).join('')}</datalist>
+    <datalist id="loko-dl-ops">${ops.map(x=>`<option value="${hEsc(x)}">`).join('')}</datalist>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1000px">
+      <thead><tr style="background:var(--bg3);font-size:11px">
+        <th style="padding:6px;width:28px">#</th><th style="padding:6px;width:128px">Datum</th>
+        <th style="padding:6px;width:92px">Brojilo početno</th><th style="padding:6px;width:92px">Brojilo završno</th>
+        <th style="padding:6px;width:66px">km</th><th style="padding:6px">Relacija (kuda)</th>
+        <th style="padding:6px;width:150px">Vrijeme od – do</th><th style="padding:6px">Izvješće (opis obavljenog posla)</th>
+        <th style="padding:6px;width:70px;text-align:right">€</th><th style="width:22px"></th>${ured?'<th style="width:30px"></th>':''}
+      </tr></thead>
+      <tbody id="loko-rows">${L.stavke.map((x,i)=>`<tr data-i="${i}" style="border-top:1px solid var(--border)">
+        <td style="padding:3px 6px;color:var(--text3)">${i+1}.</td>
+        <td style="padding:3px"><input type="date" class="l-dat" min="${mn}" max="${mx}" value="${x.datum||''}" oninput="lokoRekalk()" ${inp} ${dis}></td>
+        <td style="padding:3px"><input type="number" class="l-poc" value="${x.poc??''}" oninput="lokoRekalk()" ${inp} ${dis}></td>
+        <td style="padding:3px"><input type="number" class="l-kraj" value="${x.kraj??''}" oninput="lokoRekalk()" ${inp} ${dis}></td>
+        <td style="padding:3px"><input type="number" step="0.1" class="l-km" value="${x.km||''}" oninput="lokoRekalk()" title="Upisuje se samo ako nema stanja brojila" ${inp} ${dis}></td>
+        <td style="padding:3px"><input class="l-rel" list="loko-dl-rel" value="${hEsc(x.relacija||'')}" placeholder="npr. Teslina – Jobova – Put Meja" oninput="lokoRekalk()" ${inp} ${dis}></td>
+        <td style="padding:3px;white-space:nowrap"><input type="time" class="l-od" value="${x.od||''}" oninput="lokoRekalk()" style="width:68px;padding:4px 2px;font-size:12px" ${dis}> – <input type="time" class="l-do" value="${x.do||''}" oninput="lokoRekalk()" style="width:68px;padding:4px 2px;font-size:12px" ${dis}></td>
+        <td style="padding:3px"><input class="l-opis" list="loko-dl-ops" value="${hEsc(x.opis||'')}" placeholder="npr. obilazak radilišta, nadzor radova" oninput="lokoRekalk()" ${inp} ${dis}></td>
+        <td style="padding:3px 6px;text-align:right" class="l-eur"></td>
+        <td class="l-w" style="text-align:center"></td>
+        ${ured?`<td><button class="btn bxs bd" title="Ukloni redak" onclick="lokoUkloni(${i})"><i class="ti ti-x"></i></button></td>`:''}
+      </tr>`).join('')||`<tr><td colspan="11" style="padding:18px;text-align:center;color:var(--text3)">Još nema upisanih vožnji${ured?' – kliknite „Dodaj vožnju”':''}.</td></tr>`}</tbody>
+    </table></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <div>${ured?`<button class="btn bs" onclick="lokoDodajRed(false)"><i class="ti ti-plus"></i> Dodaj vožnju</button>
+        <button class="btn bs" onclick="lokoDodajRed(true)" ${L.stavke.length?'':'disabled'} title="Novi redak s istom relacijom, opisom i kilometrima, idući radni dan"><i class="ti ti-copy"></i> Ponovi zadnju</button>
+        <button class="btn bs" onclick="lokoSortiraj()" title="Poredaj po datumu"><i class="ti ti-sort-ascending"></i></button>`:''}</div>
+      <div id="loko-tot"></div>
+    </div>
+    <div id="loko-warn"></div>
+    <div class="fg" style="margin-top:8px"><label class="fl">Napomena</label><textarea id="loko-nap" rows="2" oninput="lokoCitaj()" ${dis}>${hEsc(L.napomena||'')}</textarea></div>
+    ${L.id?`<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="font-weight:600;margin-bottom:6px"><i class="ti ti-messages"></i> Tijek i komentari</div>
+      <div style="max-height:180px;overflow-y:auto;font-size:12px">${(L.povijest||[]).map(p=>`<div style="padding:5px 8px;margin-bottom:4px;border-radius:6px;background:${p.do==='vraceno'||p.do==='odbijeno'?'#fdecea':p.do==='odobreno'?'#eaf5ea':'var(--bg3)'}">
+        <span style="color:var(--text3)">${fmtDT(p.t)}</span> · <strong>${hEsc(p.ko||'')}</strong> <span style="color:var(--text3)">(${hEsc(nazivUlogeEv(p.uloga))})</span>
+        ${p.do?` → <span class="${(LOKO_ST[p.do]||{}).cls||''}">${(LOKO_ST[p.do]||{lbl:p.do}).lbl}</span>`:''}
+        ${p.kom?`<div style="margin-top:3px;white-space:pre-wrap">${hEsc(p.kom)}</div>`:''}</div>`).join('')}</div>
+      <div class="fg" style="margin:6px 0 0"><textarea id="loko-kom" rows="2" placeholder="${jeDirektor()?'Komentar ili pitanje za voditelja (obavezno kod vraćanja i odbijanja)':'Komentar, pojašnjenje ili odgovor direktoru'}"></textarea></div>
+    </div>`:''}`;
+  lokoRekalk();
+  renderLokoFoot();
+}
+
+function renderLokoFoot(){
+  const L=window._loko, ured=lokoMozeUrediti(L), b=[];
+  b.push(`<button class="btn bs" onclick="closeM('mo-loko')">Zatvori</button>`);
+  if(L.id) b.push(`<button class="btn bs" onclick="ispisLoko(${L.id})"><i class="ti ti-printer"></i> Ispis</button>`);
+  if(L.id) b.push(`<button class="btn bs" onclick="lokoAkcija(null)"><i class="ti ti-message-plus"></i> Dodaj komentar</button>`);
+  if(ured){
+    b.push(`<button class="btn bs" onclick="spremiLoko('nacrt')"><i class="ti ti-device-floppy"></i> Spremi nacrt</button>`);
+    b.push(`<button class="btn bp" onclick="spremiLoko('poslano')"><i class="ti ti-send"></i> ${L.status==='vraceno'?'Ponovno pošalji':'Pošalji na odobrenje'}</button>`);
+  }
+  if(L.status==='poslano'&&lokoUnosi()&&vJ().includes(L.jedinica_id)) b.push(`<button class="btn bs" onclick="lokoAkcija('nacrt')" title="Vrati u nacrt da biste ga mogli mijenjati"><i class="ti ti-arrow-back"></i> Povuci</button>`);
+  if(L.status==='poslano'&&lokoJeDir()){
+    b.push(`<button class="btn bd" onclick="lokoAkcija('odbijeno')"><i class="ti ti-circle-x"></i> Odbij</button>`);
+    b.push(`<button class="btn bs" onclick="lokoAkcija('vraceno')"><i class="ti ti-arrow-back-up"></i> Vrati na doradu</button>`);
+    b.push(`<button class="btn bp" style="background:#3f7a3a;border-color:#3f7a3a" onclick="lokoAkcija('odobreno')"><i class="ti ti-circle-check"></i> Odobri</button>`);
+  }
+  if(L.status==='odobreno'&&lokoJeDir()) b.push(`<button class="btn bs" onclick="lokoAkcija('vraceno')"><i class="ti ti-arrow-back-up"></i> Poništi odobrenje</button>`);
+  if(L.status==='odobreno'&&lokoJeObr()) b.push(`<button class="btn bp" onclick="lokoAkcija('isplaceno')"><i class="ti ti-cash"></i> Uneseno u plaće</button>`);
+  if(L.status==='isplaceno'&&lokoJeObr()) b.push(`<button class="btn bs" onclick="lokoAkcija('odobreno')"><i class="ti ti-arrow-back"></i> Vrati u odobreno</button>`);
+  document.getElementById('loko-foot').innerHTML=b.join('');
+}
+
+async function spremiLoko(status){
+  const L=window._loko; lokoCitaj();
+  if(!L.djelatnik_id){showToast('Odaberite djelatnika','error');return;}
+  if(status==='poslano'){
+    if(!L.vozilo_marka||!L.vozilo_reg){showToast('Upišite marku i registraciju vozila','error');return;}
+    if(!L.stavke.length){showToast('Upišite barem jednu vožnju','error');return;}
+    const w=lokoUpozorenja();
+    const tesko=L.stavke.findIndex((s,i)=>!s.datum||!(s.km>0)||(s.poc!=null&&s.kraj!=null&&s.kraj<=s.poc)||(w[i]||[]).includes('datum nije u mjesecu obračuna'));
+    if(tesko>=0){showToast(`Red ${tesko+1}: provjerite datum i kilometre`,'error');return;}
+    const bez=L.stavke.findIndex(s=>!(s.opis||'').trim()&&!(s.relacija||'').trim());
+    if(bez>=0){showToast(`Red ${bez+1}: upišite relaciju ili opis posla`,'error');return;}
+    const n=w.reduce((a,x)=>a+(x?.length||0),0);
+    if(n&&!confirm(`Obračun ima ${n} upozorenja (žuto označeni redovi). Ipak poslati direktoru?`)) return;
+  }
+  const stavke=L.stavke.map(s=>({datum:s.datum||null,poc:s.poc??null,kraj:s.kraj??null,km:+s.km||0,relacija:(s.relacija||'').trim(),od:s.od||'',do:s.do||'',opis:(s.opis||'').trim()}))
+    .sort((a,b)=>(a.datum||'').localeCompare(b.datum||'')||((a.poc??0)-(b.poc??0)));
+  const kom=(document.getElementById('loko-kom')?.value||'').trim()||null;
+  const p={djelatnik_id:L.djelatnik_id,jedinica_id:L.jedinica_id,godina:L.godina,mjesec:L.mjesec,vozilo_marka:L.vozilo_marka,vozilo_reg:L.vozilo_reg,
+    stavke,napomena:L.napomena||null,status,komentar:kom};
+  try{
+    let r;
+    if(L.id) r=await SB.from('loko_voznje').update(p).eq('id',L.id).select().single();
+    else r=await SB.from('loko_voznje').insert({...p,eur_km:L.eur_km}).select().single();
+    if(r.error) throw r.error;
+    window._loko={...r.data,stavke:(r.data.stavke||[]).map(s=>({...s}))};
+    showToast(status==='poslano'?'✅ Poslano direktoru na odobrenje':'✅ Nacrt spremljen','success');
+    if(status==='poslano') closeM('mo-loko'); else renderLokoModal();
+    loadLoko(); osvjeziLokoBadge();
+  }catch(e){
+    const m=String(e.message||'');
+    showToast(m.includes('duplicate')||e.code==='23505'?'Za ovog djelatnika već postoji obračun za taj mjesec – otvorite ga s popisa.':'Greška: '+m,'error');
+  }
+}
+
+async function lokoAkcija(novi){
+  const L=window._loko; if(!L?.id) return;
+  const kom=(document.getElementById('loko-kom')?.value||'').trim();
+  let p={komentar:kom||null};
+  if(novi===null){ if(!kom){showToast('Upišite komentar','error');document.getElementById('loko-kom')?.focus();return;} }
+  else{
+    if((novi==='vraceno'||novi==='odbijeno')&&!kom){showToast(novi==='vraceno'?'Upišite što treba doraditi ili pojasniti':'Upišite razlog odbijanja','error');document.getElementById('loko-kom')?.focus();return;}
+    if(novi==='odobreno'&&L.status==='poslano'&&!confirm(`Odobriti obračun loko-vožnje: ${dF(DB.djelatnici.find(d=>d.id===L.djelatnik_id))}, ${MJ_HR[L.mjesec-1]} ${L.godina}, ${lokoKm(L.ukupno_km)} km = ${lokoEur(L.ukupno_eur)} €?`)) return;
+    if(novi==='odbijeno'&&!confirm('Odbiti obračun? Odbijeni obračun se ne isplaćuje.')) return;
+    if(novi==='isplaceno'){
+      const now=new Date(); const def=`plaća za ${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+      const r=prompt('S kojom plaćom je isplaćeno? (upisuje se na obračun)',L.isplata_razdoblje||def); if(r===null) return;
+      p.isplata_razdoblje=r.trim();
+    }
+    p.status=novi;
+  }
+  const {data,error}=await SB.from('loko_voznje').update(p).eq('id',L.id).select().single();
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  window._loko={...data,stavke:(data.stavke||[]).map(s=>({...s}))};
+  showToast(novi===null?'Komentar dodan':'✅ '+(LOKO_ST[novi]?.lbl||novi),'success');
+  renderLokoModal(); loadLoko(); osvjeziLokoBadge();
+}
+
+// ── Ispis obrasca ─────────────────────────────────────────────
+async function ispisLoko(id){
+  let L=window._loko?.id===id?window._loko:null;
+  if(!L){const {data,error}=await SB.from('loko_voznje').select('*').eq('id',id).single(); if(error){showToast('Greška: '+error.message,'error');return;} L=data;}
+  let tv=window.POSTAVKE_TVRTKE; try{ if(!tv) tv=await loadPostavkeTvrtkeGlobal(); }catch(e){}
+  const d=DB.djelatnici.find(x=>x.id===L.djelatnik_id);
+  const st=(L.stavke||[]).slice().sort((a,b)=>(a.datum||'').localeCompare(b.datum||''));
+  const ok=['odobreno','isplaceno'].includes(L.status);
+  const vod=(L.povijest||[]).filter(p=>p.do==='poslano').slice(-1)[0];
+  const e2=lokoEur;
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Loko vožnja ${hEsc(dF(d))} ${MJ_NOM[L.mjesec-1]} ${L.godina}</title>
+  <style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#111;margin:0;position:relative}
+  .gl{display:flex;justify-content:space-between;align-items:flex-start}.tv{font-size:10.5px;line-height:1.4}
+  h1{text-align:center;font-size:16px;letter-spacing:1px;margin:10px 0 6px}
+  .zag{display:flex;gap:28px;justify-content:center;margin-bottom:8px;font-size:11px}.zag b{border-bottom:1px solid #333;padding:0 8px}
+  table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:3px 4px;vertical-align:top}
+  th{background:#eee;font-size:9px;text-align:center}td.r{text-align:right;white-space:nowrap}td.c{text-align:center;white-space:nowrap}
+  .br th{font-size:8px;color:#555;background:#f6f6f6;padding:1px}
+  tfoot td{font-weight:bold;background:#f3f3f3}
+  .pot{display:flex;justify-content:space-between;margin-top:26px;font-size:10px}.pot>div{width:30%;text-align:center}
+  .pot .l{border-top:1px solid #333;padding-top:3px;margin-top:22px}.ok{color:#245d24;font-weight:bold}
+  .wm{position:fixed;top:40%;left:0;right:0;text-align:center;font-size:60px;color:rgba(200,0,0,.12);transform:rotate(-12deg);font-weight:bold;pointer-events:none}
+  .nap{margin-top:8px;font-size:9.5px}.sitno{margin-top:10px;font-size:8.5px;color:#666}</style></head><body>
+  ${ok?'':`<div class="wm">${L.status==='odbijeno'?'ODBIJENO':'NIJE ODOBRENO'}</div>`}
+  <div class="gl"><div class="tv"><b>${hEsc(tv?.naziv||'Parkovi i nasadi d.o.o.')}</b><br>${hEsc(tv?.adresa||'')}<br>OIB: ${hEsc(tv?.oib||'')}</div>
+    <div class="tv" style="text-align:right">Broj: <b>${lokoBroj(L)}</b><br>Jedinica: ${hEsc(jN(L.jedinica_id))}</div></div>
+  <h1>OBRAČUN LOKO-VOŽNJE</h1>
+  <div class="zag"><span>za mjesec <b>${MJ_NOM[L.mjesec-1]} ${L.godina}.</b></span><span>radnik <b>${hEsc(d?(d.ime+' '+d.prez):'')}</b></span>${d?.oib?`<span>OIB <b>${hEsc(d.oib)}</b></span>`:''}
+    <span>vozilo <b>${hEsc(L.vozilo_marka||'')}, ${hEsc(L.vozilo_reg||'')}</b></span></div>
+  <table><thead>
+    <tr><th rowspan="2" style="width:60px">datum</th><th colspan="2">osobni automobil</th><th colspan="2">brojilo</th><th rowspan="2">relacija</th><th rowspan="2" style="width:62px">vrijeme</th><th rowspan="2" style="width:48px">prijeđeni km</th><th rowspan="2" style="width:62px">naknada u eur<br>(${e2(L.eur_km)} eur/km)</th><th rowspan="2">izvješće (opis obavljenog posla)</th></tr>
+    <tr><th style="width:70px">marka vozila</th><th style="width:62px">reg. broj</th><th style="width:54px">početno stanje</th><th style="width:54px">završno stanje</th></tr>
+    <tr class="br"><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9 (8 × ${e2(L.eur_km)})</th><th>10</th></tr></thead>
+  <tbody>${st.map(s=>`<tr><td class="c">${lokoDat(s.datum)}</td><td>${hEsc(L.vozilo_marka||'')}</td><td class="c">${hEsc(L.vozilo_reg||'')}</td>
+    <td class="r">${s.poc!=null?lokoKm(s.poc):''}</td><td class="r">${s.kraj!=null?lokoKm(s.kraj):''}</td><td>${hEsc(s.relacija||'')}</td>
+    <td class="c">${s.od||s.do?hEsc((s.od||'')+'–'+(s.do||'')):''}</td><td class="r">${lokoKm(s.km)}</td><td class="r">${e2((+s.km||0)*L.eur_km)}</td><td>${hEsc(s.opis||'')}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="7" style="text-align:right">ukupno</td><td class="r">${lokoKm(L.ukupno_km)}</td><td class="r">${e2(L.ukupno_eur)}</td><td></td></tr></tfoot></table>
+  ${L.napomena?`<div class="nap"><b>Napomena:</b> ${hEsc(L.napomena)}</div>`:''}
+  <div class="pot">
+    <div>Radnik<div class="l">${hEsc(d?(d.ime+' '+d.prez):'')}</div></div>
+    <div>Sastavio / voditelj<div class="l">${hEsc(L.izradio_ime||'')}${vod?'<br><span style="font-size:9px">poslano '+fmtDT(vod.t)+'</span>':''}</div></div>
+    <div>Odobrio${ok?`<div class="ok" style="margin-top:6px">ODOBRENO ${fmtDT(L.odobreno_at)}</div><div class="l" style="margin-top:6px">${hEsc(L.odobrio_ime||'')}</div>`:`<div class="l">${hEsc(tv?.odgovorna_osoba||'')}</div>`}</div>
+  </div>
+  ${L.status==='isplaceno'?`<div class="nap">Uneseno u plaće: ${hEsc(L.isplata_razdoblje||'')} (${hEsc(L.isplatio_ime||'')}, ${fmtDT(L.isplaceno_at)})</div>`:''}
+  <div class="sitno">Naknada za korištenje privatnog automobila u službene svrhe obračunata je po ${e2(L.eur_km)} €/km. Odobreno elektronički u aplikaciji Evidencija. Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div>
+</body></html>`);
+}
+
+// ── Excel popis (obračun plaće, financije, direktor) ────────────
+function excelLoko(){
+  const data=window._lokoList||[]; if(!data.length){showToast('Nema podataka za izvoz','info');return;}
+  if(typeof XLSX==='undefined'){showToast('Excel modul nije učitan','error');return;}
+  const god=document.getElementById('loko-fgod').value, mj=parseInt(document.getElementById('loko-fmj').value)||0;
+  const aoa=[[`Loko vožnja – ${mj?MJ_HR[mj-1]+' ':''}${god}`],[],['Broj','Šifra','Prezime','Ime','OIB','Jedinica','Mjesec','Vozilo','Registracija','Vožnji','km','€/km','Iznos €','Status','Izradio','Odobrio','Odobreno','Uneseno u plaće']];
+  data.forEach(L=>{const d=DB.djelatnici.find(x=>x.id===L.djelatnik_id)||{};
+    aoa.push([lokoBroj(L),d.sifra||'',d.prez||'',d.ime||'',d.oib||'',jN(L.jedinica_id),`${String(L.mjesec).padStart(2,'0')}/${L.godina}`,L.vozilo_marka||'',L.vozilo_reg||'',(L.stavke||[]).length,
+      +L.ukupno_km||0,+L.eur_km||0,+L.ukupno_eur||0,(LOKO_ST[L.status]||{}).lbl||L.status,L.izradio_ime||'',L.odobrio_ime||'',L.odobreno_at?fmtDT(L.odobreno_at):'',L.isplata_razdoblje||'']);});
+  aoa.push([],['','','UKUPNO','','','','','','','',data.reduce((a,L)=>a+(+L.ukupno_km||0),0),'',data.reduce((a,L)=>a+(+L.ukupno_eur||0),0)]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,8,16,12,13,26,9,16,12,7,8,6,10,16,18,18,16,16].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Loko vožnja');
+  XLSX.writeFile(wb,`Loko_voznja_${god}${mj?'_'+String(mj).padStart(2,'0'):''}.xlsx`);
+}
+
 // ══ POSTAVKE TVRTKE ════════════════════════════════════════════
 window.POSTAVKE_TVRTKE=null;
 
@@ -4382,6 +4915,7 @@ function primijeniOvlastiStim(){
   { const e=document.getElementById('nav-rekapitulacija'); if(e) e.style.display=canStim()?'':'none'; }
   { const e=document.getElementById('sg-djelatnici'); if(e) e.style.display=(canStim()||ured)?'':'none'; }
   { const e=document.getElementById('btn-dodaj-djel'); if(e) e.style.display=ured?'':'none'; }
+  { const e=document.getElementById('nav-loko'); if(e) e.style.display=lokoVidi()?'':'none'; if(lokoVidi()) setTimeout(osvjeziLokoBadge,500); }
   const t=document.getElementById('tR'); if(t&&CU) t.textContent=nazivUlogeEv(CU.role);
 }
 
@@ -5526,6 +6060,7 @@ function vbZa(rows,god,mj){let best=null;const t=god*12+mj;(rows||[]).forEach(r=
 const MJ_NOM=['siječanj','veljača','ožujak','travanj','svibanj','lipanj','srpanj','kolovoz','rujan','listopad','studeni','prosinac'];
 async function setupBodoviStr(){
   await ucitajBodoveDjelatnika();
+  rLokoCijena();
   const vj=vJ(), sel=document.getElementById('bp-jed'), cur=sel.value;
   sel.innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
   if(cur) sel.value=cur;
@@ -5536,6 +6071,24 @@ async function setupBodoviStr(){
   document.getElementById('bp-od-hint').style.display=ured?'':'none';
   document.getElementById('bp-ovlast').innerHTML=ured?'Bodove i vrijednost boda mijenjaju <b>admin i Obračun plaće</b>; svaka promjena upisuje se u Dnevnik promjena.':'Imate pravo samo pregleda – bodove mijenjaju admin i Obračun plaće.';
   rVbStr(); rBodoviStr(); rZadnjePromjene();
+}
+async function rLokoCijena(){
+  let p=null; try{p=await loadPostavkeTvrtkeGlobal();}catch(e){}
+  const c=parseFloat(p?.loko_eur_km)||0.50;
+  const n=document.getElementById('bp-loko-now'); if(!n) return;
+  n.textContent=c.toLocaleString('hr-HR',{minimumFractionDigits:2})+' €/km';
+  document.getElementById('bp-loko-od').textContent=p?.loko_promijenjeno?`promijenjeno: ${fmtDT(p.loko_promijenjeno)}${p.loko_promijenio?' · '+p.loko_promijenio:''}`:'';
+  document.getElementById('bp-loko-form').innerHTML=smijeObracun()?`<div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px">
+    <div class="fg" style="margin:0"><label class="fl">Nova cijena (€/km)</label><input type="number" step="0.01" min="0" id="bp-loko-val" value="${c.toFixed(2)}" style="width:110px"></div>
+    <button class="btn bp" onclick="spremiLokoCijenu()"><i class="ti ti-device-floppy"></i> Spremi</button></div>`:'';
+}
+async function spremiLokoCijenu(){
+  const v=parseFloat(String(document.getElementById('bp-loko-val').value).replace(',','.'));
+  if(isNaN(v)||v<=0||v>5){showToast('Upišite ispravnu cijenu po km','error');return;}
+  if(!confirm(`Nova naknada za loko vožnju: ${v.toLocaleString('hr-HR',{minimumFractionDigits:2})} €/km za cijelu tvrtku?`)) return;
+  const {error}=await SB.from('postavke_tvrtke').update({loko_eur_km:v}).eq('id',1);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  showToast('✅ Cijena loko vožnje spremljena','success'); rLokoCijena();
 }
 function rVbStr(){
   const t=new Date(), rows=[...(window._vbRows||[])].sort((a,b)=>(b.godina*12+b.mjesec)-(a.godina*12+a.mjesec));
