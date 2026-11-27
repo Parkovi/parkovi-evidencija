@@ -315,6 +315,7 @@ select{cursor:pointer}
 .sb-mode-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
 .sb-mode-local{background:#fff3cd;color:#856404;border:1px solid #ffc107}
 .sb-mode-live{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.upute-tekst ol,.upute-tekst ul{margin:6px 0 6px 20px;padding:0}.upute-tekst li,.upute-tekst p{font-size:13px;line-height:1.55}.upute-tekst p{margin:6px 0}.upute-tekst li{margin:3px 0}#upute-toc a:hover{background:var(--bg3)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -347,7 +348,7 @@ select{cursor:pointer}
         <div class="tbav" id="tAv"></div>
         <div><div style="font-weight:600;font-size:12px" id="tN"></div><div style="font-size:10px;opacity:.65" id="tR"></div></div>
       </div>
-      <button class="btb" onclick="openChangePwd()" style="margin-right:6px;background:rgba(255,255,255,.15)"><i class="ti ti-key"></i> Lozinka</button><button class="btb" onclick="doLogout()"><i class="ti ti-logout"></i> Odjava</button>
+      <button class="btb" onclick="otvoriPomoc()" title="Upute za rad – za ovu stranicu" style="margin-right:6px;background:rgba(255,255,255,.15)"><i class="ti ti-help"></i> ?</button><button class="btb" onclick="openChangePwd()" style="margin-right:6px;background:rgba(255,255,255,.15)"><i class="ti ti-key"></i> Lozinka</button><button class="btb" onclick="doLogout()"><i class="ti ti-logout"></i> Odjava</button>
     </div>
   </div>
   <div id="sb-config-banner" style="display:none">
@@ -365,6 +366,7 @@ select{cursor:pointer}
     <div class="sb">
       <div class="sg">
         <div class="sgl">Evidencija</div>
+        <div class="ni" onclick="sP('upute')" id="nav-upute"><i class="ti ti-help-circle"></i> Upute za rad</div>
         <div class="ni active" onclick="sP('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i> Pregled</div>
         <div class="ni" onclick="sP('unos')" id="nav-unos"><i class="ti ti-calendar-plus"></i> Unos podataka</div>
         <div class="ni" onclick="sP('pregled')" id="nav-pregled"><i class="ti ti-table"></i> Pregled evidencije</div>
@@ -641,6 +643,15 @@ select{cursor:pointer}
           <div class="al ali" style="margin-bottom:.8rem"><i class="ti ti-info-circle"></i> Odaberite datoteku koju je pripremio Claude. Ništa se ne sprema dok ne kliknete „Uvezi”. Mjeseci koji u aplikaciji već imaju upisane sate preskaču se, osim ako ne označite „Prepiši”.</div>
           <input type="file" id="uvoz-file" accept=".json,application/json" onchange="uvozUcitaj(this.files[0])">
           <div id="uvoz-pregled" style="margin-top:1rem"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-upute">
+        <div class="ph"><div><div class="pt">Upute za rad</div><div class="ps">Kratke upute za sve što vidite u izborniku · gumb ? gore desno otvara upute za stranicu na kojoj ste</div></div>
+          <div style="display:flex;gap:8px"><input id="upute-trazi" placeholder="Traži u uputama…" oninput="renderUpute()" style="width:220px"><button class="btn bs" onclick="ispisUputa()"><i class="ti ti-printer"></i> Ispis</button></div></div>
+        <div style="display:grid;grid-template-columns:230px 1fr;gap:1rem;align-items:start">
+          <div class="card" id="upute-toc" style="padding:.5rem;position:sticky;top:10px"></div>
+          <div id="upute-sadrzaj"></div>
         </div>
       </div>
 
@@ -1588,7 +1599,7 @@ function sP(n){
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+(n==='rekapitulacija'?'stimulacije':n))?.classList.add("active");
   document.getElementById("nav-"+n)?.classList.add("active");
-  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,loko:setupLoko,prijevoz:setupPrijevoz,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
+  ({dashboard:rDash,unos:setupUnos,pregled:setupPre,djelatnici:setupDjel,raspored:setupRasp,bodovi:setupBodoviStr,org:rOrg,vrste:rVrste,korisnici:rKor,izvjestaj:setupIzv,ispis:setupIspis,bolovanje:setupBolovanje,audit:setupAudit,stimulacije:()=>otvoriStimMod('unos'),rekapitulacija:()=>otvoriStimMod('rekap'),dodaci:setupDodaci,prijedlozi:setupPrijedlozi,loko:setupLoko,prijevoz:setupPrijevoz,upute:setupUpute,obracun:setupObracun,'postavke-tvrtke':setupPostavkeTvrtke})[n]?.();
 }
 
 function vJ(){
@@ -5102,6 +5113,113 @@ async function ispisPrijevoz(){
   ${R.some(x=>x.c.max)?`<div style="margin-top:4px">* ograničeno na najviši mjesečni iznos ${prEur(parseFloat(document.getElementById('pr-max').value))} €</div>`:''}
   <div class="potpis"><div>Izradio</div><div>Kontrolirao</div><div>Odobrio</div></div>
   <div style="margin-top:10px;font-size:8.5px;color:#666">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</div></body></html>`);
+}
+
+
+// ══ UPUTE ZA RAD ══════════════════════════════════════════════
+// Svaki odjeljak ima ključ stranice (nav-...). Prikazuju se samo odjeljci za stranice koje korisnik vidi u izborniku.
+const UPUTE=[
+ {k:'_opce',t:'Općenito',ic:'ti-info-circle',h:`
+  <p><b>Prijava:</b> korisničko ime i lozinka koje ste dobili. Lozinku mijenjate gumbom <b>Lozinka</b> gore desno, a <b>Odjava</b> vas odjavljuje.</p>
+  <p><b>Izbornik</b> je lijevo. Vidite samo ono za što imate ovlasti – voditelj vidi svoje jedinice, obračun plaće i direktor vide sve.</p>
+  <p><b>Spremanje je automatsko.</b> Sve što upišete sprema se u bazu čim izađete iz polja (klik drugdje ili tipka Tab). Posebnog gumba „Spremi” u unosu sati nema.</p>
+  <p><b>Nova verzija aplikacije:</b> kad se aplikacija ažurira, pritisnite <b>Ctrl+F5</b> da preglednik učita novu verziju.</p>
+  <p><b>Gumb ?</b> gore desno otvara upute za stranicu na kojoj se nalazite.</p>`},
+ {k:'dashboard',t:'Pregled',ic:'ti-layout-dashboard',h:`
+  <p>Početna stranica sa sažetkom: broj djelatnika, unesenih evidencija i odsutnosti u vašim jedinicama.</p>`},
+ {k:'unos',t:'Unos podataka (radni sati)',ic:'ti-calendar-plus',h:`
+  <ol>
+   <li>Odaberite <b>Jedinicu</b>, <b>Djelatnika</b>, <b>Godinu</b> i <b>Mjesec</b>. Uz ime djelatnika ✓ znači da ima unesene sate, ○ da još nema.</li>
+   <li><b>Radno vrijeme</b> gore (npr. 07:00–15:00) mijenja samo vrijeme početka i kraja u danima bez upisanih sati – sate ne upisuje.</li>
+   <li><b>Auto-popuni</b> upisuje radne sate u sve radne dane mjeseca i odmah ih sprema. Ako djelatnik već ima sate, prvo pita jer će ih zamijeniti.</li>
+   <li>Pojedine dane ispravite ručno: upišite sate u odgovarajući stupac (godišnji, bolovanje, prekovremeni…). Za brisanje dana obrišite broj sati.</li>
+   <li>Strelicama ‹ › uz ime prelazite na prethodnog ili sljedećeg djelatnika.</li>
+  </ol>
+  <p><b>Odjel tržnica 7/5</b> ima izbor <b>Raspored</b>: Jednokratno 06–13, Dvokratno 06–08 i 12–17 (ponedjeljkom 07–12) ili <b>Drugo radno vrijeme…</b> – tada upišete svoje vrijeme, a za dvokratni rad i drugi par vremena. Kvačica „pon 07–12” određuje vrijedi li ponedjeljkom kraće radno vrijeme. Subota je kod tržnice radni dan.</p>
+  <p><b>Zaključani dani:</b> dane koje je obračun plaće zaključao (unio u plaće) voditelj više ne može mijenjati – polja su sivo zaključana.</p>
+  <p><b>Prazan mjesec:</b> ako obrišete sve sate, zapis se briše i uz djelatnika opet stoji ○.</p>
+  <p>Aplikacija pamti radno vrijeme djelatnika – idući mjesec ponudi isto vrijeme kao prošli.</p>`},
+ {k:'pregled',t:'Pregled evidencije',ic:'ti-table',h:`
+  <p>Tablični pregled svih unesenih sati po djelatnicima i mjesecima, s filtrima po jedinici i razdoblju.</p>`},
+ {k:'ispis',t:'Ispis evidencije',ic:'ti-printer',h:`
+  <p>Ispis evidencije radnog vremena po obrascu HZZ za jedinicu i mjesec. Odaberite jedinicu i mjesec pa kliknite <b>Ispis</b>.</p>
+  <p>Na ekranu su nježno osjenčani dani koje je obračun plaće već zaključao (na papiru se ne vidi).</p>
+  <p>Djelatnik se ispisuje u jedinici u kojoj je radio taj mjesec (prema <b>Rasporedima</b>).</p>`},
+ {k:'bolovanje',t:'Pretraga bolovanja',ic:'ti-stethoscope',h:`
+  <p>Popis djelatnika koji su bili na bolovanju u odabranom razdoblju, s brojem dana i sati.</p>`},
+ {k:'stimulacije',t:'Stimulacije',ic:'ti-coin-euro',h:`
+  <p>Unos postotka stimulacije po djelatniku za mjesec. Iznos = bodovi × vrijednost boda × postotak. Aplikacija sama dijeli iznos na neoporezivi (do 1.200 € godišnje, zajedno s dodacima) i oporezivi dio.</p>`},
+ {k:'dodaci',t:'Dodaci',ic:'ti-gift',h:`
+  <p><b>Kvartalni dodatak</b> obračunava se 01.04. (za prosinac–ožujak), 01.08. (travanj–srpanj) i 01.12. (kolovoz–studeni). Dobiva ga tko ima evidenciju za sva 4 mjeseca, radio je od početka razdoblja i nema odsutnosti (bolovanje, dopusti…).</p>
+  <p><b>Mjesečni dodatak</b> obračunava se 1. u mjesecu za prethodni mjesec, prema broju radnih dana odsutnosti (posebno za 8-satno radno vrijeme i za tržnicu 7/5).</p>
+  <ol><li>Odaberite datum obračuna i godinu, kliknite <b>Obračunaj</b>.</li><li>Pregledajte rezultat – uz svakog djelatnika piše razlog (npr. broj dana bolovanja). Filtrima vidite tko je dobio, a tko nije.</li><li><b>Spremi</b> upisuje iznose u stimulacije; <b>Ispis</b> i <b>Excel</b> daju popis.</li></ol>
+  <p>Obračun se može napraviti bilo kada, i za ranije mjesece. Iznose i kriterije mijenjate u izborniku <b>Bodovi</b>.</p>`},
+ {k:'prijevoz',t:'Prijevoz',ic:'ti-bus',h:`
+  <p>Za svakog djelatnika upisuje se <b>dnevni iznos</b> prijevoza; kvačica <b>Dvokratno</b> znači 2 karte dnevno. Promjena se sprema odmah.</p>
+  <p>Iznos = dani rada × dnevni iznos × broj karata. Broje se radni dani, subote, nedjelje i blagdani u kojima je djelatnik radio; godišnji, bolovanje, službeni put i slobodni dani ne.</p>
+  <p><b>Najviše mjesečno</b> (gore desno, sada 280 €) – tko po izračunu ima više, dobiva taj iznos (u tablici piše „max”). Upišite novi iznos i kliknite disketu.</p>
+  <p>Odaberite mjesec, po potrebi filtrirajte i kliknite <b>Ispis</b> ili <b>Excel</b>. Žuti redak = djelatnik radi, a nema upisan dnevni iznos.</p>`},
+ {k:'rekapitulacija',t:'Rekapitulacija dodataka i stimulacija',ic:'ti-report-money',h:`
+  <p>Sve na jednom mjestu: stimulacije, kvartalni i mjesečni dodatak po djelatniku, s kumulativom za godinu (granica neoporezivog 1.200 €), ispisom i izvozom.</p>`},
+ {k:'prijedlozi',t:'Prijedlozi stimulacija',ic:'ti-send',h:`
+  <ol><li><b>Voditelj</b> predlaže postotak stimulacije za djelatnike svoje jedinice i upisuje za što se daje, pa šalje direktoru.</li>
+  <li><b>Direktor</b> pregleda, po potrebi ispravi postotke i klikne <b>Odobri</b> ili <b>Vrati na doradu</b>.</li>
+  <li><b>Obračun plaće</b> odobrene prijedloge isplaćuje; ispis daje ovjereni primjerak.</li></ol>
+  <p>Prijedlog se može mijenjati dok ga direktor ne odobri.</p>`},
+ {k:'loko',t:'Loko vožnja',ic:'ti-car',h:`
+  <ol><li><b>Voditelj</b> klikne <b>Novi obračun</b>, odabere djelatnika svoje jedinice (ili sebe), mjesec i vozilo (marka i registracija).</li>
+  <li>Za svaku vožnju upiše datum, stanje brojila (početno i završno), relaciju, vrijeme i opis posla. Kilometri i iznos računaju se sami. <b>Ponovi zadnju</b> dodaje idući radni dan s istom relacijom.</li>
+  <li>Žuto označeni redovi su upozorenja (npr. djelatnik je taj dan na bolovanju ili godišnjem, vikend, brojilo se ne nastavlja) – provjerite ih.</li>
+  <li><b>Pošalji na odobrenje.</b> Dok direktor ne odobri, obračun možete <b>povući</b> i mijenjati.</li></ol>
+  <p><b>Direktor</b> klikne <b>Odobri</b>, <b>Vrati na doradu</b> (uz pitanje ili razlog) ili <b>Odbij</b>. Voditelj vidi komentar, odgovori, ispravi i ponovno pošalje.</p>
+  <p><b>Obračun plaće i financije</b> vide sve, izvoze <b>Excel</b> i odobrene označe <b>Uneseno u plaće</b>. Odobreni obračun više nitko ne mijenja. <b>Ispis</b> daje obrazac s oznakom tko je i kada odobrio.</p>
+  <p>Cijenu po km (0,50 €) mijenja obračun plaće u izborniku <b>Bodovi</b>.</p>`},
+ {k:'obracun',t:'Obračun plaća (zaključavanje)',ic:'ti-calculator',h:`
+  <ol><li>Za svaku jedinicu upišite <b>do kojeg datuma</b> ste podatke unijeli u program za plaće i kliknite <b>Zaključaj</b>. Ti dani se zaključavaju – voditelj ih više ne može mijenjati.</li>
+  <li>Stupac <b>Uneseno nakon zaključanog</b> pokazuje što je voditelj unio ili promijenio poslije – to još treba unijeti u plaće.</li>
+  <li>Kad je obračun gotov, <b>Konačno zaključaj</b> mjesec – tada nitko ne može mijenjati ni evidenciju ni stimulacije. Za ispravak mjesec se otključava uz razlog.</li></ol>`},
+ {k:'djelatnici',t:'Djelatnici',ic:'ti-users',h:`
+  <p>Popis djelatnika s podacima (šifra, OIB, jedinica, radno mjesto, radno vrijeme, bodovi). <b>Dodaj</b>, <b>Uredi</b> i <b>Premjesti</b> mogu admin i obračun plaće.</p>
+  <p><b>Deaktivacija:</b> kad djelatnik ode, upišite zadnji dan rada – od idućeg mjeseca više se ne pojavljuje u unosu. Kvačica <b>Neaktivni</b> prikazuje i one koji su otišli; mogu se ponovno aktivirati.</p>`},
+ {k:'raspored',t:'Rasporedi (premještaji)',ic:'ti-arrows-transfer-up',h:`
+  <p>Kad djelatnik privremeno ili trajno radi u drugoj jedinici, upišite raspored: jedinicu i razdoblje <b>od</b>–<b>do</b> u obliku mm/gggg (npr. 01/2026 – 03/2026). U tim mjesecima djelatnik se unosi i ispisuje u toj jedinici. Bez „do” vrijedi dok se ne promijeni.</p>`},
+ {k:'bodovi',t:'Bodovi',ic:'ti-chart-dots',h:`
+  <p><b>Bodovi djelatnika:</b> u stupac „Novi bodovi” upišite novi broj bodova i datum od kada vrijede – sprema se odmah. Raniji mjeseci ostaju sa starim bodovima.</p>
+  <p><b>Vrijednost boda</b> za cijelu tvrtku upisuje se s mjesecom od kada vrijedi.</p>
+  <p><b>Loko vožnja</b> – naknada po km za cijelu tvrtku.</p>
+  <p><b>Dodaci – iznosi i kriteriji:</b> klikom na <b>Promijeni</b> upisujete od kada vrijede nova pravila, iznos kvartalnog dodatka i dopušteni broj dana odsutnosti, koje se odsutnosti broje te razrede mjesečnog dodatka (do koliko dana → koliki iznos), posebno za 8 h i za tržnicu 7/5. Razrede možete dodavati i brisati. <b>Povijest</b> pokazuje sve promjene.</p>`},
+ {k:'org',t:'Organizacijska struktura',ic:'ti-sitemap',h:`<p>Odjeli, sekcije i ostale jedinice tvrtke te njihov redoslijed.</p>`},
+ {k:'vrste',t:'Vrste radnog vremena',ic:'ti-list-check',h:`<p>Stupci u unosu sati (HZZ kategorije: radni sati, prekovremeni, godišnji, bolovanje, službeni put…).</p>`},
+ {k:'korisnici',t:'Korisnici i ovlasti',ic:'ti-shield-lock',h:`<p>Korisnički računi, uloge (admin, direktor, obračun plaće, voditelj…) i jedinice koje pojedini korisnik vidi.</p>`},
+ {k:'postavke-tvrtke',t:'Postavke tvrtke',ic:'ti-building',h:`<p>Naziv, adresa, OIB i ostali podaci tvrtke koji se ispisuju na obrascima.</p>`},
+ {k:'izvjestaj',t:'Godišnji izvještaj',ic:'ti-chart-bar',h:`<p>Zbirni prikaz svih sati po djelatnicima za godinu.</p>`},
+ {k:'audit',t:'Dnevnik promjena',ic:'ti-history',h:`<p>Tko je, kada i što unio ili promijenio – po danima i djelatnicima.</p>`},
+ {k:'uvoz',t:'Uvoz evidencije',ic:'ti-file-import',h:`<p>Uvoz radnih sati iz pripremljene datoteke (.json). Odaberite datoteku, pregledajte što će se uvesti (po mjesecima, sukobi s već unesenim) i kliknite <b>Uvezi</b>. Postojeće zapise možete preskočiti ili zamijeniti.</p>`},
+];
+function uputeVidljive(){
+  return UPUTE.filter(u=>{ if(u.k==='_opce') return true; const n=document.getElementById('nav-'+u.k); return n&&n.style.display!=='none'&&n.offsetParent!==null; });
+}
+function setupUpute(){ renderUpute(); }
+function renderUpute(){
+  const el=document.getElementById('upute-sadrzaj'); if(!el) return;
+  const q=(document.getElementById('upute-trazi')?.value||'').trim().toLowerCase();
+  const L=uputeVidljive().filter(u=>!q||(u.t+' '+u.h.replace(/<[^>]+>/g,' ')).toLowerCase().includes(q));
+  document.getElementById('upute-toc').innerHTML=L.map(u=>`<a href="#" onclick="uputeIdi('${u.k}');return false" style="display:flex;gap:6px;align-items:center;padding:5px 8px;border-radius:6px;color:var(--text);text-decoration:none;font-size:13px"><i class="ti ${u.ic}"></i>${hEsc(u.t)}</a>`).join('');
+  el.innerHTML=L.map(u=>`<div class="card upute-sek" id="upute-${u.k}" style="padding:1rem 1.2rem;margin-bottom:1rem"><div class="bod-sec-t" style="font-size:15px"><i class="ti ${u.ic}"></i> ${hEsc(u.t)}</div><div class="upute-tekst">${u.h}</div></div>`).join('')
+    ||'<div class="empty"><i class="ti ti-search"></i><p>Ništa nije pronađeno</p></div>';
+}
+function uputeIdi(k){ const e=document.getElementById('upute-'+k); if(e){ e.scrollIntoView({behavior:'smooth',block:'start'}); e.style.boxShadow='0 0 0 2px var(--blue)'; setTimeout(()=>e.style.boxShadow='',1600);} }
+function otvoriPomoc(){
+  const ak=document.querySelector('.page.active')?.id?.replace('page-','')||'';
+  sP('upute');
+  setTimeout(()=>{ if(document.getElementById('upute-'+ak)) uputeIdi(ak); },80);
+}
+function ispisUputa(){
+  ispisUPozadini(`<!DOCTYPE html><html lang="hr"><head><meta charset="utf-8"><title>Upute za rad – Evidencija</title>
+  <style>@page{size:A4;margin:14mm}body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;line-height:1.45}h1{font-size:17px}h2{font-size:13.5px;margin:14px 0 4px;border-bottom:1px solid #999}ol,ul{margin:4px 0 4px 18px;padding:0}p{margin:4px 0}</style></head><body>
+  <h1>Evidencija radnog vremena – upute za rad</h1>
+  ${uputeVidljive().map(u=>`<h2>${hEsc(u.t)}</h2>${u.h}`).join('')}
+  <p style="margin-top:14px;color:#666;font-size:9px">Ispisano: ${fmtDT(new Date().toISOString())} · ${hEsc(CU?.name||'')}</p></body></html>`);
 }
 
 // ══ POSTAVKE TVRTKE ════════════════════════════════════════════
