@@ -1741,10 +1741,10 @@ function loadUF(){
         <input type="time" id="rv-p2" value="${window._rvVlastito.p2||''}" style="width:76px" onchange="rvPromjena()" title="2. dio (samo za dvokratni rad)">–<input type="time" id="rv-k2" value="${window._rvVlastito.k2||''}" style="width:76px" onchange="rvPromjena()" title="2. dio (samo za dvokratni rad)">
         <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;margin-left:4px;white-space:nowrap" title="Ponedjeljkom 07–12 (5 h)"><input type="checkbox" id="rv-pon" ${window._rvVlastito.pon?'checked':''} onchange="rvPromjena()"> pon 07–12</label></span>`:''}
       <input type="hidden" id="p0" value="${rr==='vlastito'?(window._rvVlastito.p1||pd):pd}"><input type="hidden" id="k0" value="${rr==='vlastito'?(window._rvVlastito.k1||kd):kd}">`:`<span style="font-size:11px;color:var(--text2)">Radno vrijeme:</span>
-      <input type="time" id="p0" value="${pd}" style="width:78px" title="Radno vrijeme djelatnika – upisuje se gumbom Postavi">
+      <input type="time" id="p0" value="${pd}" style="width:78px" onchange="azurirajVremena()" title="Radno vrijeme u mjesecu – mijenja vrijeme u danima bez upisanih sati">
       <span style="font-size:11px">–</span>
-      <input type="time" id="k0" value="${kd}" style="width:78px" title="Radno vrijeme djelatnika – upisuje se gumbom Postavi">`}
-      <button class="btn bxs bp az" onclick="aFillGumb()" title="Upisuje odabrano radno vrijeme u sve radne dane ovog mjeseca i sprema"><i class="ti ti-wand"></i> Postavi za mjesec</button>
+      <input type="time" id="k0" value="${kd}" style="width:78px" onchange="azurirajVremena()" title="Radno vrijeme u mjesecu – mijenja vrijeme u danima bez upisanih sati">`}
+      <button class="btn bxs bp az" onclick="aFillGumb()" title="Upisuje radne sate u sve radne dane ovog mjeseca i sprema"><i class="ti ti-wand"></i> Auto-popuni</button>
       <span id="as-status" style="font-size:11.5px;color:var(--text3);min-width:150px"><i class="ti ti-cloud"></i> Sprema se automatski</span>
     </div></div>
   <div id="uai"></div>
@@ -1796,6 +1796,21 @@ function rvPromjena(){
   window._rvVlastito=v; (window._rvIzbor||={})[window._rvKey]=v;
   { const a=document.getElementById('p0'),b=document.getElementById('k0'); if(a&&v.p1)a.value=v.p1; if(b&&v.k1)b.value=v.k1; }
   if(imaloDvo!==!!v.p2) loadUF();   // pokaži/sakrij drugi par vremena po danima
+  else azurirajVremena();
+}
+// Promjena radnog vremena gore: mijenja samo vrijeme (poč./kraj) u radnim danima bez upisanih sati – sate ne upisuje.
+function azurirajVremena(){
+  const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026;
+  const rr=window._subotaRadna?(document.getElementById("rr")?.value||'jedno'):null;
+  const p0=document.getElementById("p0")?.value||"",k0=document.getElementById("k0")?.value||"";
+  for(let d=1;d<=dim(god,mj);d++){
+    if(isFreeDay(god,mj,d)) continue;
+    const pi=document.getElementById("p"+d),ki=document.getElementById("k"+d); if(!pi||!ki||pi.disabled) continue;
+    if(DB.vrste.some(v=>parseFloat(document.getElementById("s"+d+"_"+v.code)?.value)>0)) continue;
+    const p2=document.getElementById("pb"+d),k2=document.getElementById("kb"+d);
+    if(rr){ const t=trzDan(god,mj,d,rr); pi.value=t.poc; ki.value=t.kraj; if(p2)p2.value=t.poc2||''; if(k2)k2.value=t.kraj2||''; }
+    else { pi.value=p0; ki.value=k0; }
+  }
 }
 function aFillGumb(){
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
@@ -1806,7 +1821,7 @@ function aFillGumb(){
     if(!v.p1||!v.k1||rvSati(v.p1,v.k1)<=0){showToast('Upišite početak i kraj radnog vremena','error');return;}
     if((v.p2&&!v.k2)||(!v.p2&&v.k2)||(v.p2&&rvSati(v.p2,v.k2)<=0)){showToast('Upišite oba vremena drugog dijela ili ih ostavite prazna','error');return;}
   }
-  if(!confirm(`Postavi će upisati odabrano radno vrijeme u SVE radne dane u mjesecu ${MJ_HR[mj-1].toLowerCase()} ${god}. za ${d?dF(d):'djelatnika'} i odmah ih spremiti.${ima?'\n\nPOZOR: već upisani sati u tim danima bit će zamijenjeni.':''}\n\nNastaviti?`)) return;
+  if(ima&&!confirm(`${d?dF(d):'Djelatnik'} već ima upisane sate za ${MJ_HR[mj-1].toLowerCase()} ${god}.\n\nAuto-popuni će upisati sate u SVE radne dane i zamijeniti već upisane. Nastaviti?`)) return;
   aFill();
 }
 function aFill(){
