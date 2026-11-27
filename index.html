@@ -1664,8 +1664,8 @@ function loadUF(){
     const row=(ev.rows||[]).find(r=>r.dan===dan)||{};
     h+=`<tr class="${iswk?"wk":""}" data-dan="${dan}">
       <td class="sc">${dan}. <span style="color:var(--text3)">${dn}</span></td>
-      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}" ${iswk?"disabled":""} style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
-      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}" ${iswk?"disabled":""} style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}" ${iswk?"disabled":""} style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
+      <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
+      <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&rr==='dvo'?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
       ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})"></td>`).join("")}
     </tr>`;
   }
@@ -2640,6 +2640,7 @@ function getCellCode(sati){
     {k:'NEDB',lbl:'NB',  cls:'code-na'},
     {k:'ZAST',lbl:'NO',  cls:'code-norm'},
     {k:'NOC', lbl:'N',   cls:'code-na'},
+    {k:'SLP', lbl:'SP',  cls:'code-norm'},
   ];
   const DODACI = [
     {k:'PREK',lbl:'P',   cls:'code-prek'},
@@ -2675,6 +2676,9 @@ function getCellCode(sati){
     if(extras) return {txt:`${rad}${extras}`, cls:'code-mixed'};
     return {txt:`${rad}`, cls:'code-norm'};
   }
+  // Samo dodaci bez redovnog rada (npr. prekovremeni vikendom, 8T)
+  const samo=DODACI.map(({k,lbl})=>{const v=parseFloat(sati[k])||0;return v>0?`${v}${lbl}`:'';}).filter(Boolean);
+  if(samo.length) return {txt:samo.join('+'), cls:'code-mixed'};
 
   return {txt:'',cls:'code-norm'};
 }
@@ -2743,7 +2747,7 @@ function renderIspisHoriz(){
   html+=`</thead><tbody>`;
 
   // Totals accumulator for sum row
-  const grandSums={RAD:0,NOC:0,PREK:0,NEDB:0,ZAST:0,BLAG:0,TER:0,PRIP:0,DODM:0,TODM:0,GO:0,BO:0,PD:0,OC:0,NS:0,NI:0,NZR:0,NR:0,VJO:0,STR:0,LCK:0};
+  const grandSums={RAD:0,NOC:0,PREK:0,NEDB:0,ZAST:0,BLAG:0,TER:0,PRIP:0,DODM:0,TODM:0,GO:0,BO:0,PD:0,OC:0,NS:0,NI:0,NZR:0,NR:0,VJO:0,STR:0,LCK:0,SLP:0};
   let grandTotals=Array(days).fill(0);
 
   // Data rows
@@ -2758,13 +2762,13 @@ function renderIspisHoriz(){
 
     for(let dan=1;dan<=days;dan++){
       const iswk=isWE(god,mj,dan);
-      if(iswk){
-        html+=`<td class="c-wkend${zk(dan)}"></td>`;
-        continue;
-      }
       const row=rowsData.find(r=>r.dan===dan)||{};
       const sati=row.sati||{};
       const{txt,cls}=getCellCode(sati);
+      if(iswk&&!txt){
+        html+=`<td class="c-wkend${zk(dan)}"></td>`;
+        continue;
+      }
       // sum
       let ds=0;
       Object.keys(grandSums).forEach(k=>{const v=parseFloat(sati[k])||0;grandSums[k]+=v;ds+=v;});
@@ -2812,6 +2816,7 @@ function renderIspisHoriz(){
     {code:'NO', lbl:'Od toga: Sati zastoja/prekinutog rada',   cls:'code-blag'},
     {code:'NA', lbl:'Sati u dane blagdana (naknada plaće)',    cls:'code-na'},
     {code:'T',  lbl:'Sati terenskog rada',            cls:'code-norm'},
+    {code:'SP', lbl:'Službeni put',                   cls:'code-norm'},
     {code:'PP', lbl:'Sati pripravnosti',              cls:'code-norm'},
     {code:'GO', lbl:'Sati korišt. godišnjeg odmora',  cls:'code-go'},
     {code:'BO', lbl:'Sati privr. nesposob. (bolovanje)',cls:'code-bo'},
