@@ -1541,7 +1541,10 @@ function gAJ(djid,god,mj){
     const [oy,om]=dj.odlazak.split('-').map(Number);
     if(gg*12+mm>oy*12+om) return null;
   }
-  const r=DB.rasporedi.filter(x=>x.djid===djid).find(x=>x.od<=now&&(!x.do||x.do>=now));
+  // "mm/gggg" uspoređuj brojčano (string usporedba griješi preko granice godine, npr. 12/2025 i 01/2026)
+  const mk=t=>{const m=/^(\d{1,2})\/(\d{4})$/.exec(String(t||'').trim());return m?(+m[2])*12+(+m[1]):null;};
+  const k=mk(now);
+  const r=DB.rasporedi.filter(x=>x.djid===djid).find(x=>{const a=mk(x.od),b=mk(x.do);return a!=null&&a<=k&&(b==null||b>=k);});
   return r?r.jid:(dj?.jid||null);
 }
 function dim(g,m){return new Date(g,m,0).getDate();}
