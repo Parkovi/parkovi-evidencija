@@ -389,6 +389,7 @@ select{cursor:pointer}
         <div class="ni" onclick="sP('postavke-tvrtke')" id="nav-postavke-tvrtke"><i class="ti ti-building"></i> Postavke tvrtke</div>
         <div class="ni" onclick="sP('izvjestaj')" id="nav-izvjestaj"><i class="ti ti-chart-bar"></i> Godisnji izvjestaj</div>
         <div class="ni" onclick="sP('audit')" id="nav-audit"><i class="ti ti-history"></i> Dnevnik promjena</div>
+        <div class="ni" onclick="sP('uvoz')" id="nav-uvoz"><i class="ti ti-file-import"></i> Uvoz evidencije</div>
       </div>
     </div>
     <div class="mn">
@@ -618,6 +619,15 @@ select{cursor:pointer}
         <div class="card" id="bol-grid-card" style="display:none">
           <div class="ch"><div class="ct"><i class="ti ti-calendar-stats"></i> Pregled po mjesecima</div></div>
           <div class="tw" id="bol-grid"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-uvoz">
+        <div class="ph"><div><div class="pt">Uvoz evidencije</div><div class="ps">Uvoz radnih sati iz pripremljene datoteke (.json) – npr. iz Excel tablica „Radni sati 2026”</div></div></div>
+        <div class="card" style="padding:1rem 1.1rem">
+          <div class="al ali" style="margin-bottom:.8rem"><i class="ti ti-info-circle"></i> Odaberite datoteku koju je pripremio Claude. Ništa se ne sprema dok ne kliknete „Uvezi”. Mjeseci koji u aplikaciji već imaju upisane sate preskaču se, osim ako ne označite „Prepiši”.</div>
+          <input type="file" id="uvoz-file" accept=".json,application/json" onchange="uvozUcitaj(this.files[0])">
+          <div id="uvoz-pregled" style="margin-top:1rem"></div>
         </div>
       </div>
 
@@ -1502,6 +1512,7 @@ function doLogout(){if(isLive()){doLogoutSB();return;}CU=null;DB.evidencija={};d
 function sP(n){
   if((n==='stimulacije'||n==='bolovanje'||n==='bodovi'||n==='rekapitulacija')&&!canStim()) n='dashboard';
   if(n==='dodaci'&&!smijeObracun()) n='dashboard';
+  if(n==='uvoz'&&CU?.role!=='admin') n='dashboard';
   if(n==='obracun'&&!vidiObracun()) n='dashboard';
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".ni").forEach(x=>x.classList.remove("active"));
@@ -3718,12 +3729,16 @@ async function loadAllEvidencijaFromSB(){
       .map(d=>d.id);
     if(!djids.length) return;
 
-    const {data,error}=await SB
-      .from('evidencija')
-      .select('*')
-      .in('djelatnik_id', djids)
-      .order('godina')
-      .order('mjesec');
+    // Supabase vraća najviše 1000 redaka po upitu – čitaj u stranicama
+    let data=[], od=0, error=null;
+    while(true){
+      const r=await SB.from('evidencija').select('*').in('djelatnik_id', djids)
+        .order('godina').order('mjesec').order('id').range(od, od+999);
+      if(r.error){ error=r.error; break; }
+      data=data.concat(r.data||[]);
+      if(!r.data||r.data.length<1000) break;
+      od+=1000;
+    }
 
     if(error) throw error;
 
@@ -5439,6 +5454,62 @@ async function spremiDodatke(){
     details:`Promijenjeno ${promj} djelatnika, ukupno ${uk.toFixed(2)} €`});
   showToast(`✅ Spremljeno u obračun (${promj} djelatnika)`,'success');
   obracunajDodatak(R.vrsta);
+}
+
+// ── Uvoz evidencije iz pripremljene JSON datoteke ─────────────
+window._uvoz=null;
+function uvozUcitaj(file){
+  const el=document.getElementById('uvoz-pregled'); if(!file){el.innerHTML='';return;}
+  const fr=new FileReader();
+  fr.onload=()=>{
+    let J; try{ J=JSON.parse(fr.result); }catch(e){ el.innerHTML='<div class="al ald">Datoteka nije ispravan JSON.</div>'; return; }
+    if(J.vrsta!=='uvoz_evidencije'||!Array.isArray(J.zapisi)){ el.innerHTML='<div class="al ald">Ovo nije datoteka za uvoz evidencije.</div>'; return; }
+    const poSifri={}; DB.djelatnici.forEach(d=>{ if(d.sifra) poSifri[String(d.sifra)]=d; });
+    const nespareni=new Set(), zap=[];
+    J.zapisi.forEach(z=>{ const d=poSifri[String(z.sifra)]; if(!d){nespareni.add(z.sifra);return;} zap.push({...z,djelatnik_id:d.id}); });
+    const mjeseci=[...new Set(zap.map(z=>z.mjesec))].sort((a,b)=>a-b);
+    window._uvoz={J,zap,mjeseci};
+    const postoji=z=>!!DB.evidencija[`${z.djelatnik_id}_${z.godina}_${z.mjesec}`];
+    const red=m=>{const l=zap.filter(z=>z.mjesec===m);return {n:l.length,sati:l.reduce((a,z)=>a+(z.sums?.ukupno||0),0),ima:l.filter(postoji).length};};
+    el.innerHTML=`<div style="font-weight:700;margin-bottom:.4rem">${hEsc(J.izvor||'')} · godina ${J.godina} · pripremljeno ${hEsc(J.napravljeno||'')}</div>
+      <div class="tw"><table><thead><tr><th><input type="checkbox" checked onchange="document.querySelectorAll('.uvoz-mj').forEach(c=>c.checked=this.checked)"></th><th>Mjesec</th><th style="text-align:right">Djelatnika</th><th style="text-align:right">Ukupno sati</th><th style="text-align:right">Već u aplikaciji</th></tr></thead><tbody>
+      ${mjeseci.map(m=>{const r=red(m);return `<tr><td><input type="checkbox" class="uvoz-mj" value="${m}" checked></td><td>${MJ_NOM[m-1]}</td><td style="text-align:right">${r.n}</td><td style="text-align:right">${r.sati.toLocaleString('hr-HR')}</td><td style="text-align:right;color:${r.ima?'var(--amber)':'var(--text3)'}">${r.ima||'–'}</td></tr>`;}).join('')}
+      </tbody></table></div>
+      ${nespareni.size?`<div class="al ald" style="margin-top:.6rem">Nema djelatnika sa šifrom: ${[...nespareni].map(hEsc).join(', ')} – ti se zapisi neće uvesti.</div>`:''}
+      ${(J.sukobi||[]).length?`<details style="margin-top:.6rem"><summary style="cursor:pointer;font-size:12.5px">${J.sukobi.length} dana upisano različito u dvije tablice – zadržan je unos iz tablice u kojoj je djelatnik imao više dana</summary>
+        <div class="tw" style="max-height:260px;overflow:auto;margin-top:.4rem"><table><thead><tr><th>Djelatnik</th><th>Datum</th><th>Zadržano</th><th>Odbačeno</th></tr></thead><tbody>
+        ${J.sukobi.map(k=>{const d=poSifri[String(k.sifra)];const f=o=>Object.entries(o).map(([a,b])=>b+' '+a).join(', ');return `<tr><td>${d?hEsc(dF(d)):k.sifra}</td><td>${k.dan}.${k.mjesec}.</td><td>${hEsc(k.zadrzano)}: ${f(k.zadrzano_sati)}</td><td>${hEsc(k.odbaceno)}: ${f(k.odbaceno_sati)}</td></tr>`;}).join('')}
+        </tbody></table></div></details>`:''}
+      ${(J.preskoceno||[]).length?`<div class="fh" style="margin-top:.4rem">Preskočeno u izvoru: ${J.preskoceno.map(p=>hEsc(p.datoteka+' '+MJ_NOM[p.mjesec-1]+' – '+p.ime)).join('; ')}</div>`:''}
+      <div style="display:flex;gap:12px;align-items:center;margin-top:.9rem;flex-wrap:wrap">
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" id="uvoz-prepisi" style="width:auto"> Prepiši mjesece koji su već upisani u aplikaciji</label>
+        <button class="btn bp" id="uvoz-btn" onclick="uvozPokreni()"><i class="ti ti-file-import"></i> Uvezi</button>
+        <span id="uvoz-status" style="font-size:12.5px"></span></div>`;
+  };
+  fr.readAsText(file);
+}
+async function uvozPokreni(){
+  const U=window._uvoz; if(!U) return;
+  const mj=[...document.querySelectorAll('.uvoz-mj:checked')].map(c=>+c.value);
+  const prepisi=document.getElementById('uvoz-prepisi').checked;
+  const lista=U.zap.filter(z=>mj.includes(z.mjesec));
+  if(!lista.length){showToast('Odaberite barem jedan mjesec','error');return;}
+  if(!confirm(`Uvesti ${lista.length} mjesečnih evidencija (${mj.map(m=>MJ_NOM[m-1]).join(', ')})${prepisi?' i PREPISATI postojeće':''}?`)) return;
+  const btn=document.getElementById('uvoz-btn'), st=document.getElementById('uvoz-status'); btn.disabled=true;
+  const uk={novo:0,prepisano:0,preskoceno:0}, V=40;
+  for(let i=0;i<lista.length;i+=V){
+    st.textContent=`Uvozim… ${Math.min(i+V,lista.length)} / ${lista.length}`;
+    const dio=lista.slice(i,i+V).map(z=>({djelatnik_id:z.djelatnik_id,godina:z.godina,mjesec:z.mjesec,poc:z.poc,kraj:z.kraj,rows:z.rows,sums:z.sums}));
+    const {data,error}=await SB.rpc('uvoz_evidencije',{p_zapisi:dio,p_prepisi:prepisi});
+    if(error){ st.innerHTML=`<span style="color:var(--red)">Greška kod ${i+1}. zapisa: ${hEsc(error.message)}</span>`; btn.disabled=false; return; }
+    Object.keys(uk).forEach(k=>uk[k]+=data?.[k]||0);
+  }
+  addAuditLog({userName:CU?.name, action:'uvoz_evidencije', target:U.J.izvor||'JSON', jedinica:'', details:`Mjeseci: ${mj.join(', ')}/${U.J.godina}; novo ${uk.novo}, prepisano ${uk.prepisano}, preskočeno ${uk.preskoceno}`});
+  st.innerHTML='Učitavam podatke…'; await loadAllEvidencijaFromSB();
+  const poruka=`<span style="color:var(--green);font-weight:600">✓ Gotovo: novo ${uk.novo}, prepisano ${uk.prepisano}, preskočeno (već postoji) ${uk.preskoceno}</span>`;
+  showToast('✅ Uvoz evidencije završen','success');
+  document.getElementById('uvoz-pregled').insertAdjacentHTML('afterbegin',`<div class="al als" style="margin-bottom:.6rem">${poruka}</div>`);
+  btn.disabled=false;
 }
 
 // ── Stranica Bodovi ──────────────────────────────────────────
