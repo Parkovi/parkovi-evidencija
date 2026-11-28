@@ -316,6 +316,23 @@ select{cursor:pointer}
 .sb-mode-local{background:#fff3cd;color:#856404;border:1px solid #ffc107}
 .sb-mode-live{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
 .upute-tekst ol,.upute-tekst ul{margin:6px 0 6px 20px;padding:0}.upute-tekst li,.upute-tekst p{font-size:13px;line-height:1.55}.upute-tekst p{margin:6px 0}.upute-tekst li{margin:3px 0}#upute-toc a:hover{background:var(--bg3)}
+.dsec{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:1rem 0 .5rem}
+.dtodo{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.dt{display:flex;gap:12px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-left:4px solid;border-radius:var(--r2);padding:.75rem .9rem;cursor:pointer;box-shadow:var(--sh);transition:transform .1s}
+.dt:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}.dtn{font-size:26px;font-weight:800;min-width:34px;text-align:center}.dtt{font-weight:600;font-size:13.5px}
+.dsm{font-size:11.5px;color:var(--text3)}.dsm a,.dcard a{color:var(--blue);text-decoration:none}.dsm a:hover{text-decoration:underline}
+.dupoz{margin-top:10px}
+.dbrzo{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.dq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;color:var(--text);box-shadow:var(--sh)}
+.dq i{font-size:24px;color:var(--blue)}.dq:hover{background:var(--blue-lt);border-color:var(--blue)}
+.dgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:1rem;margin-top:1rem}@media(max-width:1000px){.dgrid{grid-template-columns:1fr}}
+.dcard{padding:1rem 1.1rem;margin-bottom:1rem}.dch{font-weight:700;margin-bottom:8px;display:flex;gap:6px;align-items:center}
+.dtab{width:100%;border-collapse:collapse;font-size:12.5px}.dtab th{text-align:left;font-size:11px;color:var(--text3);font-weight:600;padding:5px 6px;border-bottom:1px solid var(--border)}.dtab td{padding:6px;border-bottom:1px solid var(--border)}.dtab tr:last-child td{border-bottom:0}
+.dbar{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;min-width:80px;display:inline-block;vertical-align:middle;width:calc(100% - 60px);margin-right:6px}.dbar div{height:100%;border-radius:4px}
+.dmini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.dmini div{background:var(--bg3);border-radius:8px;padding:8px 10px}.dmini span{display:block;font-size:11px;color:var(--text3)}.dmini b{display:block;font-size:18px;margin:2px 0}.dmini em{font-style:normal;font-size:11px;color:var(--text3)}
+.dkal{display:flex;gap:10px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer}.dkal:last-child{border-bottom:0}.dkal:hover{background:var(--bg3)}
+.dkd{width:44px;height:44px;border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}.dkd b{font-size:16px;line-height:1}.dkd span{font-size:10px;text-transform:uppercase}.dkd.h{background:#fdecea;color:#c0392b;font-size:20px}
+.dob{font-size:12.5px;padding:6px 2px;border-bottom:1px solid var(--border);cursor:pointer;line-height:1.4}.dob:last-child{border-bottom:0}.dob:hover{background:var(--bg3)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -401,10 +418,8 @@ select{cursor:pointer}
     <div class="mn">
       <div class="page active" id="page-dashboard">
         <div class="ph"><div><div class="pt">Pregled</div><div class="ps" id="dsub"></div></div>
-        <div class="phr"><button class="btn bp" onclick="sP('unos')"><i class="ti ti-plus"></i> Novi unos</button></div></div>
-        <div class="mgr" id="dmet"></div>
-        <div class="card"><div class="ch"><div class="ct"><i class="ti ti-history"></i> Posljednji unosi</div></div>
-        <div class="tw"><table><thead><tr><th>Djelatnik</th><th>Rad.mj.</th><th>Jedinica</th><th>Mj.</th><th>Radni</th><th>Prekov.</th><th>Nocni</th><th>God.odm.</th><th>Bolovanje</th><th>UKUPNO</th></tr></thead><tbody id="dtb"></tbody></table></div></div>
+        <div class="phr"><button class="btn bs" onclick="rDash()" title="Osvježi"><i class="ti ti-refresh"></i> Osvježi</button></div></div>
+        <div id="dash"></div>
       </div>
 
       <div class="page" id="page-unos">
@@ -1677,44 +1692,6 @@ function isWE(g,m,d){const w=new Date(g,m-1,d).getDay();return w===0||(w===6&&!w
 function avC(s){const c=[["#dce8f5","#1a5fa8"],["#e8f3df","#2d6b0f"],["#faebd6","#7a4a08"],["#fbeaea","#992222"],["#eeebfa","#4a2d8a"]];return c[(s||"").charCodeAt(0)%c.length];}
 
 // DASHBOARD
-async function rDash(){
-  if(isLive()) await loadAllEvidencijaFromSB();
-  const vj0=vJ();
-  const vd=(vj0.length===0&&CU?.role==="admin")?DB.djelatnici:DB.djelatnici.filter(d=>vj0.includes(gAJ(d.id)));
-  const vids=vd.map(d=>d.id);
-  let tR=0,tP=0,tN=0,tG=0,tB=0,tU=0;
-  Object.entries(DB.evidencija).forEach(([k,v])=>{
-    if(!k.includes("_"))return;const p=k.split("_");if(p.length<3)return;
-    const did=parseInt(p[0]);if(isNaN(did)||!vids.includes(did))return;
-    tU++;const s=v.sums||{};tR+=(s.RAD||0);tP+=(s.PREK||0);tN+=(s.NOC||0);tG+=(s.GO||0);tB+=(s.BO||0);
-  });
-  document.getElementById("dsub").textContent=CU.role==="admin"?"Pregled cijelog sustava":"Vase jedinice i djelatnici";
-  document.getElementById("dmet").innerHTML=`
-    <div class="metric mbl"><div class="ml">Radnih sati</div><div class="mv">${tR}</div><div class="ms">uneseno</div></div>
-    <div class="metric mam"><div class="ml">Prekovremeni</div><div class="mv">${tP}</div><div class="ms">sati</div></div>
-    <div class="metric mbl"><div class="ml">Nocni rad</div><div class="mv">${tN}</div><div class="ms">sati</div></div>
-    <div class="metric mgr3"><div class="ml">Godisnji odmori</div><div class="mv">${tG}</div><div class="ms">sati GO</div></div>
-    <div class="metric mrd"><div class="ml">Bolovanje</div><div class="mv">${tB}</div><div class="ms">sati</div></div>
-    <div class="metric"><div class="ml">Uneseno zapisa</div><div class="mv">${tU}</div><div class="ms">djel x mj.</div></div>`;
-  const rows=[];
-  Object.entries(DB.evidencija).forEach(([k,v])=>{
-    if(!k.includes("_"))return;const p=k.split("_");if(p.length<3)return;
-    const did=parseInt(p[0]),god=parseInt(p[1]),mj=parseInt(p[2]);
-    if(isNaN(did)||isNaN(god)||isNaN(mj)||!vids.includes(did))return;
-    const d=DB.djelatnici.find(x=>x.id===did);if(!d)return;
-    rows.push({d,god,mj,s:v.sums||{}});
-  });
-  rows.sort((a,b)=>b.god-a.god||b.mj-a.mj);
-  const tb=document.getElementById("dtb");
-  if(!rows.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">Nema podataka</td></tr>';return;}
-  tb.innerHTML=rows.slice(0,12).map(r=>`<tr>
-    <td><strong>${dF(r.d)}</strong></td><td style="font-size:11.5px;color:var(--text2)">${r.d.rm}</td>
-    <td>${jN(gAJ(r.d.id,r.god,r.mj))}</td><td>${MN[r.mj-1]}</td>
-    <td>${r.s.RAD||0}</td><td>${r.s.PREK||0}</td><td>${r.s.NOC||0}</td><td>${r.s.GO||0}</td><td>${r.s.BO||0}</td>
-    <td><strong>${r.s.ukupno||0}</strong></td></tr>`).join("");
-}
-
-// UNOS
 function setupUnos(){
   const uw=document.getElementById('uw');
   if(uw&&!uw.dataset.auto){ uw.dataset.auto='1'; uw.addEventListener('change',e=>{ if(e.target.matches('input')&&!e.target.disabled) autoSpremi(); }); }
@@ -4479,6 +4456,200 @@ async function saveVrijednostBoda(){
 
 
 
+
+// ══ POČETNA (PREGLED) – po ulozi: Za napraviti, brzi pristup, glavni panel, obavijesti ═════
+const DASH_RAD=['RAD','NOC','PREK','NEDB','ZAST','TER','SLP','GO','BO','PD','OC','NS','NI','NZR','NR','VJO','STR','LCK','BLAG','PRDO','DODM','TODM'];
+function dashUloga(){ if(!CU) return 'vod'; if(CU.role==='admin') return 'admin'; if(CU.role==='direktor') return 'dir'; if(CU.role==='obracun') return 'obr'; return 'vod'; }
+function dashPozdrav(){const h=new Date().getHours(); return h<10?'Dobro jutro':h<18?'Dobar dan':'Dobra večer';}
+function dashDana(t){ if(!t) return 0; return Math.max(0,Math.floor((Date.now()-new Date(t).getTime())/864e5)); }
+function dashMjPrije(g,m,n=1){const d=new Date(g,m-1-n,1); return [d.getFullYear(),d.getMonth()+1];}
+async function dashEvMjesec(god,mj){
+  const out=[]; let od=0;
+  while(true){ const {data,error}=await SB.from('evidencija').select('djelatnik_id,rows_data,sums').eq('godina',god).eq('mjesec',mj).range(od,od+999);
+    if(error) throw error; out.push(...(data||[])); if(!data||data.length<1000) break; od+=1000; }
+  const M={}; out.forEach(e=>M[e.djelatnik_id]=e); return M;
+}
+function dashIdi(page,fn){ sP(page); if(fn) setTimeout(fn,350); }
+function dashPrek(st){ dashIdi('prek',()=>{const s=document.getElementById('prek-fst'); if(s){s.value=st||''; document.getElementById('prek-fmj').value='0'; loadPrek();}}); }
+function dashLoko(st){ dashIdi('loko',()=>{const s=document.getElementById('loko-fst'); if(s){s.value=st||''; document.getElementById('loko-fmj').value='0'; loadLoko();}}); }
+function dashPrij(st){ dashIdi('prijedlozi',()=>{const s=document.getElementById('prij-fst'); if(s){s.value=st||''; const m=document.getElementById('prij-fmj'); if(m) m.value='0'; loadPrijedlozi();}}); }
+async function dashUnos(did,god,mj){
+  sP('unos');
+  await new Promise(r=>setTimeout(r,120));
+  const jid=gAJ(did,god,mj); const uj=document.getElementById('uj');
+  if(uj&&[...uj.options].some(o=>+o.value===jid)) uj.value=String(jid);
+  document.getElementById('ug').value=String(god); document.getElementById('um').value=String(mj);
+  await onUJ(); const ud=document.getElementById('ud'); if(ud&&did&&[...ud.options].some(o=>+o.value===did)) ud.value=String(did); loadUF();
+}
+
+async function rDash(){
+  const el=document.getElementById('dash'); if(!el) return;
+  const t=new Date(), god=t.getFullYear(), mj=t.getMonth()+1, [pg,pm]=dashMjPrije(god,mj);
+  const U=dashUloga(), ime=(CU?.name||'').trim();
+  document.getElementById('dsub').textContent=`${dashPozdrav()}${ime?', '+ime:''} · ${PREK_DANI[t.getDay()]}, ${t.getDate()}. ${PREK_MJ_GEN[mj-1]} ${god}. · ${nazivUlogeEv(CU?.role)}`;
+  if(!isLive()){ el.innerHTML='<div class="empty"><i class="ti ti-plug-off"></i><p>Pregled radi uz vezu na bazu.</p></div>'; return; }
+  el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Pripremam pregled…</p></div>';
+  const mojeJ=vJ(), sveJ=(U==='dir'||U==='obr'||U==='admin');
+  const D={}; const q=(k,p)=>p.then(r=>{D[k]=r.data||[];}).catch(()=>{D[k]=[];});
+  try{
+    await Promise.all([
+      q('prek',SB.from('prekovremeni_zahtjevi').select('id,djelatnik_id,jedinica_id,godina,mjesec,status,ukupno_sati,stavke,poslano_at,odobreno_at,uruceno_datum,povijest,updated_at').gte('godina',god-1)),
+      q('loko',SB.from('loko_voznje').select('id,djelatnik_id,jedinica_id,godina,mjesec,status,ukupno_km,ukupno_eur,poslano_at,odobreno_at,povijest,updated_at').gte('godina',god-1)),
+      q('prij',SB.from('stimulacije_prijedlozi').select('id,jedinica_id,godina,mjesec,status,vrsta,predlozio_ime,poslano_at,odobreno_at,odobrio_ime,komentar_direktora,updated_at,stimulacije_prijedlozi_stavke(id)').gte('godina',god-1)),
+      q('preuz',SB.from('evidencija_preuzeto').select('*').in('godina',[god,pg])),
+      q('zakl',SB.from('obracun_zakljucani_mjeseci').select('*').in('godina',[god,pg])),
+      (async()=>{D.ev=await dashEvMjesec(god,mj); D.evP=await dashEvMjesec(pg,pm);})().catch(()=>{D.ev={};D.evP={};}),
+      (U==='admin'?q('audit',SB.from('audit_log').select('*').order('ts',{ascending:false}).limit(8)):Promise.resolve()),
+    ]);
+  }catch(e){}
+  window._dash=D;
+  const vid=j=>sveJ||mojeJ.includes(j);
+  const prek=D.prek.filter(z=>vid(z.jedinica_id)), loko=D.loko.filter(z=>vid(z.jedinica_id)), prij=D.prij.filter(z=>vid(z.jedinica_id));
+  const upisano=z=>(z.povijest||[]).some(p=>(p.kom||'').startsWith('Upisano u evidenciju'));
+  // ── Za napraviti ──
+  const todo=[];
+  const T=(n,ic,boja,naslov,opis,akcija)=>{ if(n>0) todo.push({n,ic,boja,naslov,opis,akcija}); };
+  if(U==='vod'||U==='admin'){
+    const vr=[...prek,...loko,...prij].filter(z=>z.status==='vraceno');
+    T(prek.filter(z=>z.status==='vraceno').length,'ti-arrow-back-up','red','Prekovremeni – vraćeno','direktor traži doradu ili pojašnjenje',"dashPrek('vraceno')");
+    T(loko.filter(z=>z.status==='vraceno').length,'ti-arrow-back-up','red','Loko vožnja – vraćeno','direktor traži doradu ili pojašnjenje',"dashLoko('vraceno')");
+    T(prij.filter(z=>z.status==='vraceno').length,'ti-arrow-back-up','red','Stimulacije – vraćeno','prijedlog vraćen na doradu',"dashPrij('vraceno')");
+    if(U==='vod'){
+      T(prek.filter(z=>z.status==='odobreno'&&!z.uruceno_datum).length,'ti-file-check','amber','Uručiti radniku','odobreni zahtjevi za prekovremeni rad – ispis i potpis',"dashPrek('odobreno')");
+      T(prek.filter(z=>z.status==='odobreno'&&!upisano(z)).length,'ti-table-import','amber','Upisati u evidenciju','odobreni prekovremeni sati još nisu upisani',"dashPrek('odobreno')");
+      T([...prek,...loko,...prij].filter(z=>z.status==='nacrt').length,'ti-pencil','gray','Nacrti','spremljeno, a nije poslano direktoru',"dashIdi('prek')");
+    }
+  }
+  if(U==='dir'||U==='admin'){
+    const sp=z=>dashDana(z.poslano_at);
+    const pp=prek.filter(z=>z.status==='poslano'), lp=loko.filter(z=>z.status==='poslano'), rp=prij.filter(z=>z.status==='poslano');
+    T(pp.length,'ti-clock-plus','blue','Prekovremeni rad',`čeka odobrenje · ${prekH(pp.reduce((a,z)=>a+(+z.ukupno_sati||0),0))} h${pp.length?` · najstariji ${Math.max(...pp.map(sp))} d`:''}`,"dashPrek('poslano')");
+    T(rp.length,'ti-coin-euro','blue','Prijedlozi stimulacija',`čeka odobrenje${rp.length?` · najstariji ${Math.max(...rp.map(sp))} d`:''}`,"dashPrij('poslano')");
+    T(lp.length,'ti-car','blue','Loko vožnja',`čeka odobrenje · ${lokoEur(lp.reduce((a,z)=>a+(+z.ukupno_eur||0),0))} €`,"dashLoko('poslano')");
+  }
+  if(U==='obr'||U==='admin'){
+    T(loko.filter(z=>z.status==='odobreno').length,'ti-cash','green','Loko – unijeti u plaće',`${lokoEur(loko.filter(z=>z.status==='odobreno').reduce((a,z)=>a+(+z.ukupno_eur||0),0))} € odobreno`,"dashLoko('odobreno')");
+    const rpO=prij.filter(z=>z.status==='odobreno'&&((z.godina===god&&z.mjesec===mj)||(z.godina===pg&&z.mjesec===pm)));
+    T(rpO.length,'ti-coin-euro','green','Odobrene stimulacije',`prijedlozi za ${MJ_NOM[pm-1]} i ${MJ_NOM[mj-1]}`,"dashPrij('odobreno')");
+    const pO=prek.filter(z=>z.status==='odobreno'&&z.godina===pg&&z.mjesec===pm);
+    T(pO.length,'ti-clock-check','green',`Prekovremeni – ${MJ_NOM[pm-1]}`,`odobreno ${prekH(pO.reduce((a,z)=>a+(+z.ukupno_sati||0),0))} h za obračun`,"dashPrek('odobreno')");
+  }
+  // ── kalendar obveza (obračun, admin) ──
+  const kal=[];
+  if(U==='obr'||U==='admin'){
+    const dd=n=>{const x=new Date(god,mj-1+n,1); return x;}; const prvi=dd(1);
+    kal.push({d:prvi,t:`Mjesečni dodatak za ${MJ_NOM[mj-1]}`,a:"dashIdi('dodaci')"});
+    kal.push({d:prvi,t:`Prijevoz za ${MJ_NOM[mj-1]}`,a:"dashIdi('prijevoz')"});
+    [[4,'prosinac – ožujak'],[8,'travanj – srpanj'],[12,'kolovoz – studeni']].forEach(([m,o])=>{ let x=new Date(god,m-1,1); if(x<new Date(god,mj-1,t.getDate())) x=new Date(god+1,m-1,1); if((x-t)/864e5<=62) kal.push({d:x,t:`Kvartalni dodatak (${o})`,a:"dashIdi('dodaci')"}); });
+    if(!D.zakl.some(z=>z.godina===pg&&z.mjesec===pm)) kal.unshift({d:null,t:`Konačno zaključaj ${MJ_NOM[pm-1]} ${pg}.`,a:"dashIdi('obracun')",hitno:true});
+    kal.sort((a,b)=>(a.d?a.d.getTime():0)-(b.d?b.d.getTime():0));
+  }
+  // ── brzi pristup ──
+  const B=(ic,t,a)=>`<button class="dq" onclick="${a}"><i class="ti ${ic}"></i><span>${t}</span></button>`;
+  const brzo={
+    vod:[B('ti-calendar-plus','Unos sati',"dashUnosPrvi()"),B('ti-clock-plus','Novi zahtjev za prekovremeni',"dashIdi('prek',noviPrek)"),B('ti-car','Nova loko vožnja',"dashIdi('loko',noviLoko)"),B('ti-send','Novi prijedlog stimulacije',"dashIdi('prijedlozi',novaPrijedlog)"),B('ti-printer','Ispis evidencije',"dashIdi('ispis')"),B('ti-help-circle','Upute za rad',"dashIdi('upute')")],
+    dir:[B('ti-clock-plus','Prekovremeni rad',"dashPrek('')"),B('ti-send','Prijedlozi stimulacija',"dashPrij('')"),B('ti-car','Loko vožnja',"dashLoko('')"),B('ti-table','Pregled evidencije',"dashIdi('pregled')"),B('ti-stethoscope','Pretraga bolovanja',"dashIdi('bolovanje')"),B('ti-report-money','Rekapitulacija',"dashIdi('rekapitulacija')")],
+    obr:[B('ti-calculator','Obračun plaća',"dashIdi('obracun')"),B('ti-gift','Dodaci',"dashIdi('dodaci')"),B('ti-bus','Prijevoz',"dashIdi('prijevoz')"),B('ti-report-money','Rekapitulacija',"dashIdi('rekapitulacija')"),B('ti-car','Loko vožnja',"dashLoko('')"),B('ti-clock-plus','Prekovremeni rad',"dashPrek('')")],
+    admin:[B('ti-calculator','Obračun plaća',"dashIdi('obracun')"),B('ti-users','Djelatnici',"dashIdi('djelatnici')"),B('ti-shield-lock','Korisnici',"dashIdi('korisnici')"),B('ti-history','Dnevnik promjena',"dashIdi('audit')"),B('ti-clock-plus','Prekovremeni rad',"dashPrek('')"),B('ti-help-circle','Upute',"dashIdi('upute')")]
+  }[U];
+  // ── stanje unosa po jedinicama ──
+  const jedL=DB.jedinice.filter(j=>sveJ?true:mojeJ.includes(j.id));
+  const stanje=(g,m,EV)=>jedL.map(j=>{
+    const dj=DB.djelatnici.filter(d=>gAJ(d.id,g,m)===j.id); if(!dj.length) return null;
+    const un=dj.filter(d=>parseFloat(EV[d.id]?.sums?.ukupno)>0);
+    const zad=Math.max(0,...un.map(d=>Math.max(0,...(EV[d.id].rows_data||[]).filter(r=>Object.values(r.sati||{}).some(v=>parseFloat(v))).map(r=>+r.dan))));
+    const pr=D.preuz.find(p=>p.jedinica_id===j.id&&p.godina===g&&p.mjesec===m);
+    return {j,n:dj.length,u:un.length,zad,zak:pr?.do_dana||0,nema:dj.filter(d=>!(parseFloat(EV[d.id]?.sums?.ukupno)>0))};
+  }).filter(Boolean);
+  const S=stanje(god,mj,D.ev), SP=stanje(pg,pm,D.evP);
+  window._dashPrvi=S.flatMap(x=>x.nema)[0]?.id||null;
+  const bar=(u,n)=>{const p=n?Math.round(u/n*100):0; const c=p>=100?'var(--green)':p>=50?'var(--amber)':'var(--red)'; return `<div class="dbar"><div style="width:${p}%;background:${c}"></div></div>`;};
+  // ── upozorenja ──
+  const upoz=[];
+  if(U==='vod'){
+    const fali=SP.flatMap(x=>x.nema); if(fali.length) upoz.push({ic:'ti-alert-triangle',t:`${MJ_HR[pm-1]}: ${fali.length} ${fali.length===1?'djelatnik nema':'djelatnika nemaju'} unesene sate`,a:`dashUnos(${fali[0].id},${pg},${pm})`,lista:fali.slice(0,8).map(d=>`<a href="#" onclick="dashUnos(${d.id},${pg},${pm});return false">${hEsc(dF(d))}</a>`).join(', ')+(fali.length>8?' …':'')});
+  }
+  if(U==='dir'||U==='admin'){
+    const godS={}; prek.filter(z=>z.status==='odobreno').forEach(z=>(z.stavke||[]).filter(s=>(s.datum||'').startsWith(String(god))&&s.vrsta==='prek').forEach(s=>godS[z.djelatnik_id]=(godS[z.djelatnik_id]||0)+(+s.sati||0)));
+    const blizu=Object.entries(godS).filter(([,h])=>h>=150).map(([d,h])=>`${dF(DB.djelatnici.find(x=>x.id===+d))} (${prekH(h)} h)`);
+    if(blizu.length) upoz.push({ic:'ti-alert-triangle',t:`Blizu godišnjeg ograničenja od 180 h prekovremenog rada: ${blizu.join(', ')}`});
+    const dugo=[...prek,...loko,...prij].filter(z=>z.status==='poslano'&&dashDana(z.poslano_at)>3).length;
+    if(dugo) upoz.push({ic:'ti-hourglass',t:`${dugo} ${dugo===1?'zahtjev čeka':'zahtjeva čekaju'} odobrenje duže od 3 dana`});
+  }
+  if(U==='obr'||U==='admin'||U==='vod'){
+    // prekovremeni u evidenciji bez odobrenog zahtjeva (tekući i prošli mjesec)
+    const raz=[]; [[god,mj,D.ev],[pg,pm,D.evP]].forEach(([g,m,EV])=>{const pre=`${g}-${String(m).padStart(2,'0')}`;
+      Object.values(EV).forEach(e=>{ if(!vid(gAJ(e.djelatnik_id,g,m))) return; const evH=(parseFloat(e.sums?.PREK)||0)+(parseFloat(e.sums?.NEDB)||0); if(!evH) return;
+        const od=prek.filter(z=>z.status==='odobreno'&&z.djelatnik_id===e.djelatnik_id).flatMap(z=>z.stavke||[]).filter(s=>(s.datum||'').startsWith(pre)).reduce((a,s)=>a+(+s.sati||0),0);
+        if(evH>od+0.01) raz.push({did:e.djelatnik_id,g,m}); });});
+    if(raz.length) upoz.push({ic:'ti-arrows-diff',t:`${raz.length} ${raz.length===1?'djelatnik ima':'djelatnika imaju'} u evidenciji više prekovremenih / ned./blag. sati nego odobreno zahtjevom`,a:`dashUsp(${raz[0].g},${raz[0].m})`,btn:'Usporedba s evidencijom'});
+  }
+  // ── obavijesti (zadnji događaji) ──
+  const ob=[];
+  const naz=(Z,tip)=>{const d=DB.djelatnici.find(x=>x.id===Z.djelatnik_id); return `${tip} ${d?dF(d):''}`;};
+  prek.forEach(Z=>(Z.povijest||[]).forEach(p=>ob.push({t:p.t,ko:p.ko,txt:`${naz(Z,'Prekovremeni')}${p.do?` → ${PREK_ST[p.do]?.lbl||p.do}`:''}${p.kom?`: ${p.kom}`:''}`,a:`dashIdi('prek',()=>otvoriPrek(${Z.id}))`})));
+  loko.forEach(Z=>(Z.povijest||[]).forEach(p=>ob.push({t:p.t,ko:p.ko,txt:`${naz(Z,'Loko vožnja')}${p.do?` → ${LOKO_ST[p.do]?.lbl||p.do}`:''}${p.kom?`: ${p.kom}`:''}`,a:`dashIdi('loko',()=>otvoriLoko(${Z.id}))`})));
+  prij.forEach(Z=>{ if(Z.odobreno_at) ob.push({t:Z.odobreno_at,ko:Z.odobrio_ime||'',txt:`Prijedlog stimulacija ${jN(Z.jedinica_id)} (${MJ_NOM[Z.mjesec-1]}) → Odobreno`,a:`dashIdi('prijedlozi',()=>otvoriPrijedlog(${Z.id}))`});
+    else if(Z.poslano_at) ob.push({t:Z.poslano_at,ko:Z.predlozio_ime||'',txt:`Prijedlog stimulacija ${jN(Z.jedinica_id)} (${MJ_NOM[Z.mjesec-1]}) → ${PRIJ_STATUS[Z.status]?.lbl||Z.status}${Z.komentar_direktora&&Z.status==='vraceno'?': '+Z.komentar_direktora:''}`,a:`dashIdi('prijedlozi',()=>otvoriPrijedlog(${Z.id}))`}); });
+  ob.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+  // ── metrike tekućeg mjeseca ──
+  const vidDj=new Set(DB.djelatnici.filter(d=>vid(gAJ(d.id,god,mj))).map(d=>d.id));
+  const sum=c=>Object.values(D.ev).filter(e=>vidDj.has(e.djelatnik_id)).reduce((a,e)=>a+(parseFloat(e.sums?.[c])||0),0);
+
+  // ── iscrtavanje ──
+  const boje={red:'#c0392b',amber:'#b7791f',blue:'var(--blue)',green:'#3f7a3a',gray:'var(--text3)'};
+  const tabStanje=(L,g,m,naslov)=>`<div class="card dcard"><div class="dch"><i class="ti ti-calendar-check"></i> ${naslov}</div>
+    <table class="dtab"><thead><tr><th>Jedinica</th><th style="width:34%">Uneseno</th><th>Voditelj unio do</th><th>Zaključano do</th></tr></thead><tbody>
+    ${L.map(x=>`<tr><td>${hEsc(x.j.name)}</td><td>${bar(x.u,x.n)}<span class="dsm">${x.u} / ${x.n}</span></td><td>${x.zad?`${x.zad}.${m}.`:'–'}</td><td>${x.zak?(x.zak>=dim(g,m)?'<span class="bdg bgr">cijeli mjesec</span>':`do ${x.zak}.${m}.`):'<span class="dsm">–</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+  const panelVod=()=>S.map(x=>`<div class="card dcard"><div class="dch"><i class="ti ti-calendar-plus"></i> Unos sati – ${MJ_NOM[mj-1]} · ${hEsc(x.j.name)}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px">${bar(x.u,x.n)}<b style="white-space:nowrap">${x.u} / ${x.n}</b></div>
+      <div class="dsm" style="margin-bottom:6px">Zadnji uneseni dan: <b>${x.zad?x.zad+'.'+mj+'.':'–'}</b> · Obračun plaće zaključao: <b>${x.zak?'do '+x.zak+'.'+mj+'.':'ništa'}</b></div>
+      ${x.nema.length?`<div class="dsm">Bez unosa (${x.nema.length}): ${x.nema.slice(0,12).map(d=>`<a href="#" onclick="dashUnos(${d.id},${god},${mj});return false">${hEsc(dF(d))}</a>`).join(', ')}${x.nema.length>12?' …':''}</div>`:'<div style="color:#3f7a3a;font-weight:600"><i class="ti ti-circle-check"></i> Svi djelatnici imaju unos</div>'}</div>`).join('');
+  const cekaDir=()=>{const L=[...prek.filter(z=>z.status==='poslano').map(z=>({t:'Prekovremeni',ic:'ti-clock-plus',z,iz:`${prekH(z.ukupno_sati)} h`,ko:dF(DB.djelatnici.find(x=>x.id===z.djelatnik_id)),a:`dashIdi('prek',()=>otvoriPrek(${z.id}))`})),
+      ...loko.filter(z=>z.status==='poslano').map(z=>({t:'Loko vožnja',ic:'ti-car',z,iz:`${lokoEur(z.ukupno_eur)} €`,ko:dF(DB.djelatnici.find(x=>x.id===z.djelatnik_id)),a:`dashIdi('loko',()=>otvoriLoko(${z.id}))`})),
+      ...prij.filter(z=>z.status==='poslano').map(z=>({t:'Stimulacije',ic:'ti-coin-euro',z,iz:`${(z.stimulacije_prijedlozi_stavke||[]).length} djel.`,ko:`${MJ_NOM[z.mjesec-1]} ${z.godina}.`,a:`dashIdi('prijedlozi',()=>otvoriPrijedlog(${z.id}))`}))]
+      .sort((a,b)=>String(a.z.poslano_at).localeCompare(String(b.z.poslano_at)));
+    return `<div class="card dcard"><div class="dch"><i class="ti ti-inbox"></i> Čeka vaše odobrenje</div>${L.length?`<table class="dtab"><thead><tr><th>Vrsta</th><th>Jedinica</th><th>Djelatnik / razdoblje</th><th style="text-align:right">Iznos</th><th>Čeka</th><th></th></tr></thead><tbody>
+      ${L.map(x=>`<tr style="cursor:pointer" onclick="${x.a}"><td><i class="ti ${x.ic}"></i> ${x.t}</td><td>${hEsc(jN(x.z.jedinica_id))}</td><td>${hEsc(x.ko||'')}</td><td style="text-align:right;font-weight:600">${x.iz}</td><td>${(()=>{const d=dashDana(x.z.poslano_at);return d>3?`<span class="bdg brd">${d} d</span>`:d?`${d} d`:'danas';})()}</td><td><button class="btn bxs bp">Otvori</button></td></tr>`).join('')}</tbody></table>`:'<div style="color:#3f7a3a;font-weight:600;padding:6px 0"><i class="ti ti-circle-check"></i> Ništa ne čeka odobrenje</div>'}</div>`;};
+  const sazDir=()=>{const pMj=prek.filter(z=>z.status==='odobreno').flatMap(z=>z.stavke||[]).filter(s=>(s.datum||'').startsWith(`${god}-${String(mj).padStart(2,'0')}`)).reduce((a,s)=>a+(+s.sati||0),0);
+      const pPr=prek.filter(z=>z.status==='odobreno').flatMap(z=>z.stavke||[]).filter(s=>(s.datum||'').startsWith(`${pg}-${String(pm).padStart(2,'0')}`)).reduce((a,s)=>a+(+s.sati||0),0);
+      const lMj=loko.filter(z=>['odobreno','isplaceno'].includes(z.status)&&z.godina===god&&z.mjesec===mj).reduce((a,z)=>a+(+z.ukupno_eur||0),0);
+      const lPr=loko.filter(z=>['odobreno','isplaceno'].includes(z.status)&&z.godina===pg&&z.mjesec===pm).reduce((a,z)=>a+(+z.ukupno_eur||0),0);
+      const poJ=DB.jedinice.map(j=>{const ids=DB.djelatnici.filter(d=>gAJ(d.id,god,mj)===j.id).map(d=>d.id); const s=c=>ids.reduce((a,i)=>a+(parseFloat(D.ev[i]?.sums?.[c])||0),0); return {j,p:s('PREK')+s('NEDB'),b:s('BO')};}).filter(x=>x.p||x.b).sort((a,b)=>b.p-a.p).slice(0,6);
+      return `<div class="card dcard"><div class="dch"><i class="ti ti-chart-bar"></i> Sažetak – ${MJ_NOM[mj-1]}</div>
+       <div class="dmini"><div><span>Odobreni prekovremeni</span><b>${prekH(pMj)} h</b><em>${MJ_NOM[pm-1]}: ${prekH(pPr)} h</em></div><div><span>Loko vožnja</span><b>${lokoEur(lMj)} €</b><em>${MJ_NOM[pm-1]}: ${lokoEur(lPr)} €</em></div>
+       <div><span>Odobreni prijedlozi stimulacija</span><b>${prij.filter(z=>z.status==='odobreno'&&z.godina===god&&z.mjesec===mj).length}</b><em>${MJ_NOM[pm-1]}: ${prij.filter(z=>z.status==='odobreno'&&z.godina===pg&&z.mjesec===pm).length}</em></div></div>
+       ${poJ.length?`<table class="dtab" style="margin-top:8px"><thead><tr><th>Jedinica</th><th style="text-align:right">Prekov. + ned./blag. (evidencija)</th><th style="text-align:right">Bolovanje</th></tr></thead><tbody>${poJ.map(x=>`<tr><td>${hEsc(x.j.name)}</td><td style="text-align:right">${prekH(x.p)} h</td><td style="text-align:right">${prekH(x.b)} h</td></tr>`).join('')}</tbody></table>`:''}</div>`;};
+  const kalHtml=()=>kal.length?`<div class="card dcard"><div class="dch"><i class="ti ti-calendar-event"></i> Kalendar obveza</div>${kal.map(k=>`<div class="dkal" onclick="${k.a}"><div class="dkd ${k.hitno?'h':''}">${k.d?`<b>${k.d.getDate()}.</b><span>${MJ_NOM[k.d.getMonth()].slice(0,3)}</span>`:'<i class="ti ti-alert-circle"></i>'}</div><div>${hEsc(k.t)}${k.d?`<div class="dsm">${(()=>{const n=Math.ceil((k.d-t)/864e5);return n<=0?'danas':`za ${n} ${n===1?'dan':'dana'}`;})()}</div>`:'<div class="dsm">prošli mjesec još nije konačno zaključan</div>'}</div><i class="ti ti-chevron-right" style="margin-left:auto;color:var(--text3)"></i></div>`).join('')}</div>`:'';
+  const obHtml=()=>`<div class="card dcard"><div class="dch"><i class="ti ti-bell"></i> Obavijesti</div>${ob.length?ob.slice(0,8).map(o=>`<div class="dob" onclick="${o.a}"><span class="dsm">${fmtDT(o.t)}</span> <b>${hEsc(o.ko||'')}</b> · ${hEsc(o.txt)}</div>`).join(''):'<div class="dsm">Nema novih događaja</div>'}</div>`;
+  const auditHtml=()=>U==='admin'&&(D.audit||[]).length?`<div class="card dcard"><div class="dch"><i class="ti ti-history"></i> Zadnje promjene u sustavu</div>${D.audit.map(a=>`<div class="dob" onclick="dashIdi('audit')"><span class="dsm">${fmtDT(a.ts)}</span> <b>${hEsc(a.user_name||'')}</b> · ${hEsc([a.action,a.target].filter(Boolean).join(' – '))}</div>`).join('')}</div>`:'';
+
+  let glavni='', strana='';
+  if(U==='vod'){ glavni=panelVod(); strana=obHtml(); }
+  else if(U==='dir'){ glavni=cekaDir()+sazDir(); strana=obHtml(); }
+  else if(U==='obr'){ glavni=tabStanje(S,god,mj,`Stanje unosa po jedinicama – ${MJ_NOM[mj-1]}`)+tabStanje(SP,pg,pm,`Stanje unosa – ${MJ_NOM[pm-1]} (prošli mjesec)`); strana=kalHtml()+obHtml(); }
+  else { glavni=cekaDir()+tabStanje(S,god,mj,`Stanje unosa po jedinicama – ${MJ_NOM[mj-1]}`)+sazDir(); strana=kalHtml()+obHtml()+auditHtml(); }
+
+  el.innerHTML=`
+   <div class="dsec">Za napraviti</div>
+   ${todo.length?`<div class="dtodo">${todo.map(x=>`<div class="dt" onclick="${x.akcija}" style="border-left-color:${boje[x.boja]}"><div class="dtn" style="color:${boje[x.boja]}">${x.n}</div><div><div class="dtt"><i class="ti ${x.ic}"></i> ${x.naslov}</div><div class="dsm">${x.opis}</div></div></div>`).join('')}</div>`
+     :'<div class="card dcard" style="color:#3f7a3a;font-weight:600"><i class="ti ti-circle-check"></i> Sve je riješeno – ništa ne čeka vas.</div>'}
+   ${upoz.length?`<div class="dupoz">${upoz.map(u=>`<div class="al alw" style="display:block;margin:0 0 6px"><i class="ti ${u.ic}"></i> ${u.t}${u.lista?`<div style="margin-top:3px;font-size:12px">${u.lista}</div>`:''}${u.a&&u.btn?` <button class="btn bxs bs" onclick="${u.a}">${u.btn}</button>`:''}</div>`).join('')}</div>`:''}
+   <div class="dsec">Brzi pristup</div><div class="dbrzo">${brzo.join('')}</div>
+   <div class="dgrid"><div>${glavni}</div><div>${strana}</div></div>
+   <div class="dsec">${MJ_HR[mj-1]} ${god} – ${sveJ?'cijela tvrtka':'vaše jedinice'}</div>
+   <div class="mgr">
+    <div class="metric mbl"><div class="ml">Radni sati</div><div class="mv">${prekH(sum('RAD'))}</div></div>
+    <div class="metric mam"><div class="ml">Prekovremeni</div><div class="mv">${prekH(sum('PREK'))}</div></div>
+    <div class="metric mam"><div class="ml">Ned./blagdan</div><div class="mv">${prekH(sum('NEDB'))}</div></div>
+    <div class="metric mgr3"><div class="ml">Godišnji odmor</div><div class="mv">${prekH(sum('GO'))}</div></div>
+    <div class="metric mrd"><div class="ml">Bolovanje</div><div class="mv">${prekH(sum('BO'))}</div></div>
+    <div class="metric"><div class="ml">Djelatnika s unosom</div><div class="mv">${Object.keys(D.ev).filter(i=>vidDj.has(+i)).length} / ${vidDj.size}</div></div>
+   </div>`;
+}
+function dashUsp(g,m){ dashIdi('prek',()=>{const s=id=>document.getElementById(id); if(!s('prek-fgod')) return; s('prek-fgod').value=String(g); s('prek-fmj').value=String(m); s('prek-fst').value=''; loadPrek(); usporedbaPrek();}); }
+function dashUnosPrvi(){ const t=new Date(); dashUnos(window._dashPrvi||0,t.getFullYear(),t.getMonth()+1); }
+
 // ══ PREKOVREMENI RAD / RAD SUBOTOM, NEDJELJOM, BLAGDANOM ════════
 // Voditelj sastavlja zahtjev za radnika svoje jedinice, direktor odobrava, voditelj potvrđuje uručenje radniku.
 const PREK_ST={nacrt:{lbl:'Nacrt',cls:'bdg bgy'},poslano:{lbl:'Čeka odobrenje',cls:'bdg bam'},vraceno:{lbl:'Vraćeno na doradu',cls:'bdg brd'},
@@ -4714,6 +4885,7 @@ function renderPrekModal(){
    <div id="prek-warn"></div>
    <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;margin-top:6px"><input type="checkbox" id="prek-usm" ${Z.usmeni?'checked':''} onchange="prekRekalk()" ${dis}> Rad je naložen usmeno zbog prijeke potrebe – ovo je pisana potvrda (najkasnije 7 dana od naloga)</label>
    <div class="fg" style="margin-top:6px"><label class="fl">Napomena</label><textarea id="prek-nap" rows="2" oninput="prekCitaj()" ${dis}>${hEsc(Z.napomena||'')}</textarea></div>
+   ${Z.status==='odobreno'?`<div class="al ${(Z.povijest||[]).some(p=>(p.kom||'').startsWith('Upisano u evidenciju'))?'ali':'alw'}" style="display:block;font-size:12.5px;margin-bottom:6px"><i class="ti ti-table-import"></i> ${(Z.povijest||[]).some(p=>(p.kom||'').startsWith('Upisano u evidenciju'))?'Sati su upisani u evidenciju radnog vremena.':'Sati još nisu upisani u evidenciju – gumb <b>Upiši u evidenciju</b> ili ručno u Unosu podataka.'}</div>`:''}
    ${Z.status==='odobreno'?`<div class="al ${Z.uruceno_datum?'ali':'alw'}" style="display:block;font-size:12.5px"><i class="ti ti-file-check"></i> ${Z.uruceno_datum?`Zahtjev uručen radniku <b>${prekDatHr(Z.uruceno_datum)}</b> (${hEsc(Z.uruceno_ime||'')}).`:'Zahtjev je odobren – ispišite ga, uručite radniku na potpis i označite <b>Uručeno radniku</b>.'}</div>`:''}
    ${Z.id?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px"><div style="font-weight:600;margin-bottom:6px"><i class="ti ti-messages"></i> Tijek i komentari</div>
      <div style="max-height:160px;overflow-y:auto;font-size:12px">${(Z.povijest||[]).map(p=>`<div style="padding:5px 8px;margin-bottom:4px;border-radius:6px;background:${p.do==='vraceno'||p.do==='odbijeno'?'#fdecea':p.do==='odobreno'?'#eaf5ea':'var(--bg3)'}">
@@ -4728,6 +4900,7 @@ function renderPrekFoot(){
   if(Z.status==='poslano'&&prekUnosi()&&vJ().includes(Z.jedinica_id)) b.push(`<button class="btn bs" onclick="prekAkcija('nacrt')"><i class="ti ti-arrow-back"></i> Povuci</button>`);
   if(Z.status==='poslano'&&(jeDirektor()||CU?.role==='admin')) b.push(`<button class="btn bd" onclick="prekAkcija('odbijeno')"><i class="ti ti-circle-x"></i> Odbij</button>`,`<button class="btn bs" onclick="prekAkcija('vraceno')"><i class="ti ti-arrow-back-up"></i> Vrati na doradu</button>`,`<button class="btn bp" style="background:#3f7a3a;border-color:#3f7a3a" onclick="prekAkcija('odobreno')"><i class="ti ti-circle-check"></i> Odobri</button>`);
   if(Z.status==='odobreno'&&(jeDirektor()||CU?.role==='admin')) b.push(`<button class="btn bs" onclick="prekAkcija('vraceno')"><i class="ti ti-arrow-back-up"></i> Poništi odobrenje</button>`);
+  if(prekSmijeUpis(Z)) b.push(`<button class="btn bs" onclick="prekUpisiUEvidenciju()" title="Upiši odobrene sate u evidenciju radnog vremena"><i class="ti ti-table-import"></i> ${(Z.povijest||[]).some(p=>(p.kom||'').startsWith('Upisano u evidenciju'))?'Ponovno upiši u evidenciju':'Upiši u evidenciju'}</button>`);
   if(Z.status==='odobreno'&&prekUnosi()&&vJ().includes(Z.jedinica_id)) b.push(`<button class="btn bp" onclick="prekUruceno()"><i class="ti ti-file-check"></i> ${Z.uruceno_datum?'Promijeni datum uručenja':'Uručeno radniku'}</button>`);
   document.getElementById('prek-foot').innerHTML=b.join('');
 }
@@ -4774,6 +4947,48 @@ async function prekUruceno(){
   const {data,error}=await SB.from('prekovremeni_zahtjevi').update({uruceno_datum:iso}).eq('id',Z.id).select().single();
   if(error){showToast('Greška: '+error.message,'error');return;}
   window._prek={...data,stavke:data.stavke.map(s=>({...s}))}; showToast('✅ Označeno: uručeno radniku','success'); renderPrekModal(); loadPrek();
+}
+
+
+// Upis odobrenih sati u evidenciju radnog vremena (PREKOV. ili NED./BLAG.); ostali stupci dana ostaju netaknuti
+function prekSmijeUpis(Z){return Z?.status==='odobreno'&&(CU?.role==='admin'||CU?.role==='obracun'||(prekUnosi()&&vJ().includes(Z.jedinica_id)));}
+async function prekUpisiUEvidenciju(){
+  const Z=window._prek; if(!prekSmijeUpis(Z)) return;
+  const d=DB.djelatnici.find(x=>x.id===Z.djelatnik_id);
+  const poMj={}; (Z.stavke||[]).filter(s=>s.datum&&s.sati>0).forEach(s=>{const k=s.datum.slice(0,7);(poMj[k]||=[]).push(s);});
+  const plan=[]; const sukobi=[];
+  try{
+    for(const [k,L] of Object.entries(poMj)){
+      const [y,m]=k.split('-').map(Number);
+      const {data:ev,error}=await SB.from('evidencija').select('id,rows_data,poc_rada,kraj_rada').eq('djelatnik_id',Z.djelatnik_id).eq('godina',y).eq('mjesec',m).maybeSingle();
+      if(error) throw error;
+      const rows=JSON.parse(JSON.stringify(ev?.rows_data||[]));
+      L.forEach(s=>{const dan=+s.datum.slice(8,10), code=PREK_VR[s.vrsta]?.ev||'PREK';
+        let r=rows.find(x=>+x.dan===dan); if(!r){r={dan,sati:{}};rows.push(r);} r.sati=r.sati||{};
+        const staro=parseFloat(r.sati[code])||0; if(staro&&staro!==+s.sati) sukobi.push(`${prekDatHr(s.datum)}: ${code==='PREK'?'PREKOV.':'NED./BLAG.'} ${prekH(staro)} h → ${prekH(s.sati)} h`);
+        r.sati[code]=+s.sati;});
+      rows.sort((a,b)=>a.dan-b.dan);
+      const sums={}; let uk=0; DB.vrste.forEach(v=>sums[v.code]=0);
+      rows.forEach(r=>Object.entries(r.sati||{}).forEach(([c,v])=>{v=parseFloat(v)||0; if(v){sums[c]=(sums[c]||0)+v; uk+=v;}}));
+      Object.keys(sums).forEach(c=>sums[c]=Math.round(sums[c]*10)/10); sums.ukupno=Math.round(uk*10)/10;
+      plan.push({y,m,ev,rows,sums,n:L.length});
+    }
+  }catch(e){showToast('Greška čitanja evidencije: '+e.message,'error');return;}
+  const opis=plan.map(p=>`${MJ_HR[p.m-1]} ${p.y}: ${p.n} ${p.n===1?'dan':'dana'}`).join(', ');
+  if(!confirm(`Upisati odobrene sate za ${dF(d)} u evidenciju radnog vremena (${opis})?\n\nPrekovremeni rad i subota → stupac PREKOV., nedjelja i blagdan → NED./BLAG. Ostali sati tih dana se ne mijenjaju.${sukobi.length?`\n\nPOZOR – već upisano drukčije, bit će zamijenjeno:\n${sukobi.join('\n')}`:''}`)) return;
+  try{
+    for(const p of plan){
+      let r;
+      if(p.ev) r=await SB.from('evidencija').update({rows_data:p.rows,sums:p.sums,updated_by:SB_USER?.id}).eq("id",p.ev.id).select('id').single();
+      else r=await SB.from('evidencija').insert({djelatnik_id:Z.djelatnik_id,godina:p.y,mjesec:p.m,rows_data:p.rows,sums:p.sums,poc_rada:d?.poc||'07:00',kraj_rada:d?.kraj||'15:00',created_by:SB_USER?.id,updated_by:SB_USER?.id}).select("id").single();
+      if(r.error) throw r.error;
+      const key=`${Z.djelatnik_id}_${p.y}_${p.m}`;
+      DB.evidencija[key]={...(DB.evidencija[key]||{poc:d?.poc||'07:00',kraj:d?.kraj||'15:00'}),rows:p.rows,sums:p.sums,_dbId:r.data.id};
+    }
+  }catch(e){showToast('Nije upisano: '+(String(e.message||'').includes('zaklju')?'dani su zaključani za obračun plaće – upis može napraviti obračun plaće':e.message),'error');return;}
+  const {data}=await SB.from('prekovremeni_zahtjevi').update({komentar:`Upisano u evidenciju radnog vremena (${opis})`}).eq('id',Z.id).select().single();
+  if(data) window._prek={...data,stavke:data.stavke.map(s=>({...s}))};
+  showToast('✅ Sati upisani u evidenciju','success'); renderPrekModal(); loadPrek();
 }
 
 // ── ispis zahtjeva ──
@@ -5542,7 +5757,12 @@ const UPUTE=[
   <p><b>Nova verzija aplikacije:</b> kad se aplikacija ažurira, pritisnite <b>Ctrl+F5</b> da preglednik učita novu verziju.</p>
   <p><b>Gumb ?</b> gore desno otvara upute za stranicu na kojoj se nalazite.</p>`},
  {k:'dashboard',t:'Pregled',ic:'ti-layout-dashboard',h:`
-  <p>Početna stranica sa sažetkom: broj djelatnika, unesenih evidencija i odsutnosti u vašim jedinicama.</p>`},
+  <p>Početna stranica prilagođena vašoj ulozi:</p>
+  <ul><li><b>Za napraviti</b> – kartice s brojem stvari koje čekaju baš vas (npr. vraćeno na doradu, čeka odobrenje, unijeti u plaće). Klik vodi ravno na posao.</li>
+  <li><b>Upozorenja</b> – npr. djelatnici bez unesenih sati prošli mjesec, prekovremeni sati u evidenciji bez odobrenog zahtjeva, zahtjevi koji čekaju duže od 3 dana.</li>
+  <li><b>Brzi pristup</b> – gumbi za najčešće poslove.</li>
+  <li><b>Voditelj</b> vidi stanje unosa sati za tekući mjesec i tko još nema unos (klik na ime otvara unos). <b>Direktor</b> vidi sve što čeka odobrenje i sažetak mjeseca. <b>Obračun plaće</b> vidi stanje unosa po jedinicama i kalendar obveza (dodaci, prijevoz, zaključavanje).</li>
+  <li><b>Obavijesti</b> – zadnji događaji (poslano, odobreno, vraćeno, komentari).</li></ul>`},
  {k:'unos',t:'Unos podataka (radni sati)',ic:'ti-calendar-plus',h:`
   <ol>
    <li>Odaberite <b>Jedinicu</b>, <b>Djelatnika</b>, <b>Godinu</b> i <b>Mjesec</b>. Uz ime djelatnika ✓ znači da ima unesene sate, ○ da još nema.</li>
@@ -5588,6 +5808,7 @@ const UPUTE=[
   <li><b>Pošalji na odobrenje.</b> Direktor <b>odobri</b>, <b>vrati na doradu</b> ili <b>odbije</b> (uz komentar).</li>
   <li>Odobreni zahtjev <b>ispišite</b>, uručite radniku na potpis i kliknite <b>Uručeno radniku</b> s datumom.</li></ol>
   <p>Pisani zahtjev uručuje se prije rada. Ako je rad zbog prijeke potrebe naložen usmeno, označite kvačicu „usmeni nalog” – zahtjev je tada pisana potvrda koja se uručuje najkasnije u roku od 7 dana.</p>
+  <p>Odobreni zahtjev možete gumbom <b>Upiši u evidenciju</b> upisati u evidenciju radnog vremena (ostali sati tih dana se ne mijenjaju), ili sate upisati ručno.</p>
   <p>U <b>Unosu podataka</b> iznad tablice vidi se odobreni prekovremeni rad djelatnika za taj mjesec. Sati se u evidenciju upisuju u stupac <b>PREKOV.</b> (prekovremeni i subota) ili <b>NED./BLAG.</b> (nedjelja i blagdan). <b>Usporedba s evidencijom</b> pokazuje razlike između odobrenog i upisanog.</p>`},
  {k:'loko',t:'Loko vožnja',ic:'ti-car',h:`
   <ol><li><b>Voditelj</b> klikne <b>Novi obračun</b>, odabere djelatnika svoje jedinice (ili sebe), mjesec i vozilo (marka i registracija).</li>
