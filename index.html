@@ -728,7 +728,7 @@ select{cursor:pointer}
             <div class="fh" id="dod-kv-opis" style="margin-bottom:.6rem">Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i nije imao ni dan bolovanja, plaćenog/neplaćenog dopusta, očinskog i sl.</div>
             <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="fg" style="margin:0"><label class="fl">Obračun na dan</label><select id="dod-k-mj" style="width:auto">
-                <option value="4">01.04. (prosinac – ožujak)</option><option value="8">01.08. (travanj – srpanj)</option><option value="12">01.12. (kolovoz – studeni)</option></select></div>
+                <option value="5">01.05. (siječanj – travanj)</option><option value="9">01.09. (svibanj – kolovoz)</option><option value="1">01.01. (rujan – prosinac prethodne godine)</option></select></div>
               <div class="fg" style="margin:0"><label class="fl">Godina</label><select id="dod-k-god" style="width:auto"></select></div>
               <button class="btn bp" onclick="obracunajDodatak('233')"><i class="ti ti-calculator"></i> Obračunaj kvartal</button>
             </div>
@@ -859,7 +859,7 @@ select{cursor:pointer}
                 </select>
               </div>
               <div class="fg" style="min-width:130px;margin:0">
-                <label class="fl">Mjesec</label>
+                <label class="fl" title="Stimulacija za ovaj mjesec isplaćuje se s plaćom idućeg mjeseca i troši 1.200 € te godine isplate (prosinac → iduća godina)">Mjesec rada (isplata idući mj.)</label>
                 <select id="stim-umj" onchange="loadStimUnos()">
                   <option value="1">Siječanj</option><option value="2">Veljača</option>
                   <option value="3">Ožujak</option><option value="4">Travanj</option>
@@ -4068,12 +4068,13 @@ async function loadStimUnos(){
   const {map:prijMap, cekaju:prijCekaju} = await dohvatiOdobrenePrijedloge(god, mj);
 
   // Dohvati kumulativ za svakog djelatnika (zadnji zapis prije ovog mjeseca)
+  // (godina isplate: prosinac prethodne godine + siječanj…studeni; ovaj mjesec se isplaćuje u ${isplGod(god,mj)}.)
+  const PY=isplGod(god,mj), ovajRed=isplRed(god,mj);
   const {data:kumData} = await SB.from('stimulacije_obracun')
-    .select('djelatnik_id, kumulativ_neoporezivo, mjesec')
-    .eq('godina',god).lt('mjesec',mj).order('mjesec',{ascending:false});
-  const kumMap = {};
-  (kumData||[]).forEach(k=>{
-    if(!kumMap[k.djelatnik_id]) kumMap[k.djelatnik_id] = parseFloat(k.kumulativ_neoporezivo)||0;
+    .select('djelatnik_id, kumulativ_neoporezivo, godina, mjesec').in('godina',[PY-1,PY]);
+  const kumMap = {}, kumRed={};
+  (kumData||[]).filter(k=>isplGod(k.godina,k.mjesec)===PY&&isplRed(k.godina,k.mjesec)<ovajRed).forEach(k=>{
+    const r=isplRed(k.godina,k.mjesec); if(kumRed[k.djelatnik_id]==null||r>kumRed[k.djelatnik_id]){kumRed[k.djelatnik_id]=r; kumMap[k.djelatnik_id]=parseFloat(k.kumulativ_neoporezivo)||0;}
   });
 
   // Filter djelatnici
@@ -4089,7 +4090,7 @@ async function loadStimUnos(){
         <th style="padding:8px;text-align:left">Djelatnik</th>
         <th style="padding:8px;text-align:left">Jedinica</th>
         <th style="padding:8px;text-align:right">Bodovi</th>
-        <th style="padding:8px;text-align:right;color:var(--text2);font-size:11px">Kumul.prije</th>
+        <th style="padding:8px;text-align:right;color:var(--text2);font-size:11px"><span title="Iskorišteno od 1.200 € u godini isplate prije ovog mjeseca">Kumul. 1.200 prije</span></th>
         <th style="padding:8px;text-align:center">Stim.%</th>
         <th style="padding:8px;text-align:right;color:#22863a">Neopor.</th>
         <th style="padding:8px;text-align:right;color:#c0392b">Opor.</th>
@@ -4201,7 +4202,7 @@ async function obracunajSve(){
       dodatak_bolovanje: bolDod,
       dodatak_bol_neoporezivo: r.bolNeopor,
       dodatak_bol_oporezivo: r.bolOpor,
-      dodatak_bol_bruto2: r.bolNeto,  // neto iznos (oporezivi / 1.165)
+      dodatak_bol_bruto2: r.bolNeto,  // bruto 1 oporezivog dijela (bruto 2 / 1,165)
       dodatak_mjesecni: bolMj,
       kumulativ_neoporezivo: r.kumNakon,
       napomena: ''
@@ -4226,15 +4227,39 @@ async function obracunajSve(){
     .upsert(toSave, {onConflict:'djelatnik_id,godina,mjesec'});
 
   if(error){showToast('Greška: '+error.message,'error');return;}
+  try{ await preracunajKumulativ([...new Set([...toSave.map(x=>x.djelatnik_id)])], isplGod(god,mj)); }catch(e){ showToast('Upozorenje – preračun kumulativa: '+e.message,'error'); }
 
   showToast(`✅ Snimljeno ${toSave.length} zapisa${zaBrisanje.length?`, uklonjeno ${zaBrisanje.length}`:''}!`,'success');
   await loadStimUnos(); // Refresh
 }
 
 // ── Calc function ──────────────────────────────────────────────
-// Kumulativ = SVI primici (neopor + opor + dod.bol + dod.mj)
-// Bruto2 = oporezivi dio 233€ / 1.165 (neto koji djelatnik dobije)
+// Kumulativ = iskorišteni neoporezivi dio (stimulacije + kvartalni dodatak); mjesečni dodatak je uvijek oporeziv
+// Oporezivi dio kvartalnog dodatka je bruto 2; bruto 1 = bruto 2 / 1,165 (odbija se 16,5 % doprinosa)
 // Neoporezivi max = 1200 € godišnje
+// Red obračuna = mjesec za koji se obračunava (rad); isplaćuje se s plaćom idućeg mjeseca.
+// Neoporezivih 1.200 € vodi se po GODINI ISPLATE: prosinac ide u iduću godinu (npr. 12/2026 → 2027).
+function isplGod(g,m){return m===12?g+1:g;}
+function isplRed(g,m){return m===12?0:m;}
+// Preračun neoporezivog/oporezivog i kumulativa za sve redove djelatnika u godini isplate (redom isplate)
+async function preracunajKumulativ(ids,PY){
+  if(!ids.length||!isLive()) return 0;
+  const {data,error}=await SB.from('stimulacije_obracun').select('*').in('godina',[PY-1,PY]).in('djelatnik_id',ids);
+  if(error) throw error;
+  const n=x=>parseFloat(x)||0; let prom=0;
+  for(const did of ids){
+    const rows=(data||[]).filter(r=>r.djelatnik_id===did&&isplGod(r.godina,r.mjesec)===PY).sort((a,b)=>isplRed(a.godina,a.mjesec)-isplRed(b.godina,b.mjesec));
+    let kum=0;
+    for(const r of rows){
+      const c=calcStim(n(r.bodovi),n(r.stimulacija_posto),n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni));
+      const upd={iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,dodatak_bol_neoporezivo:c.bolNeopor,
+        dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon};
+      if(Object.keys(upd).some(k=>Math.abs(n(r[k])-n(upd[k]))>0.004)){ const {error:e}=await SB.from('stimulacije_obracun').update(upd).eq('id',r.id); if(e) throw e; prom++; }
+      kum=c.kumNakon;
+    }
+  }
+  return prom;
+}
 function calcStim(bodovi, posto, vrijBoda, kumPrije, dodatakBol, dodatakMj){
   const iznos = Math.round(bodovi * (posto/100) * vrijBoda * 100) / 100;
   
@@ -4249,15 +4274,16 @@ function calcStim(bodovi, posto, vrijBoda, kumPrije, dodatakBol, dodatakMj){
     const prostor2 = Math.max(0, NEOPOR_MAX - kumPrije - stimNeopor);
     bolNeopor = Math.round(Math.min(dodatakBol, prostor2) * 100) / 100;
     bolOpor   = Math.round(Math.max(0, dodatakBol - bolNeopor) * 100) / 100;
-    // Na oporezivi dio ide bruto2: neto = oporezivi / 1.165
+    // oporezivi dio = bruto 2 → bruto 1 = bruto 2 / 1,165
     if(bolOpor > 0){
       bolNeto   = Math.round(bolOpor / (1 + BRUTO2_STOPA) * 100) / 100;
       bolBruto2 = Math.round((bolOpor - bolNeto) * 100) / 100;
     }
   }
   
-  // Kumulativ = SVI primici
-  const kumNakon = Math.round((kumPrije + stimNeopor + stimOpor + bolNeopor + bolOpor + dodatakMj) * 100) / 100;
+  // Kumulativ = iskorišteno od neoporezivih 1.200 € u godini isplate (stimulacije + kvartalni dodatak).
+  // Mjesečni dodatak (200/100 €) je uvijek oporeziv i ne troši 1.200 €.
+  const kumNakon = Math.round((kumPrije + stimNeopor + bolNeopor) * 100) / 100;
   
   return {iznos, stimNeopor, stimOpor, bolNeopor, bolOpor, bolBruto2, bolNeto, dodatakMj, kumNakon};
 }
@@ -4306,15 +4332,15 @@ function renderStimPregled(data){
       <th style="padding:7px 8px">Mj.</th>
       <th style="padding:7px 8px;text-align:right">Bod.</th>
       <th style="padding:7px 8px;text-align:right">%</th>
-      <th style="padding:7px 8px;text-align:right">Stim.</th>
-      <th style="padding:7px 8px;text-align:right;color:#22863a">Neopor.</th>
-      <th style="padding:7px 8px;text-align:right;color:#c0392b">Opor.</th>
-      <th style="padding:7px 8px;text-align:right">Dod.bol.</th>
-      <th style="padding:7px 8px;text-align:right;color:#22863a">Bol.neopor.</th>
-      <th style="padding:7px 8px;text-align:right;color:#c0392b">Bol.opor.</th>
-      <th style="padding:7px 8px;text-align:right;color:#e67e22">Bruto2</th>
-      <th style="padding:7px 8px;text-align:right">Dod.mj.</th>
-      <th style="padding:7px 8px;text-align:right">Kumul.</th>
+      <th style="padding:7px 8px;text-align:right">Stimulacija</th>
+      <th style="padding:7px 8px;text-align:right;color:#22863a">Stim. neopor.</th>
+      <th style="padding:7px 8px;text-align:right;color:#c0392b">Stim. opor.</th>
+      <th style="padding:7px 8px;text-align:right">Kv. dodatak</th>
+      <th style="padding:7px 8px;text-align:right;color:#22863a">Kv. neopor.</th>
+      <th style="padding:7px 8px;text-align:right;color:#c0392b">Kv. opor.</th>
+      <th style="padding:7px 8px;text-align:right;color:#e67e22" title="Oporezivi dio kvartalnog dodatka umanjen za 16,5 % (bruto 2 / 1,165)">Kv. opor. −16,5 %</th>
+      <th style="padding:7px 8px;text-align:right" title="Mjesečni dodatak 200/100 € – vodi se posebno, ne ulazi u 1.200 €">200/100 €</th>
+      <th style="padding:7px 8px;text-align:right" title="Iskorišteno od neoporezivih 1.200 € u godini isplate">Kumul. 1.200</th>
       <th style="padding:7px 8px"></th>
     </tr></thead><tbody>`;
 
@@ -4540,7 +4566,7 @@ async function rDash(){
     const dd=n=>{const x=new Date(god,mj-1+n,1); return x;}; const prvi=dd(1);
     kal.push({d:prvi,t:`Mjesečni dodatak za ${MJ_NOM[mj-1]}`,a:"dashIdi('dodaci')"});
     kal.push({d:prvi,t:`Prijevoz za ${MJ_NOM[mj-1]}`,a:"dashIdi('prijevoz')"});
-    [[4,'prosinac – ožujak'],[8,'travanj – srpanj'],[12,'kolovoz – studeni']].forEach(([m,o])=>{ let x=new Date(god,m-1,1); if(x<new Date(god,mj-1,t.getDate())) x=new Date(god+1,m-1,1); if((x-t)/864e5<=62) kal.push({d:x,t:`Kvartalni dodatak (${o})`,a:"dashIdi('dodaci')"}); });
+    [[5,'siječanj – travanj'],[9,'svibanj – kolovoz'],[1,'rujan – prosinac']].forEach(([m,o])=>{ let x=new Date(god,m-1,1); if(x<new Date(god,mj-1,t.getDate())) x=new Date(god+1,m-1,1); if((x-t)/864e5<=62) kal.push({d:x,t:`Kvartalni dodatak (${o})`,a:"dashIdi('dodaci')"}); });
     if(!D.zakl.some(z=>z.godina===pg&&z.mjesec===pm)) kal.unshift({d:null,t:`Konačno zaključaj ${MJ_NOM[pm-1]} ${pg}.`,a:"dashIdi('obracun')",hitno:true});
     kal.sort((a,b)=>(a.d?a.d.getTime():0)-(b.d?b.d.getTime():0));
   }
@@ -5786,7 +5812,7 @@ const UPUTE=[
  {k:'stimulacije',t:'Stimulacije',ic:'ti-coin-euro',h:`
   <p>Unos postotka stimulacije po djelatniku za mjesec. Iznos = bodovi × vrijednost boda × postotak. Aplikacija sama dijeli iznos na neoporezivi (do 1.200 € godišnje, zajedno s dodacima) i oporezivi dio.</p>`},
  {k:'dodaci',t:'Dodaci',ic:'ti-gift',h:`
-  <p><b>Kvartalni dodatak</b> obračunava se 01.04. (za prosinac–ožujak), 01.08. (travanj–srpanj) i 01.12. (kolovoz–studeni). Dobiva ga tko ima evidenciju za sva 4 mjeseca, radio je od početka razdoblja i nema odsutnosti (bolovanje, dopusti…).</p>
+  <p><b>Kvartalni dodatak</b> obračunava se 01.05. (za siječanj–travanj), 01.09. (svibanj–kolovoz) i 01.01. iduće godine (rujan–prosinac). Iznos ulazi u neoporezivih 1.200 € <b>godine isplate</b> – razdoblje rujan–prosinac 2026. ulazi u 2027. Dobiva ga tko ima evidenciju za sva 4 mjeseca, radio je od početka razdoblja i nema odsutnosti (bolovanje, dopusti…).</p>
   <p><b>Mjesečni dodatak</b> obračunava se 1. u mjesecu za prethodni mjesec, prema broju radnih dana odsutnosti (posebno za 8-satno radno vrijeme i za tržnicu 7/5).</p>
   <ol><li>Odaberite datum obračuna i godinu, kliknite <b>Obračunaj</b>.</li><li>Pregledajte rezultat – uz svakog djelatnika piše razlog (npr. broj dana bolovanja). Filtrima vidite tko je dobio, a tko nije.</li><li><b>Spremi</b> upisuje iznose u stimulacije; <b>Ispis</b> i <b>Excel</b> daju popis.</li></ol>
   <p>Obračun se može napraviti bilo kada, i za ranije mjesece. Iznose i kriterije mijenjate u izborniku <b>Bodovi</b>.</p>`},
@@ -6271,6 +6297,7 @@ async function ukloniPrijedlogIzObracuna(p){
         }
         kum=c.kumNakon;
       }
+      await preracunajKumulativ([did], isplGod(p.godina,p.mjesec));
     }catch(e){ out.greske.push(`${ime}: ${e.message}`); }
   }
   if(out.promjene.length) addAuditLog({userName:CU?.name, action:'stim_obracun_uskladen', target:prijBroj(p), jedinica:jN(p.jedinica_id),
@@ -6419,7 +6446,7 @@ async function loadStimKumulativ(){
       const n=x=>parseFloat(x)||0;
       a.mj++; a.stim+=n(r.iznos_stimulacije); a.bol+=n(r.dodatak_bolovanje); a.dmj+=n(r.dodatak_mjesecni);
       a.neop+=n(r.iznos_neoporezivo)+n(r.dodatak_bol_neoporezivo);
-      a.opor+=n(r.iznos_oporezivo)+n(r.dodatak_bol_oporezivo)+n(r.dodatak_mjesecni);
+      a.opor+=n(r.iznos_oporezivo)+n(r.dodatak_bol_oporezivo);   // 200/100 € vodi se posebno
       a.uk+=n(r.iznos_stimulacije)+n(r.dodatak_bolovanje)+n(r.dodatak_mjesecni);
     });
     const lista=Object.entries(agg).map(([k,a])=>{const d=DB.djelatnici.find(x=>x.id===parseInt(k)); return {d,ime:d?dF(d):'#'+k,jed:d?jN(d.jid):'',...a};})
@@ -6432,7 +6459,7 @@ async function loadStimKumulativ(){
       <button class="btn bsm btn-excel" style="float:right" onclick="exportStimKumulativ()"><i class="ti ti-file-spreadsheet"></i> Excel</button></div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:var(--bg3)">
       <th style="padding:7px 8px;text-align:left">Djelatnik</th><th style="padding:7px 8px;text-align:left">Jedinica</th><th style="padding:7px 8px;text-align:center">Mjeseci</th>
-      <th style="padding:7px 8px;text-align:right">Stimulacija</th><th style="padding:7px 8px;text-align:right">Dod. bolovanje</th><th style="padding:7px 8px;text-align:right">Dod. mjesečni</th>
+      <th style="padding:7px 8px;text-align:right">Stimulacija</th><th style="padding:7px 8px;text-align:right">Kvartalni dodatak</th><th style="padding:7px 8px;text-align:right" title="vodi se posebno">200/100 €</th>
       <th style="padding:7px 8px;text-align:right;color:#22863a">Neoporezivo</th><th style="padding:7px 8px;text-align:right;color:#c0392b">Oporezivo</th><th style="padding:7px 8px;text-align:right">UKUPNO</th></tr></thead>
       <tbody>${lista.map(a=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 8px;font-weight:500">${hEsc(a.ime)}</td><td style="padding:6px 8px;font-size:11px;color:var(--text2)">${hEsc(a.jed)}</td>
         <td style="padding:6px 8px;text-align:center">${a.mj}</td><td style="padding:6px 8px;text-align:right">${e2(a.stim)}</td><td style="padding:6px 8px;text-align:right">${e2(a.bol)}</td><td style="padding:6px 8px;text-align:right">${e2(a.dmj)}</td>
@@ -6444,7 +6471,7 @@ async function loadStimKumulativ(){
 function exportStimKumulativ(){
   const X=window._stkExport; if(!X||typeof XLSX==='undefined') return;
   const r2=v=>Math.round(v*100)/100;
-  const aoa=[[`Stimulacije – kumulativ: ${X.raspon}`],[],['Djelatnik','Jedinica','Mjeseci','Stimulacija €','Dod. bolovanje €','Dod. mjesečni €','Neoporezivo €','Oporezivo €','Ukupno €'],
+  const aoa=[[`Stimulacije – kumulativ: ${X.raspon}`],[],['Djelatnik','Jedinica','Mjeseci','Stimulacija €','Kvartalni dodatak €','Mjesečni dodatak 200/100 €','Neoporezivo €','Oporezivo €','Ukupno €'],
     ...X.lista.map(a=>[a.ime,a.jed,a.mj,r2(a.stim),r2(a.bol),r2(a.dmj),r2(a.neop),r2(a.opor),r2(a.uk)])];
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:28},{wch:28},{wch:8},{wch:13},{wch:15},{wch:15},{wch:13},{wch:12},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kumulativ');
@@ -6481,7 +6508,7 @@ async function ispisStimPregled(){
   <h1>Obračun stimulacija – ${hEsc(N.mj)} ${hEsc(N.god)}.</h1>
   <div class="sub">Jedinica: <strong>${hEsc(N.jed)}</strong> · Djelatnik: <strong>${hEsc(N.djel)}</strong> · Zapisa: ${R.length}</div>
   <table><thead><tr><th>R.br.</th><th>Djelatnik</th><th>Jedinica</th><th>Mj.</th><th class="r">Bod.</th><th class="r">%</th><th class="r">Stimulacija</th>
-  <th class="r">Neopor.</th><th class="r">Opor.</th><th class="r">Dod. bol.</th><th class="r">Bol. neopor.</th><th class="r">Bol. opor.</th><th class="r">Bruto2</th><th class="r">Dod. mj.</th><th class="r">Ukupno</th><th class="r">Kumul.</th></tr></thead>
+  <th class="r">Stim. neopor.</th><th class="r">Stim. opor.</th><th class="r">Kv. dodatak</th><th class="r">Kv. neopor.</th><th class="r">Kv. opor.</th><th class="r">Kv. opor. −16,5 %</th><th class="r">200/100 €</th><th class="r">Ukupno</th><th class="r" title="Iskorišteno od neoporezivih 1.200 € u godini isplate">Neopor. kumul.</th></tr></thead>
   <tbody>${R.map((r,i)=>`<tr><td>${i+1}.</td><td>${hEsc(r.ime)}</td><td>${hEsc(r.jed)}</td><td>${MJ_HR[r.mj-1]}</td><td class="r">${r.bod??''}</td><td class="r">${r.posto}%</td>
    <td class="r">${e2(r.stim)}</td><td class="r">${e2(r.neop)}</td><td class="r">${e2(r.opor)}</td><td class="r">${e2(r.bol)}</td><td class="r">${e2(r.boln)}</td><td class="r">${e2(r.bolo)}</td>
    <td class="r">${e2(r.bruto2)}</td><td class="r">${e2(r.dmj)}</td><td class="r"><strong>${e2(r.uk)}</strong></td><td class="r">${e2(r.kum)}</td></tr>`).join('')}</tbody>
@@ -6495,7 +6522,7 @@ function excelStimPregled(){
   if(typeof XLSX==='undefined'){showToast('Excel modul nije učitan','error');return;}
   const N=stimPregledNaslov(); const r2=v=>Math.round(v*100)/100;
   const aoa=[[`Obračun stimulacija – ${N.mj} ${N.god} – ${N.jed}`],[],
-    ['Djelatnik','Jedinica','Mjesec','Bodovi','%','Stimulacija €','Neoporezivo €','Oporezivo €','Dod. bolovanje €','Bol. neopor. €','Bol. opor. €','Bruto2 €','Dod. mjesečni €','Ukupno €','Kumulativ €'],
+    ['Djelatnik','Jedinica','Mjesec','Bodovi','%','Stimulacija €','Stim. neoporezivo €','Stim. oporezivo €','Kvartalni dodatak €','Kv. neoporezivo €','Kv. oporezivo €','Kv. oporezivo −16,5 % €','Mjesečni dodatak 200/100 €','Ukupno €','Neopor. kumulativ (od 1.200 €) €'],
     ...R.map(r=>[r.ime,r.jed,MJ_HR[r.mj-1],r.bod,r.posto,r2(r.stim),r2(r.neop),r2(r.opor),r2(r.bol),r2(r.boln),r2(r.bolo),r2(r.bruto2),r2(r.dmj),r2(r.uk),r2(r.kum)])];
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:26},{wch:26},{wch:11},{wch:8},{wch:6},{wch:12},{wch:13},{wch:12},{wch:14},{wch:13},{wch:12},{wch:10},{wch:14},{wch:11},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stimulacije');
@@ -6843,7 +6870,8 @@ async function obrisiBodove(id,did,elId){
 const ODSUTNOSTI_DODACI=['BO','PD','OC','NS','NI','NZR','NR','VJO']; // bolovanje, plaćeni/neplaćeni dopust, očinski i sl.
 const NAZIV_ODS={BO:'bolovanje',PD:'plaćeni dopust',OC:'očinski',NS:'neplaćeni (skrb)',NI:'neplaćeni (izbori)',NZR:'nenazočnost (zahtjev)',NR:'nenazočnost (raspored)',VJO:'odsutnost'};
 const MJ_LOK=['siječnju','veljači','ožujku','travnju','svibnju','lipnju','srpnju','kolovozu','rujnu','listopadu','studenom','prosincu'];
-function razdoblje233(god,mj){return ({4:[[god-1,12],[god,1],[god,2],[god,3]],8:[[god,4],[god,5],[god,6],[god,7]],12:[[god,8],[god,9],[god,10],[god,11]]})[mj]||null;}
+// Kvartalni dodatak: tri razdoblja po 4 mjeseca u kalendarskoj godini; obračun (i godina isplate) 01.05., 01.09. i 01.01. iduće godine
+function razdoblje233(god,mj){return ({5:[[god,1],[god,2],[god,3],[god,4]],9:[[god,5],[god,6],[god,7],[god,8]],1:[[god-1,9],[god-1,10],[god-1,11],[god-1,12]]})[mj]||null;}
 // 233 €: obračun u mjesecu mj (4, 8 ili 12) za prethodna 4 mjeseca
 async function izracunaj233(god,mj,djels){
   if(!window._dodPravila) await ucitajDodPravila();
@@ -6961,7 +6989,7 @@ function otvoriDodPravila(samoPovijest){
       <select id="dp-mj">${MJ_NOM.map((m,i)=>`<option value="${i+1}"${i===nm.getMonth()?' selected':''}>01.${String(i+1).padStart(2,'0')}.</option>`).join('')}</select>
       <select id="dp-god">${YEARS.map(y=>`<option value="${y}"${y===nm.getFullYear()?' selected':''}>${y}</option>`).join('')}</select></div>
       <div class="fh">Nova pravila vrijede za obračune od tog dana. Već spremljeni obračuni se ne mijenjaju.</div></div>
-    <div class="card" style="padding:.8rem;margin-bottom:.8rem"><div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Kvartalni dodatak (01.04., 01.08., 01.12.)</div>
+    <div class="card" style="padding:.8rem;margin-bottom:.8rem"><div class="bod-sec-t"><i class="ti ti-calendar-stats"></i> Kvartalni dodatak (01.05., 01.09., 01.01.)</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div class="fg" style="margin:0"><label class="fl">Iznos (€)</label><input type="number" step="0.01" min="0" id="dp-kv-iznos" value="${p.kv.iznos}" style="width:110px"></div>
         <div class="fg" style="margin:0"><label class="fl">Dopušteno dana odsutnosti u 4 mjeseca</label><input type="number" step="1" min="0" id="dp-kv-dop" value="${p.kv.dopusteno||0}" style="width:110px"></div>
@@ -7033,7 +7061,7 @@ async function obrisiDodPravila(id){
 // opisi na stranici Dodaci prema pravilima koja trenutno vrijede
 function osvjeziDodaciOpis(){
   const t=new Date(), p=dodPravilaZa(t.getFullYear(),t.getMonth()+1), s=dodPravilaSazetak(p);
-  const a=document.getElementById('dod-kv-opis'); if(a) a.textContent=`Iznos ${fmtEur0(p.kv.iznos)} €. Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i ${p.kv.dopusteno>0?`nema više od ${p.kv.dopusteno} dana odsutnosti`:'nije imao ni dan odsutnosti'} (${dodOdsTxt(p.kv.ods)}).`;
+  const a=document.getElementById('dod-kv-opis'); if(a) a.textContent=`Iznos ${fmtEur0(p.kv.iznos)} €. Dobiva ga tko ima evidenciju za sva 4 mjeseca, radi od početka razdoblja i ${p.kv.dopusteno>0?`nema više od ${p.kv.dopusteno} dana odsutnosti`:'nije imao ni dan odsutnosti'} (${dodOdsTxt(p.kv.ods)}). Ulazi u neoporezivih 1.200 € godine isplate; iznad toga oporezivo kao bruto 2 (÷ 1,165).`;
   const b=document.getElementById('dod-mj-opis'); if(b) b.textContent=`Unosi se 1. u mjesecu za prethodni mjesec. 8 h: ${s.m8}. Tržnica 7/5: ${s.m7}. Broje se radni dani: ${dodOdsTxt(p.mj.ods)}.`;
 }
 
@@ -7044,17 +7072,18 @@ function setupDodaci(){
   ['dod-k-god','dod-m-god'].forEach(id=>{const e=document.getElementById(id); if(!e.options.length){e.innerHTML=gs; e.value=String(t.getFullYear());}});
   const mm=document.getElementById('dod-m-mj');
   if(!mm.options.length){ mm.innerHTML=MJ_NOM.map((m,i)=>`<option value="${i+1}">01.${String(i+1).padStart(2,'0')}. (za ${MJ_NOM[(i+11)%12]})</option>`).join(''); mm.value=String(t.getMonth()+1); }
-  const km=document.getElementById('dod-k-mj'); const sl=[4,8,12].find(x=>x>=t.getMonth()+1)||4; if(!km.dataset.init){km.value=String(sl);km.dataset.init='1';}
+  const km=document.getElementById('dod-k-mj'); const m0=t.getMonth()+1; const sl=m0<=1?1:m0<=5?5:m0<=9?9:1; if(!km.dataset.init){km.value=String(sl);km.dataset.init='1'; if(m0>9) document.getElementById('dod-k-god').value=String(t.getFullYear()+1);}
 }
 async function obracunajDodatak(vrsta){
   const el=document.getElementById('dod-rez');
   const god=parseInt(document.getElementById(vrsta==='233'?'dod-k-god':'dod-m-god').value), mj=parseInt(document.getElementById(vrsta==='233'?'dod-k-mj':'dod-m-mj').value);
   el.innerHTML='<div class="empty"><i class="ti ti-loader-2"></i><p>Računam…</p></div>';
   // djelatnici: oni koji su radili u (zadnjem) mjesecu koji se gleda
-  const gR=vrsta==='233'?god:(mj===1?god-1:god), mR=vrsta==='233'?mj-1:(mj===1?12:mj-1);
+  const per0=vrsta==='233'?razdoblje233(god,mj):null;
+  const gR=vrsta==='233'?per0[3][0]:(mj===1?god-1:god), mR=vrsta==='233'?per0[3][1]:(mj===1?12:mj-1);
   const djels=DB.djelatnici.filter(d=>gAJ(d.id,gR,mR)!=null).sort((a,b)=>a.prez.localeCompare(b.prez));
   const r=vrsta==='233'?await izracunaj233(god,mj,djels):await izracunajDodMj(god,mj,djels);
-  const {data:post}=await SB.from('stimulacije_obracun').select('djelatnik_id,dodatak_bolovanje,dodatak_mjesecni').eq('godina',god).eq('mjesec',mj);
+  const {data:post}=await SB.from('stimulacije_obracun').select('djelatnik_id,dodatak_bolovanje,dodatak_mjesecni').eq('godina',gR).eq('mjesec',mR);
   const pm={}; (post||[]).forEach(x=>pm[x.djelatnik_id]=parseFloat(vrsta==='233'?x.dodatak_bolovanje:x.dodatak_mjesecni)||0);
   const iznosi={}; djels.forEach(d=>iznosi[d.id]=(r.rez[d.id]||{iznos:0}).iznos);
   const naslov=vrsta==='233'?`Kvartalni dodatak – obračun 01.${String(mj).padStart(2,'0')}.${god}. (${r.per.map(([g,m])=>MJ_NOM[m-1]+' '+g).join(', ')})`
@@ -7156,23 +7185,24 @@ async function spremiDodatke(){
   const iznosi={...R.iznosi};
   if(!confirm(`Spremiti ${R.vrsta==='233'?'kvartalni dodatak':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
   const ids=R.djels.map(d=>d.id);
-  const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',R.god).in('djelatnik_id',ids);
+  const RG=R.gR, RM=R.mR;   // red obračuna = mjesec rada; isplata s plaćom 01.${R.mj}.${R.god}.
+  const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',RG).in('djelatnik_id',ids);
   if(e1){showToast('Greška: '+e1.message,'error');return;}
   const {data:bodR}=await SB.from('stimulacije_bodovi').select('djelatnik_id,bodovi,vrijedi_od');
-  const bodMap=bodMapZaMjesec(bodR||[],R.god,R.mj);
+  const bodMap=bodMapZaMjesec(bodR||[],RG,RM);
   const {data:vbR}=await SB.from('stimulacije_parametri').select('godina,mjesec,vrijednost_boda');
-  const vb=parseFloat(vbZa(vbR||[],R.god,R.mj)?.vrijednost_boda)||0.352;
+  const vb=parseFloat(vbZa(vbR||[],RG,RM)?.vrijednost_boda)||0.352;
   const n=x=>parseFloat(x)||0, upserti=[], brisi=[]; let promj=0;
   for(const d of R.djels){
     const rows=(sviRed||[]).filter(x=>x.djelatnik_id===d.id).sort((a,b)=>a.mjesec-b.mjesec);
-    let ovaj=rows.find(x=>x.mjesec===R.mj); const novi=iznosi[d.id];
+    let ovaj=rows.find(x=>x.mjesec===RM); const novi=iznosi[d.id];
     if(!ovaj&&!novi) continue;
     if(ovaj&&Math.abs(n(ovaj[polje])-novi)<0.005) continue;
     promj++;
-    if(!ovaj){ ovaj={djelatnik_id:d.id,godina:R.god,mjesec:R.mj,bodovi:bodMap[d.id]||0,stimulacija_posto:0,vrijednost_boda:vb,dodatak_bolovanje:0,dodatak_mjesecni:0,napomena:''}; rows.push(ovaj); rows.sort((a,b)=>a.mjesec-b.mjesec); }
+    if(!ovaj){ ovaj={djelatnik_id:d.id,godina:RG,mjesec:RM,bodovi:bodMap[d.id]||0,stimulacija_posto:0,vrijednost_boda:vb,dodatak_bolovanje:0,dodatak_mjesecni:0,napomena:''}; rows.push(ovaj); rows.sort((a,b)=>a.mjesec-b.mjesec); }
     ovaj[polje]=novi;
-    let kum=0; const pr=rows.filter(x=>x.mjesec<R.mj); if(pr.length) kum=n(pr[pr.length-1].kumulativ_neoporezivo);
-    for(const x of rows.filter(x=>x.mjesec>=R.mj)){
+    let kum=0; const pr=rows.filter(x=>x.mjesec<RM); if(pr.length) kum=n(pr[pr.length-1].kumulativ_neoporezivo);
+    for(const x of rows.filter(x=>x.mjesec>=RM)){
       if(x===ovaj&&n(x.stimulacija_posto)===0&&n(x.dodatak_bolovanje)===0&&n(x.dodatak_mjesecni)===0){ if(x.id) brisi.push(x.id); continue; }
       const c=calcStim(n(x.bodovi),n(x.stimulacija_posto),n(x.vrijednost_boda),kum,n(x.dodatak_bolovanje),n(x.dodatak_mjesecni));
       Object.assign(x,{iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,dodatak_bol_neoporezivo:c.bolNeopor,
@@ -7185,6 +7215,7 @@ async function spremiDodatke(){
   if(stara.length){const {error}=await SB.from('stimulacije_obracun').upsert(stara,{onConflict:'id'}); if(error){showToast('Greška: '+error.message,'error');return;}}
   if(nova.length){const {error}=await SB.from('stimulacije_obracun').insert(nova); if(error){showToast('Greška: '+error.message,'error');return;}}
   if(brisi.length){const {error}=await SB.from('stimulacije_obracun').delete().in('id',brisi); if(error){showToast('Greška: '+error.message,'error');return;}}
+  try{ await preracunajKumulativ(ids, isplGod(RG,RM)); }catch(e){ showToast('Upozorenje – preračun kumulativa: '+e.message,'error'); }
   const uk=Object.values(iznosi).reduce((a,v)=>a+v,0);
   addAuditLog({userName:CU?.name, action:R.vrsta==='233'?'dodatak_233':'dodatak_mjesecni', target:`01.${String(R.mj).padStart(2,'0')}.${R.god}.`, jedinica:'',
     details:`Promijenjeno ${promj} djelatnika, ukupno ${uk.toFixed(2)} €`});
