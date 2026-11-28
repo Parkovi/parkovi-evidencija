@@ -105,6 +105,10 @@ select{cursor:pointer}
 .mft{display:flex;gap:8px;justify-content:flex-end;margin-top:1.1rem;padding-top:.9rem;border-top:1px solid var(--border)}
 .mwp{overflow-x:auto;border-radius:var(--r2)}
 .mtb{min-width:700px;border-collapse:collapse;font-size:11.5px}
+#sat-prijedlog{position:absolute;display:none;transform:translateX(-50%);z-index:500;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2);white-space:nowrap}
+#sat-prijedlog:hover{filter:brightness(1.1)}
+.rv-puls{animation:rvPuls 1.2s ease-in-out infinite}
+@keyframes rvPuls{0%,100%{box-shadow:0 0 0 0 rgba(26,95,168,.55)}50%{box-shadow:0 0 0 5px rgba(26,95,168,0)}}
 .mtb th{padding:5px 6px;background:var(--bg3);color:var(--text2);font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;text-align:center}
 .mtb th.sc{text-align:left;position:sticky;left:0;z-index:2}
 .mtb td{padding:4px 5px;border-bottom:1px solid var(--border);vertical-align:middle;text-align:center}
@@ -473,6 +477,12 @@ select{cursor:pointer}
             <div class="bp-vb-now"><span id="bp-loko-now">–</span><small id="bp-loko-od"></small></div>
             <div id="bp-loko-form"></div>
             <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Nova cijena vrijedi za obračune koji se pošalju na odobrenje nakon promjene. Već poslani i odobreni ostaju sa svojom cijenom.</div>
+          </div>
+          <div class="card bp-vb">
+            <div class="bod-sec-t"><i class="ti ti-receipt-tax"></i> Neoporezivi iznos godišnje</div>
+            <div class="bp-vb-now"><span id="bp-neop-now">–</span><small id="bp-neop-od"></small></div>
+            <div id="bp-neop-form"></div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Stimulacije i kvartalni dodatak u godini isplate (prosinac → iduća godina). Stimulacije pune prve, ostatak je oporeziv. Mjesečni dodatak 200/100 € ne ulazi.</div>
           </div>
           <div class="card bp-vb">
             <div class="bod-sec-t"><i class="ti ti-gift"></i> Dodaci – iznosi i kriteriji</div>
@@ -1726,7 +1736,9 @@ function loadUF(){
   const evPrev=DB.evidencija[did+"_"+(mj===1?god-1:god)+"_"+(mj===1?12:mj-1)]||{};
   const imaEv=!!(ev.rows&&ev.rows.length);
   // radno vrijeme: ovaj mjesec, inače prošli mjesec (zapamćeno po djelatniku), inače iz podataka djelatnika
-  const pd=(imaEv&&ev.poc)||evPrev.poc||d?.poc||"07:00",kd=(imaEv&&ev.kraj)||evPrev.kraj||d?.kraj||"15:00";
+  rvUcitajIzbore();
+  const vrI=(window._vrIzbor||{})[did+"_"+god+"_"+mj];
+  const pd=vrI?.p||(imaEv&&ev.poc)||evPrev.poc||d?.poc||"07:00",kd=vrI?.k||(imaEv&&ev.kraj)||evPrev.kraj||d?.kraj||"15:00";
   const days=dim(god,mj);
   const trz=window._subotaRadna;
   // raspored za tržnicu: iz ovog mjeseca, inače iz prethodnog mjeseca, inače jednokratno
@@ -1770,7 +1782,7 @@ function loadUF(){
       <input type="time" id="p0" value="${pd}" style="width:78px" onchange="azurirajVremena()" title="Radno vrijeme u mjesecu – mijenja vrijeme u danima bez upisanih sati">
       <span style="font-size:11px">–</span>
       <input type="time" id="k0" value="${kd}" style="width:78px" onchange="azurirajVremena()" title="Radno vrijeme u mjesecu – mijenja vrijeme u danima bez upisanih sati">`}
-      <button class="btn bxs bp az" onclick="aFillGumb()" title="Upisuje radne sate u sve radne dane ovog mjeseca i sprema"><i class="ti ti-wand"></i> Auto-popuni</button>
+      <button class="btn bxs bp az" id="rv-potvrdi" onclick="potvrdiRadnoVrijeme()" title="Postavlja ovo radno vrijeme u sve radne dane mjeseca – za ovog djelatnika ili cijelu jedinicu. Sati se ne upisuju."><i class="ti ti-clock-check"></i> Potvrdi radno vrijeme</button>
       <span id="as-status" style="font-size:11.5px;color:var(--text3);min-width:150px"><i class="ti ti-cloud"></i> Sprema se automatski</span>
     </div></div>
   <div id="uai"></div>
@@ -1786,7 +1798,7 @@ function loadUF(){
       <td class="sc">${dan}. <span style="color:var(--text3)">${dn}</span></td>
       <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
       <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
-      ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})"></td>`).join("")}
+      ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})" onmouseenter="satPrijedlog(this,${dan})" onfocus="satPrijedlog(this,${dan})" onmouseleave="satPrijedlogSkrij()" onblur="satPrijedlogSkrij()"></td>`).join("")}
     </tr>`;
   }
   h+=`<tr class="trow"><td class="sc" colspan="3">UKUPNO</td>${DB.vrste.map(v=>`<td id="t_${v.code}">0</td>`).join("")}</tr>
@@ -1799,7 +1811,8 @@ function cRow(dan,god,mj){
   const raz=(a,b)=>{if(!a||!b)return 0;const[ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);return Math.max(0,(bh*60+bm)-(ah*60+am))/60;};
   if(pe&&ke&&pe.value&&ke.value){
     const s=Math.round((raz(pe.value,ke.value)+raz(document.getElementById("pb"+dan)?.value,document.getElementById("kb"+dan)?.value))*10)/10;
-    if(s>0){const ri=document.getElementById("s"+dan+"_RAD");if(ri)ri.value=s;}
+    // sati se ne upisuju sami: ako je u danu već upisan RAD, prilagodi ga novom vremenu
+    const ri=document.getElementById("s"+dan+"_RAD"); if(s>0&&ri&&parseFloat(ri.value)>0) ri.value=s;
   }
   rTots(god,mj);
 }
@@ -1809,10 +1822,113 @@ function rTots(god,mj){
   for(let d=1;d<=days;d++)DB.vrste.forEach(v=>{const el=document.getElementById("s"+d+"_"+v.code);if(el)tots[v.code]+=parseFloat(el.value)||0;});
   DB.vrste.forEach(v=>{const el=document.getElementById("t_"+v.code);if(el)el.innerHTML="<strong>"+(Math.round(tots[v.code]*10)/10||"")+"</strong>";});
 }
+function rvUcitajIzbore(){
+  if(window._rvIzboriUcitani) return; window._rvIzboriUcitani=true;
+  try{ const s=JSON.parse(localStorage.getItem('rv_izbori')||'{}'); window._rrIzbor={...(s.rr||{}),...(window._rrIzbor||{})}; window._rvIzbor={...(s.rv||{}),...(window._rvIzbor||{})}; window._vrIzbor={...(s.vr||{}),...(window._vrIzbor||{})}; }catch(e){}
+}
+function rvSpremiIzbore(){ try{ localStorage.setItem('rv_izbori',JSON.stringify({rr:window._rrIzbor||{},rv:window._rvIzbor||{},vr:window._vrIzbor||{}})); }catch(e){} }
+
+// ── Prijedlog sati na prelazak mišem (sati se ne upisuju sami) ──
+function satPrijedlogVrijednost(dan){
+  const g=id=>document.getElementById(id)?.value||'';
+  let s=rvSati(g('p'+dan),g('k'+dan))+rvSati(g('pb'+dan),g('kb'+dan));
+  s=Math.round(s*10)/10; if(s<=0) return 0;
+  let vec=0; DB.vrste.forEach(v=>{vec+=parseFloat(document.getElementById('s'+dan+'_'+v.code)?.value)||0;});
+  return Math.max(0,Math.round((s-vec)*10)/10);
+}
+function satPrijedlog(inp,dan){
+  clearTimeout(window._spT);
+  if(inp.disabled||inp.value!=='') { satPrijedlogSkrij(true); return; }
+  const v=satPrijedlogVrijednost(dan); if(!v){ satPrijedlogSkrij(true); return; }
+  let c=document.getElementById('sat-prijedlog');
+  if(!c){ c=document.createElement('button'); c.id='sat-prijedlog'; c.type='button'; document.body.appendChild(c);
+    c.addEventListener('mousedown',e=>e.preventDefault());
+    c.addEventListener('mouseenter',()=>clearTimeout(window._spT)); c.addEventListener('mouseleave',()=>satPrijedlogSkrij());
+    c.addEventListener('click',()=>{ const i=window._spInp; if(!i||i.disabled) return; i.value=window._spVal; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); satPrijedlogSkrij(true); }); }
+  window._spInp=inp; window._spVal=v; inp.placeholder=String(v).replace('.',',');
+  c.textContent='+ '+String(v).replace('.',',')+' h'; c.title='Klik (ili Enter u polju) upisuje '+v+' h';
+  const r=inp.getBoundingClientRect(); c.style.left=(r.left+window.scrollX+r.width/2)+'px'; c.style.top=(r.top+window.scrollY-24)+'px'; c.style.display='block';
+  if(!inp.dataset.spEnter){ inp.dataset.spEnter='1'; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&inp.value===''&&window._spInp===inp&&window._spVal){ e.preventDefault(); inp.value=window._spVal; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); satPrijedlogSkrij(true);} }); }
+}
+function satPrijedlogSkrij(odmah){
+  const f=()=>{ const c=document.getElementById('sat-prijedlog'); if(c) c.style.display='none'; const i=window._spInp; if(i&&document.activeElement!==i) i.placeholder='0'; };
+  clearTimeout(window._spT); if(odmah) f(); else window._spT=setTimeout(f,350);
+}
+
+// ── Potvrda radnog vremena: za cijeli mjesec djelatnika ili cijele jedinice (samo vremena, sati se ne mijenjaju) ──
+function potvrdiRadnoVrijeme(){
+  const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
+  const d=DB.djelatnici.find(x=>x.id===did), jid=gAJ(did,god,mj), jn=DB.jedinice.find(j=>j.id===jid)?.name||'';
+  const trz=window._subotaRadna, rr=trz?(document.getElementById('rr')?.value||'jedno'):null;
+  if(rr==='vlastito'){ const v=window._rvVlastito||{};
+    if(!v.p1||!v.k1||rvSati(v.p1,v.k1)<=0){showToast('Upišite početak i kraj radnog vremena','error');return;}
+    if((v.p2&&!v.k2)||(!v.p2&&v.k2)||(v.p2&&rvSati(v.p2,v.k2)<=0)){showToast('Upišite oba vremena drugog dijela ili ih ostavite prazna','error');return;} }
+  const p0=document.getElementById('p0')?.value||'', k0=document.getElementById('k0')?.value||'';
+  if(!trz&&(!p0||!k0||rvSati(p0,k0)<=0)){showToast('Upišite ispravno radno vrijeme','error');return;}
+  const opis=trz?(rr==='dvo'?'dvokratno 06–08 i 12–17':rr==='jedno'?'jednokratno 06–13':`${window._rvVlastito.p1}–${window._rvVlastito.k1}${window._rvVlastito.p2?' i '+window._rvVlastito.p2+'–'+window._rvVlastito.k2:''}`)+((rr!=='vlastito'||window._rvVlastito.pon)?', pon 07–12':''):`${p0}–${k0}`;
+  const broj=DB.djelatnici.filter(x=>gAJ(x.id,god,mj)===jid).length;
+  let m=document.getElementById('mo-rvpot');
+  if(!m){ m=document.createElement('div'); m.className='mo'; m.id='mo-rvpot'; document.body.appendChild(m); }
+  m.innerHTML=`<div class="md" style="max-width:480px"><div class="mhd"><div class="mtt"><i class="ti ti-clock-check"></i> Potvrdi radno vrijeme</div><button class="mcl" onclick="closeM('mo-rvpot')"><i class="ti ti-x"></i></button></div>
+   <div style="padding:14px 18px"><p style="margin:0 0 10px">Radno vrijeme <b>${hEsc(opis)}</b> postavlja se u sve radne dane za <b>${MJ_HR[mj-1].toLowerCase()} ${god}</b>.</p>
+   <div style="display:flex;flex-direction:column;gap:8px">
+    <button class="btn bp" onclick="rvPrimijeni('djel')"><i class="ti ti-user"></i> Samo za ${hEsc(d?dF(d):'djelatnika')}</button>
+    <button class="btn bs" onclick="rvPrimijeni('jed')"><i class="ti ti-users"></i> Za cijelu jedinicu ${hEsc(jn)} (${broj} djelatnika)</button></div>
+   <div style="font-size:11.5px;color:var(--text3);margin-top:10px">Upisani sati se ne mijenjaju – sate upisujete ručno (prijeđite mišem preko polja i kliknite ponuđeni broj sati). Zaključani dani se ne diraju.</div></div></div>`;
+  openM('mo-rvpot');
+}
+function rvNovaVremena(god,mj,dan,rr,p0,k0){ return rr?trzDan(god,mj,dan,rr):{poc:p0,kraj:k0}; }
+async function rvPrimijeni(opseg){
+  closeM('mo-rvpot');
+  const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
+  const jid=gAJ(did,god,mj), trz=window._subotaRadna, rr=trz?(document.getElementById('rr')?.value||'jedno'):null;
+  const p0=document.getElementById('p0')?.value||'', k0=document.getElementById('k0')?.value||'';
+  const v={...(window._rvVlastito||{})};
+  const zapamti=id=>{ const k=id+"_"+god+"_"+mj; if(trz){ (window._rrIzbor||={})[k]=rr; if(rr==='vlastito') (window._rvIzbor||={})[k]=v; } else (window._vrIzbor||={})[k]={p:p0,k:k0}; };
+  // trenutni djelatnik – u obrascu
+  zapamti(did);
+  for(let d=1;d<=dim(god,mj);d++){
+    if(isFreeDay(god,mj,d)) continue;
+    const pi=document.getElementById("p"+d),ki=document.getElementById("k"+d); if(!pi||!ki||pi.disabled) continue;
+    const t=rvNovaVremena(god,mj,d,rr,p0,k0); pi.value=t.poc; ki.value=t.kraj;
+    const a=document.getElementById("pb"+d),b=document.getElementById("kb"+d); if(a)a.value=t.poc2||''; if(b)b.value=t.kraj2||'';
+  }
+  document.getElementById('rv-potvrdi')?.classList.remove('rv-puls');
+  const imaOvaj=!!DB.evidencija[did+"_"+god+"_"+mj];
+  if(imaOvaj) await autoSpremi();
+  let n=1, ns=imaOvaj?1:0, preskoceno=0;
+  if(opseg==='jed'){
+    let st={zakljucan:null,preuzeto:[]}; if(isLive()){ try{ st=await dohvatiStatusMjeseca(god,mj); }catch(e){} }
+    if(st.zakljucan){ showToast('Mjesec je zaključan za obračun plaća','error'); rvSpremiIzbore(); loadUF(); return; }
+    const doDana=smijeObracun()?0:(st.preuzeto.find(x=>x.jedinica_id===jid)?.do_dana||0);
+    const ostali=DB.djelatnici.filter(x=>x.id!==did&&gAJ(x.id,god,mj)===jid);
+    for(const x of ostali){
+      zapamti(x.id); n++;
+      const kl=x.id+"_"+god+"_"+mj, ev=DB.evidencija[kl]; if(!ev) continue;
+      const rows=(ev.rows||[]).map(r=>({...r}));
+      for(let d=1;d<=dim(god,mj);d++){
+        if(isFreeDay(god,mj,d)||d<=doDana) continue;
+        const t=rvNovaVremena(god,mj,d,rr,p0,k0);
+        let r=rows.find(q=>q.dan===d); if(!r){ r={dan:d,sati:{}}; rows.push(r); }
+        r.poc=t.poc; r.kraj=t.kraj;
+        if(t.poc2&&t.kraj2){ r.poc2=t.poc2; r.kraj2=t.kraj2; r.dvo=true; } else { delete r.poc2; delete r.kraj2; delete r.dvo; }
+      }
+      rows.sort((a,b)=>a.dan-b.dan);
+      const novo={...ev,rows,poc:trz?(rr==='vlastito'?v.p1:t0(rr).poc):p0,kraj:trz?(rr==='vlastito'?v.k1:t0(rr).kraj):k0};
+      let ok=true; if(isLive()) ok=await saveEvidencijaToSB(x.id,god,mj,novo);
+      if(ok){ DB.evidencija[kl]=novo; ns++; } else preskoceno++;
+    }
+  }
+  rvSpremiIzbore(); loadUF();
+  addAuditLog({userName:CU?.name,action:'radno_vrijeme',target:`${opseg==='jed'?'jedinica':'djelatnik'} ${MJ_HR[mj-1]} ${god}`,jedinica:DB.jedinice.find(j=>j.id===jid)?.name||'',details:`${n} djelatnika, spremljeno zapisa: ${ns}`});
+  showToast(`✅ Radno vrijeme postavljeno${opseg==='jed'?` za ${n} djelatnika`:''}${preskoceno?` · ${preskoceno} nije spremljeno`:''}`,preskoceno?'error':'success');
+}
+function t0(rr){ return rr==='dvo'?{poc:'06:00',kraj:'08:00'}:{poc:'06:00',kraj:'13:00'}; }
 function promijeniRaspored(v){
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026,did=parseInt(document.getElementById("ud")?.value)||0;
   (window._rrIzbor||={})[did+"_"+god+"_"+mj]=v;
-  loadUF();   // samo promjena prikaza; sati se upisuju tek na gumb Auto-popuni
+  loadUF();   // samo promjena prikaza; za cijeli mjesec – gumb Potvrdi radno vrijeme
+  document.getElementById('rv-potvrdi')?.classList.add('rv-puls');
 }
 function rvPromjena(){
   const g=id=>document.getElementById(id)?.value||'';
@@ -1826,6 +1942,7 @@ function rvPromjena(){
 }
 // Promjena radnog vremena gore: mijenja samo vrijeme (poč./kraj) u radnim danima bez upisanih sati – sate ne upisuje.
 function azurirajVremena(){
+  { const b=document.getElementById('rv-potvrdi'); if(b){ b.classList.add('rv-puls'); } }
   const mj=parseInt(document.getElementById("um")?.value)||1,god=parseInt(document.getElementById("ug")?.value)||2026;
   const rr=window._subotaRadna?(document.getElementById("rr")?.value||'jedno'):null;
   const p0=document.getElementById("p0")?.value||"",k0=document.getElementById("k0")?.value||"";
@@ -3980,7 +4097,16 @@ async function savePwd(){
 // ══════════════════════════════════════════════════════════════
 
 const BRUTO2_STOPA = 0.165;
-const NEOPOR_MAX = 1200;
+const NEOPOR_MAX = 1200;   // zadano, ako u bazi nema upisanog iznosa
+window._neoporLimiti=null;
+async function ucitajNeoporLimite(osvjezi){
+  if(window._neoporLimiti&&!osvjezi) return window._neoporLimiti;
+  if(!isLive()){ window._neoporLimiti=window._neoporLimiti||[]; return window._neoporLimiti; }
+  const {data,error}=await SB.from('neoporezivi_limit').select('*').order('godina');
+  window._neoporLimiti=error?[]:(data||[]); return window._neoporLimiti;
+}
+// neoporezivi iznos za godinu isplate (zadnji upisani s godinom ≤ PY)
+function neoporMaxZa(PY){ let b=null; (window._neoporLimiti||[]).forEach(r=>{ if(r.godina<=PY&&(!b||r.godina>b.godina)) b=r; }); return b?parseFloat(b.iznos):NEOPOR_MAX; }
 
 function stimTab(tab){
   if(tab==='kumulativ') setupStimKumulativ();
@@ -4041,6 +4167,8 @@ function stimFilterPregledDjel(){
 
 // ── Učitaj tablicu za batch unos ──────────────────────────────
 async function loadStimUnos(){
+  await ucitajNeoporLimite();
+  { const g=parseInt(document.getElementById('stim-ugod')?.value)||new Date().getFullYear(), m=parseInt(document.getElementById('stim-umj')?.value)||1; window._neoporAkt=neoporMaxZa(isplGod(g,m)); }
   const jid = parseInt(document.getElementById('stim-uj')?.value)||0;
   const god = parseInt(document.getElementById('stim-ugod')?.value)||2026;
   const mj  = parseInt(document.getElementById('stim-umj')?.value)||1;
@@ -4244,6 +4372,7 @@ function isplRed(g,m){return m===12?0:m;}
 // Preračun neoporezivog/oporezivog i kumulativa za sve redove djelatnika u godini isplate (redom isplate)
 async function preracunajKumulativ(ids,PY){
   if(!ids.length||!isLive()) return 0;
+  await ucitajNeoporLimite(); const maxN=neoporMaxZa(PY);
   const {data,error}=await SB.from('stimulacije_obracun').select('*').in('godina',[PY-1,PY]).in('djelatnik_id',ids);
   if(error) throw error;
   const n=x=>parseFloat(x)||0; let prom=0;
@@ -4251,7 +4380,7 @@ async function preracunajKumulativ(ids,PY){
     const rows=(data||[]).filter(r=>r.djelatnik_id===did&&isplGod(r.godina,r.mjesec)===PY).sort((a,b)=>isplRed(a.godina,a.mjesec)-isplRed(b.godina,b.mjesec));
     let kum=0;
     for(const r of rows){
-      const c=calcStim(n(r.bodovi),n(r.stimulacija_posto),n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni));
+      const c=calcStim(n(r.bodovi),n(r.stimulacija_posto),n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni),maxN);
       const upd={iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,dodatak_bol_neoporezivo:c.bolNeopor,
         dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon};
       if(Object.keys(upd).some(k=>Math.abs(n(r[k])-n(upd[k]))>0.004)){ const {error:e}=await SB.from('stimulacije_obracun').update(upd).eq('id',r.id); if(e) throw e; prom++; }
@@ -4260,18 +4389,19 @@ async function preracunajKumulativ(ids,PY){
   }
   return prom;
 }
-function calcStim(bodovi, posto, vrijBoda, kumPrije, dodatakBol, dodatakMj){
+function calcStim(bodovi, posto, vrijBoda, kumPrije, dodatakBol, dodatakMj, maxN){
+  const MAXN = maxN ?? window._neoporAkt ?? NEOPOR_MAX;
   const iznos = Math.round(bodovi * (posto/100) * vrijBoda * 100) / 100;
   
   // Prostor u neoporezivom (max 1200)
-  const prostor = Math.max(0, NEOPOR_MAX - kumPrije);
+  const prostor = Math.max(0, MAXN - kumPrije);
   let stimNeopor = Math.round(Math.min(iznos, prostor) * 100) / 100;
   let stimOpor   = Math.round(Math.max(0, iznos - stimNeopor) * 100) / 100;
   
   // Dodatak bolovanje (233€) - ide u neoporezivo dok ima mjesta
   let bolNeopor=0, bolOpor=0, bolBruto2=0, bolNeto=0;
   if(dodatakBol > 0){
-    const prostor2 = Math.max(0, NEOPOR_MAX - kumPrije - stimNeopor);
+    const prostor2 = Math.max(0, MAXN - kumPrije - stimNeopor);
     bolNeopor = Math.round(Math.min(dodatakBol, prostor2) * 100) / 100;
     bolOpor   = Math.round(Math.max(0, dodatakBol - bolNeopor) * 100) / 100;
     // oporezivi dio = bruto 2 → bruto 1 = bruto 2 / 1,165
@@ -5792,8 +5922,8 @@ const UPUTE=[
  {k:'unos',t:'Unos podataka (radni sati)',ic:'ti-calendar-plus',h:`
   <ol>
    <li>Odaberite <b>Jedinicu</b>, <b>Djelatnika</b>, <b>Godinu</b> i <b>Mjesec</b>. Uz ime djelatnika ✓ znači da ima unesene sate, ○ da još nema.</li>
-   <li><b>Radno vrijeme</b> gore (npr. 07:00–15:00) mijenja samo vrijeme početka i kraja u danima bez upisanih sati – sate ne upisuje.</li>
-   <li><b>Auto-popuni</b> upisuje radne sate u sve radne dane mjeseca i odmah ih sprema. Ako djelatnik već ima sate, prvo pita jer će ih zamijeniti.</li>
+   <li><b>Radno vrijeme</b> gore (npr. 07:00–15:00) – nakon promjene kliknite <b>Potvrdi radno vrijeme</b> i odaberite <b>samo za djelatnika</b> ili <b>za cijelu jedinicu</b>. Vrijeme se postavlja u sve radne dane mjeseca; sati se ne mijenjaju.</li>
+   <li><b>Sati se upisuju ručno.</b> Kad mišem prijeđete preko praznog polja sati, iznad njega se pojavi prijedlog (npr. <b>+ 8 h</b>, kod tržnice + 7 h, prema vremenu tog dana) – klik na prijedlog ili Enter upisuje ga. Možete upisati i bilo koji drugi broj.</li>
    <li>Pojedine dane ispravite ručno: upišite sate u odgovarajući stupac (godišnji, bolovanje, prekovremeni…). Za brisanje dana obrišite broj sati.</li>
    <li>Strelicama ‹ › uz ime prelazite na prethodnog ili sljedećeg djelatnika.</li>
   </ol>
@@ -5857,6 +5987,7 @@ const UPUTE=[
   <p><b>Bodovi djelatnika:</b> u stupac „Novi bodovi” upišite novi broj bodova i datum od kada vrijede – sprema se odmah. Raniji mjeseci ostaju sa starim bodovima.</p>
   <p><b>Vrijednost boda</b> za cijelu tvrtku upisuje se s mjesecom od kada vrijedi.</p>
   <p><b>Loko vožnja</b> – naknada po km za cijelu tvrtku.</p>
+  <p><b>Neoporezivi iznos godišnje</b> (sada 1.200 €) – upisuje se s godinom isplate od koje vrijedi; već spremljeni obračuni te i kasnijih godina automatski se preračunaju.</p>
   <p><b>Dodaci – iznosi i kriteriji:</b> klikom na <b>Promijeni</b> upisujete od kada vrijede nova pravila, iznos kvartalnog dodatka i dopušteni broj dana odsutnosti, koje se odsutnosti broje te razrede mjesečnog dodatka (do koliko dana → koliki iznos), posebno za 8 h i za tržnicu 7/5. Razrede možete dodavati i brisati. <b>Povijest</b> pokazuje sve promjene.</p>`},
  {k:'org',t:'Organizacijska struktura',ic:'ti-sitemap',h:`<p>Odjeli, sekcije i ostale jedinice tvrtke te njihov redoslijed.</p>`},
  {k:'vrste',t:'Vrste radnog vremena',ic:'ti-list-check',h:`<p>Stupci u unosu sati (HZZ kategorije: radni sati, prekovremeni, godišnji, bolovanje, službeni put…).</p>`},
@@ -6260,6 +6391,7 @@ async function vratiPrijedlog(){
 // Od obračunatog postotka oduzima se postotak iz prijedloga, iznos se ponovno računa (calcStim),
 // prazni redak se briše, a kumulativ i neoporezivo/oporezivo se preračunavaju za kasnije mjesece.
 async function ukloniPrijedlogIzObracuna(p){
+  await ucitajNeoporLimite();
   const out={promjene:[],greske:[]};
   if(!p||p.status!=='odobreno') return out;
   const {data:st,error:se}=await SB.from('stimulacije_prijedlozi_stavke').select('djelatnik_id,posto').eq('prijedlog_id',p.id);
@@ -6285,7 +6417,7 @@ async function ukloniPrijedlogIzObracuna(p){
           out.promjene.push(`${ime}: ${MJ_HR[r.mjesec-1]} – obračun obrisan (bilo ${stari}%, ${n(r.iznos_stimulacije).toFixed(2)} €)`);
           continue;
         }
-        const c=calcStim(n(r.bodovi),posto,n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni));
+        const c=calcStim(n(r.bodovi),posto,n(r.vrijednost_boda),kum,n(r.dodatak_bolovanje),n(r.dodatak_mjesecni),neoporMaxZa(isplGod(r.godina,r.mjesec)));
         const upd={stimulacija_posto:posto,iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,
           dodatak_bol_neoporezivo:c.bolNeopor,dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon};
         const mijenja=Object.keys(upd).some(k=>Math.abs(n(r[k])-n(upd[k]))>0.004);
@@ -7185,6 +7317,7 @@ async function spremiDodatke(){
   const iznosi={...R.iznosi};
   if(!confirm(`Spremiti ${R.vrsta==='233'?'kvartalni dodatak':'mjesečni dodatak'} za 01.${String(R.mj).padStart(2,'0')}.${R.god}. (${Object.values(iznosi).filter(v=>v>0).length} djelatnika s iznosom)?`)) return;
   const ids=R.djels.map(d=>d.id);
+  await ucitajNeoporLimite();
   const RG=R.gR, RM=R.mR;   // red obračuna = mjesec rada; isplata s plaćom 01.${R.mj}.${R.god}.
   const {data:sviRed,error:e1}=await SB.from('stimulacije_obracun').select('*').eq('godina',RG).in('djelatnik_id',ids);
   if(e1){showToast('Greška: '+e1.message,'error');return;}
@@ -7204,7 +7337,7 @@ async function spremiDodatke(){
     let kum=0; const pr=rows.filter(x=>x.mjesec<RM); if(pr.length) kum=n(pr[pr.length-1].kumulativ_neoporezivo);
     for(const x of rows.filter(x=>x.mjesec>=RM)){
       if(x===ovaj&&n(x.stimulacija_posto)===0&&n(x.dodatak_bolovanje)===0&&n(x.dodatak_mjesecni)===0){ if(x.id) brisi.push(x.id); continue; }
-      const c=calcStim(n(x.bodovi),n(x.stimulacija_posto),n(x.vrijednost_boda),kum,n(x.dodatak_bolovanje),n(x.dodatak_mjesecni));
+      const c=calcStim(n(x.bodovi),n(x.stimulacija_posto),n(x.vrijednost_boda),kum,n(x.dodatak_bolovanje),n(x.dodatak_mjesecni),neoporMaxZa(isplGod(x.godina,x.mjesec)));
       Object.assign(x,{iznos_stimulacije:c.iznos,iznos_neoporezivo:c.stimNeopor,iznos_oporezivo:c.stimOpor,dodatak_bol_neoporezivo:c.bolNeopor,
         dodatak_bol_oporezivo:c.bolOpor,dodatak_bol_bruto2:c.bolNeto,kumulativ_neoporezivo:c.kumNakon});
       const {created_at,updated_at,...bez}=x; upserti.push(bez); kum=c.kumNakon;
@@ -7285,7 +7418,7 @@ function vbZa(rows,god,mj){let best=null;const t=god*12+mj;(rows||[]).forEach(r=
 const MJ_NOM=['siječanj','veljača','ožujak','travanj','svibanj','lipanj','srpanj','kolovoz','rujan','listopad','studeni','prosinac'];
 async function setupBodoviStr(){
   await ucitajBodoveDjelatnika();
-  rLokoCijena(); rDodPravilaKartica();
+  rLokoCijena(); rDodPravilaKartica(); rNeoporKartica();
   const vj=vJ(), sel=document.getElementById('bp-jed'), cur=sel.value;
   sel.innerHTML='<option value="0">Sve jedinice</option>'+DB.jedinice.filter(j=>vj.includes(j.id)).map(j=>`<option value="${j.id}">${hEsc(j.name)}</option>`).join('');
   if(cur) sel.value=cur;
@@ -7296,6 +7429,46 @@ async function setupBodoviStr(){
   document.getElementById('bp-od-hint').style.display=ured?'':'none';
   document.getElementById('bp-ovlast').innerHTML=ured?'Bodove i vrijednost boda mijenjaju <b>admin i Obračun plaće</b>; svaka promjena upisuje se u Dnevnik promjena.':'Imate pravo samo pregleda – bodove mijenjaju admin i Obračun plaće.';
   rVbStr(); rBodoviStr(); rZadnjePromjene();
+}
+async function rNeoporKartica(){
+  const el=document.getElementById('bp-neop-now'); if(!el) return;
+  await ucitajNeoporLimite(true);
+  const t=new Date(), PY=isplGod(t.getFullYear(),t.getMonth()+1), v=neoporMaxZa(PY);
+  const L=(window._neoporLimiti||[]).slice().sort((a,b)=>b.godina-a.godina);
+  const ak=L.find(r=>r.godina<=PY);
+  el.textContent=v.toLocaleString('hr-HR',{minimumFractionDigits:2})+' €';
+  document.getElementById('bp-neop-od').textContent=`za godinu isplate ${PY}.${ak&&ak.godina>2000?` · vrijedi od ${ak.godina}. (${ak.upisao_ime||''})`:''}`;
+  const buduci=L.filter(r=>r.godina>PY);
+  document.getElementById('bp-neop-form').innerHTML=(buduci.length?`<div style="font-size:11.5px;color:#b7791f">Najava: ${buduci.map(r=>`od ${r.godina}. ${(+r.iznos).toLocaleString('hr-HR',{minimumFractionDigits:2})} €`).join(', ')}</div>`:'')
+    +(smijeObracun()?`<div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
+      <div class="fg" style="margin:0"><label class="fl">Vrijedi od godine isplate</label><select id="bp-neop-god" style="width:96px">${YEARS.concat([YEARS[YEARS.length-1]+1]).filter((y,i,a)=>a.indexOf(y)===i).map(y=>`<option value="${y}"${y===PY?' selected':''}>${y}</option>`).join('')}</select></div>
+      <div class="fg" style="margin:0"><label class="fl">Iznos (€)</label><input type="number" step="0.01" min="0" id="bp-neop-val" value="${v.toFixed(2)}" style="width:110px"></div>
+      <button class="btn bp" onclick="spremiNeoporLimit()"><i class="ti ti-device-floppy"></i> Spremi</button></div>`:'')
+    +(L.filter(r=>r.godina>2000).length?`<div style="font-size:11.5px;margin-top:6px">${L.filter(r=>r.godina>2000).map(r=>`<div>od ${r.godina}.: <b>${(+r.iznos).toLocaleString('hr-HR',{minimumFractionDigits:2})} €</b> <span style="color:var(--text3)">${hEsc(r.upisao_ime||'')}</span>${smijeObracun()?` <a href="#" onclick="obrisiNeoporLimit(${r.godina});return false" style="color:#c0392b">obriši</a>`:''}</div>`).join('')}</div>`:'');
+}
+async function neoporPreracunajOd(god){
+  // preračun svih spremljenih obračuna za godine isplate od 'god' nadalje
+  const {data}=await SB.from('stimulacije_obracun').select('djelatnik_id,godina,mjesec').gte('godina',god-1);
+  const po={}; (data||[]).forEach(r=>{const PY=isplGod(r.godina,r.mjesec); if(PY>=god)(po[PY]||=new Set()).add(r.djelatnik_id);});
+  let n=0; for(const [PY,s] of Object.entries(po)) n+=await preracunajKumulativ([...s],+PY); return n;
+}
+async function spremiNeoporLimit(){
+  const god=+document.getElementById('bp-neop-god').value, v=parseFloat(String(document.getElementById('bp-neop-val').value).replace(',','.'));
+  if(isNaN(v)||v<0){showToast('Upišite ispravan iznos','error');return;}
+  if(!confirm(`Neoporezivi iznos ${v.toLocaleString('hr-HR',{minimumFractionDigits:2})} € vrijedi od godine isplate ${god}. (do sljedeće promjene).\n\nVeć spremljeni obračuni od te godine bit će preračunati (neoporezivo/oporezivo). Nastaviti?`)) return;
+  const {error}=await SB.from('neoporezivi_limit').upsert({godina:god,iznos:v},{onConflict:'godina'});
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  await ucitajNeoporLimite(true);
+  let n=0; try{ n=await neoporPreracunajOd(god); }catch(e){ showToast('Upozorenje – preračun: '+e.message,'error'); }
+  addAuditLog({userName:CU?.name,action:'neoporezivi_limit',target:`od ${god}.`,jedinica:'',details:`${v} €, preračunato redaka: ${n}`});
+  showToast(`✅ Spremljeno${n?` · preračunato ${n} obračuna`:''}`,'success'); rNeoporKartica();
+}
+async function obrisiNeoporLimit(god){
+  if(!confirm(`Obrisati neoporezivi iznos koji vrijedi od ${god}.? Tada vrijedi prethodni iznos.`)) return;
+  const {error}=await SB.from('neoporezivi_limit').delete().eq('godina',god);
+  if(error){showToast('Greška: '+error.message,'error');return;}
+  await ucitajNeoporLimite(true); let n=0; try{ n=await neoporPreracunajOd(god); }catch(e){}
+  showToast(`Obrisano${n?` · preračunato ${n} obračuna`:''}`,'success'); rNeoporKartica();
 }
 async function rLokoCijena(){
   let p=null; try{p=await loadPostavkeTvrtkeGlobal();}catch(e){}
