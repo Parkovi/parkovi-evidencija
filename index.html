@@ -1798,7 +1798,7 @@ function loadUF(){
       <td class="sc">${dan}. <span style="color:var(--text3)">${dn}</span></td>
       <td><input type="time" id="p${dan}" value="${row.poc||(!iswk?(trz?trzDan(god,mj,dan,rr).poc:pd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="pb${dan}" class="dvo2" value="${row.poc2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).poc2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – početak" onchange="cRow(${dan},${god},${mj})">`:''}</td>
       <td><input type="time" id="k${dan}" value="${row.kraj||(!iswk?(trz?trzDan(god,mj,dan,rr).kraj:kd):"")}"  style="width:67px" onchange="cRow(${dan},${god},${mj})">${trz&&(rr==='dvo'||(rr==='vlastito'&&window._rvVlastito.p2))?`<input type="time" id="kb${dan}" class="dvo2" value="${row.kraj2||(!iswk&&!row.poc?(trzDan(god,mj,dan,rr).kraj2||''):'')}"  style="width:67px" title="2. dio dvokratnog rada – kraj" onchange="cRow(${dan},${god},${mj})">`:''}</td>
-      ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})" onmouseenter="satPrijedlog(this,${dan})" onfocus="satPrijedlog(this,${dan})" onmouseleave="satPrijedlogSkrij()" onblur="satPrijedlogSkrij()"></td>`).join("")}
+      ${DB.vrste.map(v=>`<td><input type="number" id="s${dan}_${v.code}" value="${row.sati?.[v.code]||""}" min="0" step="0.5" placeholder="0" oninput="rTots(${god},${mj})"></td>`).join("")}
     </tr>`;
   }
   h+=`<tr class="trow"><td class="sc" colspan="3">UKUPNO</td>${DB.vrste.map(v=>`<td id="t_${v.code}">0</td>`).join("")}</tr>
@@ -1874,7 +1874,7 @@ function potvrdiRadnoVrijeme(){
    <div style="display:flex;flex-direction:column;gap:8px">
     <button class="btn bp" onclick="rvPrimijeni('djel')"><i class="ti ti-user"></i> Samo za ${hEsc(d?dF(d):'djelatnika')}</button>
     <button class="btn bs" onclick="rvPrimijeni('jed')"><i class="ti ti-users"></i> Za cijelu jedinicu ${hEsc(jn)} (${broj} djelatnika)</button></div>
-   <div style="font-size:11.5px;color:var(--text3);margin-top:10px">Upisani sati se ne mijenjaju – sate upisujete ručno (prijeđite mišem preko polja i kliknite ponuđeni broj sati). Zaključani dani se ne diraju.</div></div></div>`;
+   <div style="font-size:11.5px;color:var(--text3);margin-top:10px">Upisani sati se ne mijenjaju – sate upisujete ručno . Zaključani dani se ne diraju.</div></div></div>`;
   openM('mo-rvpot');
 }
 function rvNovaVremena(god,mj,dan,rr,p0,k0){ return rr?trzDan(god,mj,dan,rr):{poc:p0,kraj:k0}; }
@@ -5923,7 +5923,7 @@ const UPUTE=[
   <ol>
    <li>Odaberite <b>Jedinicu</b>, <b>Djelatnika</b>, <b>Godinu</b> i <b>Mjesec</b>. Uz ime djelatnika ✓ znači da ima unesene sate, ○ da još nema.</li>
    <li><b>Radno vrijeme</b> gore (npr. 07:00–15:00) – nakon promjene kliknite <b>Potvrdi radno vrijeme</b> i odaberite <b>samo za djelatnika</b> ili <b>za cijelu jedinicu</b>. Vrijeme se postavlja u sve radne dane mjeseca; sati se ne mijenjaju.</li>
-   <li><b>Sati se upisuju ručno.</b> Kad mišem prijeđete preko praznog polja sati, iznad njega se pojavi prijedlog (npr. <b>+ 8 h</b>, kod tržnice + 7 h, prema vremenu tog dana) – klik na prijedlog ili Enter upisuje ga. Možete upisati i bilo koji drugi broj.</li>
+   <li><b>Sati se upisuju ručno</b> u odgovarajući stupac.</li>
    <li>Pojedine dane ispravite ručno: upišite sate u odgovarajući stupac (godišnji, bolovanje, prekovremeni…). Za brisanje dana obrišite broj sati.</li>
    <li>Strelicama ‹ › uz ime prelazite na prethodnog ili sljedećeg djelatnika.</li>
   </ol>
